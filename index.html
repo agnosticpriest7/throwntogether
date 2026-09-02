@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#171c24" />
+    <title>Thrown Together — Transfer Test</title>
+  </head>
+  <body>
+    <main>
+      <header>
+        <div>
+          <span class="eyebrow">MILESTONE 1 · TRANSFER TEST</span>
+          <h1>Thrown Together</h1>
+        </div>
+        <button id="reset-button" type="button" aria-label="Restart prototype">Restart <kbd>R</kbd></button>
+      </header>
+      <section id="game" aria-label="Thrown Together local co-op game"></section>
+      <output id="game-status" class="sr-only" aria-live="polite">Game loading</output>
+      <footer>
+        <div><strong>P1</strong> <kbd>WASD</kbd> move · <kbd>E</kbd> use · <kbd>Q</kbd> throw</div>
+        <div><strong>P2</strong> <kbd>Arrows</kbd> move · <kbd>Shift</kbd> use · <kbd>/</kbd> throw</div>
+        <div><strong>Gamepad</strong> left stick · south button use · right trigger throw</div>
+      </footer>
+    </main>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
