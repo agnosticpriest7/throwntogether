@@ -1,300 +1,412 @@
 import Phaser from "phaser";
 import { AudioCues } from "./AudioCues";
 import { InputManager } from "./InputManager";
+import { RestaurantModel, type ServiceEvent } from "./RestaurantModel";
+import type { RestaurantUI } from "./RestaurantUI";
 import {
-  DESTINATION_POS, GAME_HEIGHT, GAME_WIDTH, INTERACT_DISTANCE, PLAYER_SPEED, PLAYER_STARTS,
-  PREP_POS, SHARED_POS, SOURCE_POS, THROW_DURATION_MS, type PotatoState, type Side, type Vec2,
+  CHOP_TIME_MS, INGREDIENTS, RECIPES, ingredientItem,
+  type IngredientId, type KitchenItem, type RecipeId,
+} from "./data";
+import {
+  GAME_HEIGHT, GAME_WIDTH, INTERACT_DISTANCE, PLAYER_SPEED, PLAYER_STARTS,
+  SHARED_POS, THROW_DURATION_MS, type Side, type Vec2,
 } from "./config";
 import { canAutoCatch, clampToSide, distance, throwLanding } from "./rules";
+
+type StationType = "counter" | "chop" | "assembly" | "oven" | "plate";
 
 interface Player {
   side: Side;
   position: Vec2;
-  held: PotatoState | null;
+  held: KitchenItem | null;
   body: Phaser.GameObjects.Container;
   heldVisual: Phaser.GameObjects.Container;
-  label: Phaser.GameObjects.Text;
   inputBadge: Phaser.GameObjects.Text;
-  processingUntil: number;
 }
 
-interface LoosePotato { state: PotatoState; position: Vec2; visual: Phaser.GameObjects.Container }
+interface Station {
+  id: string;
+  type: StationType;
+  position: Vec2;
+  item: KitchenItem | null;
+  itemVisual: Phaser.GameObjects.Container;
+  statusText: Phaser.GameObjects.Text;
+  progressBg: Phaser.GameObjects.Rectangle;
+  progressFill: Phaser.GameObjects.Rectangle;
+  processStartedAt: number;
+  processDuration: number;
+}
+
+interface Source { id: IngredientId; position: Vec2; countText: Phaser.GameObjects.Text }
+interface RuinedItem { position: Vec2; visual: Phaser.GameObjects.Container }
+interface Flight {
+  item: KitchenItem; from: Vec2; to: Vec2; elapsed: number;
+  visual: Phaser.GameObjects.Container; shadow: Phaser.GameObjects.Ellipse;
+  indicator: Phaser.GameObjects.Arc; receiver: 0 | 1;
+}
+
+const SOURCE_LAYOUT: Array<{ id: IngredientId; position: Vec2 }> = [
+  { id: "potato", position: { x: 95, y: 305 } }, { id: "tomato", position: { x: 215, y: 305 } },
+  { id: "onion", position: { x: 95, y: 440 } }, { id: "cheese", position: { x: 215, y: 440 } },
+];
+const OVEN_POS = { x: 120, y: 150 };
+const CHOP_POS = { x: 820, y: 150 };
+const ASSEMBLY_POS = { x: 660, y: 150 };
+const PLATE_POS = { x: 660, y: 440 };
+const SERVE_POS = { x: 830, y: 440 };
 
 export class TransferScene extends Phaser.Scene {
   private inputManager!: InputManager;
   private readonly audioCues = new AudioCues();
+  private ui?: RestaurantUI;
   private players!: [Player, Player];
-  private loose: LoosePotato | null = null;
-  private shared: PotatoState | null = null;
-  private destination: PotatoState | null = null;
-  private sharedVisual!: Phaser.GameObjects.Container;
-  private destinationVisual!: Phaser.GameObjects.Container;
-  private objectiveText!: Phaser.GameObjects.Text;
+  private stations: Station[] = [];
+  private sources: Source[] = [];
+  private ruinedItems: RuinedItem[] = [];
+  private flight: Flight | null = null;
   private calloutText!: Phaser.GameObjects.Text;
   private calloutTimer?: Phaser.Time.TimerEvent;
-  private flight: { state: PotatoState; from: Vec2; to: Vec2; elapsed: number; duration: number; visual: Phaser.GameObjects.Container; shadow: Phaser.GameObjects.Ellipse; indicator: Phaser.GameObjects.Arc; receiver: 0 | 1 } | null = null;
-  private messes: Phaser.GameObjects.Container[] = [];
-  private completed = false;
+  private lastPhase = "menu";
 
-  constructor() { super("transfer"); }
+  constructor(private readonly restaurant: RestaurantModel) { super("transfer"); }
+  attachUI(ui: RestaurantUI): void { this.ui = ui; }
 
   create(): void {
     this.inputManager = new InputManager(this);
     this.drawKitchen();
-    this.sharedVisual = this.makePotato(SHARED_POS.x, SHARED_POS.y, "raw").setVisible(false);
-    this.destinationVisual = this.makePotato(DESTINATION_POS.x, DESTINATION_POS.y, "raw").setVisible(false);
     this.players = [this.makePlayer(0, "left"), this.makePlayer(1, "right")];
-    this.objectiveText = this.add.text(GAME_WIDTH / 2, 40, "GET POTATO  →  THROW  →  CATCH  →  PREP  →  SAFE RETURN", {
-      fontFamily: "DM Mono, monospace", fontSize: "12px", color: "#dbe2ec", letterSpacing: 1,
-    }).setOrigin(0.5);
-    this.calloutText = this.add.text(GAME_WIDTH / 2, 72, "", {
+    this.calloutText = this.add.text(GAME_WIDTH / 2, 68, "", {
       fontFamily: "Nunito, sans-serif", fontSize: "18px", fontStyle: "bold", color: "#ffffff",
-      backgroundColor: "#18202dcc", padding: { x: 12, y: 6 },
-    }).setOrigin(0.5).setDepth(40).setVisible(false);
-    this.resetPrototype(false);
-    document.getElementById("reset-button")?.addEventListener("click", () => this.resetPrototype(true));
-    window.addEventListener("tt-reset", () => this.resetPrototype(true));
+      backgroundColor: "#18202dee", padding: { x: 13, y: 7 },
+    }).setOrigin(0.5).setDepth(50).setVisible(false);
+    this.resetKitchen();
+    window.addEventListener("tt-purchase", () => this.audioCues.play("purchase"));
+    window.addEventListener("tt-phase-change", ((event: CustomEvent<{ events?: ServiceEvent[] }>) => this.handlePhaseChange(event.detail?.events ?? [])) as EventListener);
     Object.assign(window, {
       __THROWN_TOGETHER__: {
         snapshot: () => this.snapshot(),
-        reset: () => this.resetPrototype(false),
-        setPlayer: (player: 0 | 1, x: number, y: number, held?: PotatoState | null) => this.debugSetPlayer(player, x, y, held),
-        interact: (player: 0 | 1) => this.interact(player),
-        throw: (player: 0 | 1) => this.throwItem(player),
-        advanceFlight: () => { if (this.flight) this.updateFlight(this.flight.duration); },
+        reset: () => { this.restaurant.resetNight(); this.resetKitchen(); },
+        setPlayer: (player: 0 | 1, x: number, y: number, held?: KitchenItem | null) => this.debugSetPlayer(player, x, y, held),
+        interact: (player: 0 | 1) => this.interact(player), throw: (player: 0 | 1) => this.throwItem(player),
+        advanceFlight: () => { if (this.flight) this.updateFlight(THROW_DURATION_MS); },
+        giveIngredient: (player: 0 | 1, id: IngredientId, state: "raw" | "chopped" = "raw") => {
+          const item = ingredientItem(id); item.state = state; this.players[player].held = item; this.updateHeld(this.players[player]);
+        },
+        giveDish: (player: 0 | 1, id: RecipeId, state: "assembled" | "cooked" | "plated") => {
+          this.players[player].held = { kind: "dish", recipeId: id, state, value: this.recipeValue(id) }; this.updateHeld(this.players[player]);
+        },
+        endService: () => this.handleServiceEvents(this.restaurant.endService(performance.now())),
       },
     });
   }
 
   update(_time: number, delta: number): void {
+    if (this.restaurant.phase !== this.lastPhase) { this.lastPhase = this.restaurant.phase; this.handlePhaseChange([]); }
+    const kitchenActive = this.restaurant.phase === "prep" || this.restaurant.phase === "service";
     const inputs = [this.inputManager.read(0), this.inputManager.read(1)] as const;
     inputs.forEach((input, index) => {
-      const player = this.players[index];
-      player.inputBadge.setText(input.gamepadLabel);
-      if (input.resetPressed) this.resetPrototype(true);
-      if (this.time.now >= player.processingUntil) {
-        const length = Math.hypot(input.x, input.y) || 1;
-        const next = clampToSide({
-          x: player.position.x + (input.x / Math.max(1, length)) * PLAYER_SPEED * delta / 1000,
-          y: player.position.y + (input.y / Math.max(1, length)) * PLAYER_SPEED * delta / 1000,
-        }, player.side);
-        player.position = next;
-        player.body.setPosition(next.x, next.y);
-        if (input.interactPressed) this.interact(index as 0 | 1);
-        if (input.throwPressed) this.throwItem(index as 0 | 1);
-      }
+      const player = this.players[index]; player.inputBadge.setText(input.gamepadLabel);
+      if (input.resetPressed) window.dispatchEvent(new Event("tt-restart-night"));
+      if (!kitchenActive) return;
+      const length = Math.hypot(input.x, input.y) || 1;
+      player.position = clampToSide({
+        x: player.position.x + input.x / Math.max(1, length) * PLAYER_SPEED * delta / 1000,
+        y: player.position.y + input.y / Math.max(1, length) * PLAYER_SPEED * delta / 1000,
+      }, player.side);
+      player.body.setPosition(player.position.x, player.position.y);
+      if (input.interactPressed) this.interact(index as 0 | 1);
+      if (input.throwPressed) this.throwItem(index as 0 | 1);
     });
     if (this.flight) this.updateFlight(delta);
-    this.updateHighlights();
-    this.syncAccessibleStatus();
+    this.updateStations(performance.now());
+    if (this.restaurant.phase === "service") this.handleServiceEvents(this.restaurant.updateService(performance.now()));
+    this.updateSourceCounts(); this.ui?.refresh(); this.syncAccessibleStatus();
   }
 
-  private resetPrototype(showMessage: boolean): void {
+  private handlePhaseChange(events: ServiceEvent[]): void {
+    this.lastPhase = this.restaurant.phase;
+    if (this.restaurant.phase === "menu") this.resetKitchen();
+    if (this.restaurant.phase === "prep") { this.resetKitchen(); this.callout("CLOSED · PREP TIME", "#f5c85b"); }
+    if (this.restaurant.phase === "service") {
+      this.audioCues.play("serviceStart"); this.callout("RESTAURANT OPEN!", "#7ed8ba");
+      this.stations.filter((station) => station.type === "oven").forEach((station) => this.tryStartOven(station, performance.now()));
+    }
+    if (this.restaurant.phase === "summary") this.callout("SERVICE CLOSED", "#ffdc74");
+    this.handleServiceEvents(events); this.ui?.render();
+  }
+
+  private handleServiceEvents(events: ServiceEvent[]): void {
+    events.forEach((event) => {
+      if (event.type === "order-arrived") this.audioCues.play("order");
+      if (event.type === "order-expired") this.audioCues.play("expire");
+      if (event.type === "service-ended") { this.audioCues.play("serviceEnd"); this.ui?.render(); }
+    });
+  }
+
+  private resetKitchen(): void {
     this.flight?.visual.destroy(); this.flight?.shadow.destroy(); this.flight?.indicator.destroy(); this.flight = null;
-    this.loose?.visual.destroy();
-    this.messes.forEach((mess) => mess.destroy()); this.messes = [];
-    this.shared = null; this.destination = null; this.completed = false;
-    this.objectiveText?.setText("GET POTATO  →  THROW  →  CATCH  →  PREP  →  SAFE RETURN").setColor("#dbe2ec");
-    this.sharedVisual.setVisible(false); this.destinationVisual.setVisible(false);
-    this.players?.forEach((player) => { player.held = null; player.processingUntil = 0; this.updateHeld(player); });
+    this.ruinedItems.forEach((item) => item.visual.destroy()); this.ruinedItems = [];
+    this.stations.forEach((station) => this.setStationItem(station, null));
+    this.players?.forEach((player) => { player.held = null; this.updateHeld(player); });
     if (this.players) {
       this.players[0].position = { ...PLAYER_STARTS.left }; this.players[0].body.setPosition(PLAYER_STARTS.left.x, PLAYER_STARTS.left.y);
       this.players[1].position = { ...PLAYER_STARTS.right }; this.players[1].body.setPosition(PLAYER_STARTS.right.x, PLAYER_STARTS.right.y);
     }
-    this.loose = { state: "raw", position: { ...SOURCE_POS }, visual: this.makePotato(SOURCE_POS.x, SOURCE_POS.y, "raw") };
-    if (showMessage) this.callout("FRESH START", "#f5c85b");
+    this.updateSourceCounts();
   }
 
   private interact(index: 0 | 1): void {
+    if (this.restaurant.phase !== "prep" && this.restaurant.phase !== "service") return;
     const player = this.players[index];
-    if (this.flight) return;
-    if (player.held) {
-      if (distance(player.position, SHARED_POS) <= INTERACT_DISTANCE && !this.shared) {
-        this.shared = player.held; player.held = null; this.updateHeld(player); this.updateCounterVisuals();
-        this.audioCues.play("pickup"); this.callout("SAFE TRANSFER READY", "#7ed8ba"); return;
+    if (distance(player.position, SERVE_POS) <= INTERACT_DISTANCE) { if (player.held) this.serve(player); return; }
+    const source = this.nearestSource(player.position); const station = this.nearestStation(player.position);
+    if (!player.held) {
+      if (station?.item && station.processStartedAt === 0) {
+        player.held = station.item; this.setStationItem(station, null); this.updateHeld(player); this.audioCues.play("pickup"); return;
       }
-      if (distance(player.position, SHARED_POS) <= INTERACT_DISTANCE && this.shared) {
-        this.callout("COUNTER OCCUPIED", "#ffdc74"); return;
+      if (source) {
+        if (!this.restaurant.takeIngredient(source.id)) { this.callout(`${INGREDIENTS[source.id].displayName.toUpperCase()} OUT OF STOCK`, "#ff7e70"); return; }
+        player.held = ingredientItem(source.id); this.updateHeld(player); this.updateSourceCounts(); this.audioCues.play("pickup");
+        this.callout(`${INGREDIENTS[source.id].displayName.toUpperCase()} TAKEN`, "#f5c85b"); return;
       }
-      if (distance(player.position, PREP_POS) <= INTERACT_DISTANCE && player.held === "raw") {
-        player.processingUntil = this.time.now + 760; this.audioCues.play("process"); this.callout("CHOPPING…", "#f5c85b");
-        this.time.delayedCall(760, () => { if (player.held === "raw") { player.held = "prepped"; this.updateHeld(player); this.audioCues.play("complete"); this.callout("POTATO PREPPED!", "#7ed8ba"); } }); return;
+      return;
+    }
+    if (!station) { this.ruinHeld(player, player.position, "DROPPED · WASTED"); return; }
+    if (station.type === "chop") { this.useChop(player, station); return; }
+    if (station.type === "assembly") { this.useAssembly(player, station); return; }
+    if (station.type === "oven") { this.useOven(player, station); return; }
+    if (station.type === "plate") { this.usePlate(player, station); return; }
+    if (station.item) { this.callout("WORKSPACE OCCUPIED", "#ffdc74"); return; }
+    this.setStationItem(station, player.held); player.held = null; this.updateHeld(player); this.audioCues.play("pickup");
+  }
+
+  private useChop(player: Player, station: Station): void {
+    const item = player.held!;
+    if (station.item) { this.callout("CHOPPING BOARD OCCUPIED", "#ffdc74"); return; }
+    if (item.kind !== "ingredient" || item.state !== "raw" || !INGREDIENTS[item.ingredientId].choppable) { this.callout("THAT DOESN'T NEED CHOPPING", "#ff7e70"); return; }
+    this.setStationItem(station, item); player.held = null; this.updateHeld(player);
+    station.processStartedAt = performance.now(); station.processDuration = CHOP_TIME_MS; station.statusText.setText("CHOPPING"); this.audioCues.play("process");
+  }
+
+  private useAssembly(player: Player, station: Station): void {
+    const held = player.held!;
+    if (!station.item) {
+      if (!this.isCheeseBakeComponent(held)) { this.callout("NEEDS CHOPPED POTATO OR CHEESE", "#ff7e70"); return; }
+      this.setStationItem(station, held); player.held = null; this.updateHeld(player); return;
+    }
+    if (this.matchesCheeseBake(station.item, held) && this.restaurant.selectedRecipeIds.includes("cheese-bake")) {
+      this.setStationItem(station, { kind: "dish", recipeId: "cheese-bake", state: "assembled", value: station.item.value + held.value });
+      player.held = null; this.updateHeld(player); this.audioCues.play("complete"); this.callout("CHEESE BAKE ASSEMBLED", "#7ed8ba"); return;
+    }
+    this.callout("THOSE ITEMS DON'T COMBINE HERE", "#ff7e70");
+  }
+
+  private useOven(player: Player, station: Station): void {
+    if (station.item) { this.callout("OVEN OCCUPIED", "#ffdc74"); return; }
+    const item = player.held!; const recipeId = this.ovenRecipeFor(item);
+    if (!recipeId || !this.restaurant.selectedRecipeIds.includes(recipeId)) { this.callout("OVEN REFUSES THAT ITEM", "#ff7e70"); return; }
+    this.setStationItem(station, item); player.held = null; this.updateHeld(player);
+    if (this.restaurant.phase === "prep") { station.statusText.setText("READY WHEN OPEN"); this.callout("STAGED · WAITS FOR SERVICE", "#f5c85b"); }
+    else this.tryStartOven(station, performance.now());
+  }
+
+  private usePlate(player: Player, station: Station): void {
+    const held = player.held!;
+    if (station.item) {
+      if (this.matchesGardenPlate(station.item, held) && this.restaurant.selectedRecipeIds.includes("garden-plate")) {
+        if (!this.consumePlate()) return;
+        this.setStationItem(station, { kind: "dish", recipeId: "garden-plate", state: "plated", value: station.item.value + held.value });
+        player.held = null; this.updateHeld(player); this.audioCues.play("complete"); this.callout("GARDEN PLATE READY", "#7ed8ba"); return;
       }
-      if (distance(player.position, DESTINATION_POS) <= INTERACT_DISTANCE && !this.destination && player.held === "prepped") {
-        this.destination = player.held; player.held = null; this.completed = true; this.updateHeld(player); this.updateCounterVisuals();
-        this.audioCues.play("complete"); this.objectiveText.setText("TRANSFER LOOP COMPLETE · PRESS R TO RUN IT AGAIN").setColor("#7ed8ba"); this.callout("LOOP COMPLETE!", "#7ed8ba"); return;
-      }
-      this.dropItem(player); return;
+      this.callout("PLATING STATION OCCUPIED", "#ffdc74"); return;
     }
-    if (distance(player.position, SHARED_POS) <= INTERACT_DISTANCE && this.shared) {
-      player.held = this.shared; this.shared = null; this.updateHeld(player); this.updateCounterVisuals(); this.audioCues.play("pickup"); this.callout("SAFE PICKUP", "#7ed8ba"); return;
+    if (held.kind === "dish" && held.state === "cooked") {
+      if (!this.consumePlate()) return;
+      held.state = "plated"; this.setStationItem(station, held); player.held = null; this.updateHeld(player);
+      this.audioCues.play("complete"); this.callout(`${RECIPES[held.recipeId].displayName.toUpperCase()} PLATED`, "#7ed8ba"); return;
     }
-    if (distance(player.position, DESTINATION_POS) <= INTERACT_DISTANCE && this.destination) {
-      player.held = this.destination; this.destination = null; this.updateHeld(player); this.updateCounterVisuals(); this.audioCues.play("pickup"); return;
+    if (this.isGardenComponent(held)) {
+      this.setStationItem(station, held); player.held = null; this.updateHeld(player); this.callout("ADD THE OTHER CHOPPED VEGETABLE", "#f5c85b"); return;
     }
-    if (this.loose && this.loose.state !== "ruined" && distance(player.position, this.loose.position) <= INTERACT_DISTANCE) {
-      player.held = this.loose.state; this.loose.visual.destroy(); this.loose = null; this.updateHeld(player); this.audioCues.play("pickup"); this.callout("POTATO PICKED UP", "#f5c85b");
-    }
+    this.callout("ITEM ISN'T READY TO PLATE", "#ff7e70");
+  }
+
+  private serve(player: Player): void {
+    const held = player.held;
+    if (!held || held.kind !== "dish" || held.state !== "plated") { this.callout("ONLY PLATED DISHES CAN BE SERVED", "#ff7e70"); return; }
+    if (!this.restaurant.serveDish(held.recipeId)) { this.callout("NO MATCHING ORDER · REFUSED", "#ff7e70"); return; }
+    player.held = null; this.updateHeld(player); this.audioCues.play("orderComplete");
+    this.callout(`${RECIPES[held.recipeId].displayName.toUpperCase()} SERVED! +$${RECIPES[held.recipeId].sellingPrice}`, "#7ed8ba"); this.ui?.refresh(performance.now() + 1000);
   }
 
   private throwItem(index: 0 | 1): void {
-    const player = this.players[index];
-    if (!player.held || this.flight) return;
-    const state = player.held; player.held = null; this.updateHeld(player);
-    const to = throwLanding(player.side, player.position.y);
-    const receiver = (index === 0 ? 1 : 0) as 0 | 1;
+    const player = this.players[index]; const item = player.held;
+    if (!item || this.flight) return;
+    if (!this.isThrowable(item)) { this.callout("USE THE SHARED COUNTER FOR THAT", "#ffdc74"); return; }
+    player.held = null; this.updateHeld(player);
+    const to = throwLanding(player.side, player.position.y); const receiver = (index === 0 ? 1 : 0) as 0 | 1;
     const indicator = this.add.circle(to.x, to.y, 48, 0xf5c85b, 0.16).setStrokeStyle(4, 0xffdc74, 0.9).setDepth(16);
     const shadow = this.add.ellipse(player.position.x, player.position.y + 8, 34, 13, 0x11151c, 0.35).setDepth(18);
-    const visual = this.makePotato(player.position.x, player.position.y, state).setDepth(25);
-    this.flight = { state, from: { ...player.position }, to, elapsed: 0, duration: THROW_DURATION_MS, visual, shadow, indicator, receiver };
+    const visual = this.makeItemVisual(player.position.x, player.position.y, item).setDepth(25);
+    this.flight = { item, from: { ...player.position }, to, elapsed: 0, visual, shadow, indicator, receiver };
     this.tweens.add({ targets: indicator, scale: 1.15, alpha: 0.45, duration: 260, yoyo: true, repeat: 1 });
     this.audioCues.play("throw"); this.time.delayedCall(80, () => this.audioCues.play("incoming")); this.callout("INCOMING!", "#ffdc74");
   }
 
   private updateFlight(delta: number): void {
     const flight = this.flight; if (!flight) return;
-    flight.elapsed = Math.min(flight.duration, flight.elapsed + delta);
-    const t = flight.elapsed / flight.duration;
-    const x = Phaser.Math.Linear(flight.from.x, flight.to.x, t);
-    const y = Phaser.Math.Linear(flight.from.y, flight.to.y, t);
-    const arc = Math.sin(Math.PI * t);
+    flight.elapsed = Math.min(THROW_DURATION_MS, flight.elapsed + delta); const t = flight.elapsed / THROW_DURATION_MS;
+    const x = Phaser.Math.Linear(flight.from.x, flight.to.x, t); const y = Phaser.Math.Linear(flight.from.y, flight.to.y, t); const arc = Math.sin(Math.PI * t);
     flight.visual.setPosition(x, y - arc * 58).setScale(1 + arc * 0.35).setAngle(t * 300);
     flight.shadow.setPosition(x, y + 8).setScale(1 - arc * 0.28).setAlpha(0.35 - arc * 0.15);
     if (t < 1) return;
-    const receiver = this.players[flight.receiver];
-    const caught = canAutoCatch(receiver.position, flight.to, receiver.held === null);
+    const receiver = this.players[flight.receiver]; const caught = canAutoCatch(receiver.position, flight.to, receiver.held === null);
     flight.visual.destroy(); flight.shadow.destroy(); flight.indicator.destroy(); this.flight = null;
-    if (caught) {
-      receiver.held = flight.state; this.updateHeld(receiver); this.audioCues.play("catch"); this.callout(`P${flight.receiver + 1} CAUGHT IT!`, "#7ed8ba");
-    } else {
-      this.createMess(flight.to); this.loose = { state: "ruined", position: flight.to, visual: this.makePotato(flight.to.x, flight.to.y, "ruined") };
-      this.audioCues.play("miss"); this.callout(receiver.held ? "HANDS FULL — POTATO WASTED" : "MISSED — POTATO WASTED", "#ff7e70");
+    if (caught) { receiver.held = flight.item; this.updateHeld(receiver); this.audioCues.play("catch"); this.callout(`P${flight.receiver + 1} CAUGHT IT!`, "#7ed8ba"); }
+    else {
+      this.createRuinedItem(flight.to, flight.item); this.restaurant.recordWaste(flight.item.value); this.audioCues.play("miss");
+      this.callout(receiver.held ? `HANDS FULL · $${flight.item.value} WASTED` : `MISSED · $${flight.item.value} WASTED`, "#ff7e70");
     }
   }
 
-  private dropItem(player: Player): void {
-    const state = player.held!; player.held = null; this.updateHeld(player);
-    this.loose?.visual.destroy();
-    this.loose = { state, position: { ...player.position }, visual: this.makePotato(player.position.x, player.position.y + 25, state) };
-    this.audioCues.play("pickup"); this.callout("PLACED ON FLOOR", "#c1c8d2");
+  private updateStations(now: number): void {
+    this.stations.forEach((station) => {
+      if (!station.item) { station.progressBg.setVisible(false); station.progressFill.setVisible(false); return; }
+      if (station.type === "oven" && station.processStartedAt === 0 && this.restaurant.phase === "service") this.tryStartOven(station, now);
+      if (station.processStartedAt <= 0) return;
+      const progress = Math.min(1, (now - station.processStartedAt) / station.processDuration);
+      station.progressBg.setVisible(true); station.progressFill.setVisible(true).setScale(progress, 1);
+      if (progress < 1) return;
+      station.processStartedAt = 0; station.progressBg.setVisible(false); station.progressFill.setVisible(false);
+      if (station.type === "chop" && station.item.kind === "ingredient") {
+        station.item.state = "chopped"; station.statusText.setText("CHOPPED · TAKE"); this.refreshStationVisual(station); this.audioCues.play("complete");
+      } else if (station.type === "oven") {
+        const recipeId = this.ovenRecipeFor(station.item);
+        if (recipeId) this.setStationItem(station, { kind: "dish", recipeId, state: "cooked", value: station.item.value });
+        station.statusText.setText("COOKED · TAKE"); this.audioCues.play("complete"); this.callout("OVEN READY!", "#7ed8ba");
+      }
+    });
+  }
+
+  private tryStartOven(station: Station, now: number): void {
+    if (!station.item || station.processStartedAt > 0 || station.item.state === "cooked") return;
+    const recipeId = this.ovenRecipeFor(station.item); if (!recipeId) return;
+    station.processStartedAt = now; station.processDuration = RECIPES[recipeId].cookTimeMs ?? 5000; station.statusText.setText("BAKING"); this.audioCues.play("process");
   }
 
   private drawKitchen(): void {
     const g = this.add.graphics();
     g.fillStyle(0x2d3745).fillRoundedRect(24, 22, GAME_WIDTH - 48, GAME_HEIGHT - 44, 16);
-    g.fillStyle(0x343f4e).fillRect(36, 66, 408, 470); g.fillStyle(0x303a48).fillRect(516, 66, 408, 470);
-    g.lineStyle(1, 0x455264, 0.45);
-    for (let x = 36; x <= 924; x += 32) g.lineBetween(x, 66, x, 536);
-    for (let y = 66; y <= 536; y += 32) g.lineBetween(36, y, 924, y);
-    g.fillStyle(0x171c24).fillRoundedRect(444, 66, 72, 470, 6);
-    g.fillStyle(0x687488).fillRoundedRect(438, 84, 84, 166, 8).fillRoundedRect(438, 360, 84, 158, 8);
-    g.fillStyle(0x8b97a8).fillRoundedRect(421, 260, 118, 90, 10);
-    g.fillStyle(0x252c36).fillRoundedRect(429, 270, 102, 70, 8);
-    this.add.text(480, 354, "SHARED COUNTER", { fontFamily: "DM Mono, monospace", fontSize: "10px", color: "#aeb8c7" }).setOrigin(0.5);
-    this.drawStation(SOURCE_POS, "POTATO", "SUPPLY", 0xd39b52);
-    this.drawStation(PREP_POS, "KNIFE", "PREP", 0x66b9a8);
-    this.drawStation(DESTINATION_POS, "✓", "FINISH TRAY", 0x7988d9);
-    this.add.text(64, 92, "PLAYER 1 · LEFT KITCHEN", { fontFamily: "DM Mono, monospace", fontSize: "11px", color: "#f6b75e" });
-    this.add.text(896, 92, "PLAYER 2 · RIGHT KITCHEN", { fontFamily: "DM Mono, monospace", fontSize: "11px", color: "#76c8df" }).setOrigin(1, 0);
+    g.fillStyle(0x343f4e).fillRect(36, 84, 408, 452); g.fillStyle(0x303a48).fillRect(516, 84, 408, 452);
+    g.lineStyle(1, 0x455264, 0.38);
+    for (let x = 36; x <= 924; x += 32) g.lineBetween(x, 84, x, 536);
+    for (let y = 84; y <= 536; y += 32) g.lineBetween(36, y, 924, y);
+    g.fillStyle(0x171c24).fillRoundedRect(444, 84, 72, 452, 6);
+    g.fillStyle(0x687488).fillRoundedRect(438, 94, 84, 156, 8).fillRoundedRect(438, 360, 84, 158, 8);
+    this.add.text(62, 55, "PLAYER 1 · STORAGE + OVEN", { fontFamily: "DM Mono, monospace", fontSize: "10px", color: "#f6b75e" });
+    this.add.text(898, 55, "PLAYER 2 · PREP + SERVE", { fontFamily: "DM Mono, monospace", fontSize: "10px", color: "#76c8df" }).setOrigin(1, 0);
+    this.sources = SOURCE_LAYOUT.map(({ id, position }) => this.drawSource(id, position));
+    this.stations = [
+      this.drawStation("oven", "oven", OVEN_POS, "OVEN", "▦", 0xd47755),
+      this.drawStation("left-counter", "counter", { x: 340, y: 155 }, "STAGING", "□", 0x8391a6),
+      this.drawStation("left-counter-2", "counter", { x: 340, y: 445 }, "STAGING", "□", 0x8391a6),
+      this.drawStation("shared", "counter", SHARED_POS, "SHARED", "⇄", 0xa7b2c2, 112),
+      this.drawStation("assembly", "assembly", ASSEMBLY_POS, "ASSEMBLE", "+", 0xe1ad54),
+      this.drawStation("chop", "chop", CHOP_POS, "CHOP", "╱", 0x66b9a8),
+      this.drawStation("right-counter", "counter", { x: 660, y: 305 }, "STAGING", "□", 0x8391a6),
+      this.drawStation("plate", "plate", PLATE_POS, "PLATE", "○", 0x7988d9),
+    ];
+    this.drawServeStation();
   }
 
-  private drawStation(pos: Vec2, icon: string, label: string, color: number): void {
-    this.add.rectangle(pos.x, pos.y, 112, 82, 0x222a35).setStrokeStyle(3, color, 0.8);
-    this.add.text(pos.x, pos.y - 8, icon, { fontFamily: "Nunito, sans-serif", fontSize: "22px", fontStyle: "bold", color: `#${color.toString(16).padStart(6, "0")}` }).setOrigin(0.5);
-    this.add.text(pos.x, pos.y + 24, label, { fontFamily: "DM Mono, monospace", fontSize: "9px", color: "#c3ccd9" }).setOrigin(0.5);
+  private drawSource(id: IngredientId, position: Vec2): Source {
+    const ingredient = INGREDIENTS[id];
+    this.add.rectangle(position.x, position.y, 94, 92, 0x222a35).setStrokeStyle(3, ingredient.color, 0.85).setDepth(4);
+    this.add.text(position.x, position.y - 16, ingredient.icon, { fontFamily: "Nunito, sans-serif", fontSize: "24px", fontStyle: "bold", color: `#${ingredient.color.toString(16).padStart(6, "0")}` }).setOrigin(0.5).setDepth(5);
+    this.add.text(position.x, position.y + 13, ingredient.displayName.toUpperCase(), { fontFamily: "DM Mono, monospace", fontSize: "8px", color: "#d7dde7" }).setOrigin(0.5).setDepth(5);
+    const countText = this.add.text(position.x, position.y + 31, "STOCK 0", { fontFamily: "DM Mono, monospace", fontSize: "9px", color: "#f5c85b" }).setOrigin(0.5).setDepth(5);
+    return { id, position, countText };
+  }
+
+  private drawStation(id: string, type: StationType, position: Vec2, label: string, icon: string, color: number, width = 108): Station {
+    this.add.rectangle(position.x, position.y, width, 92, 0x222a35).setStrokeStyle(3, color, 0.82).setDepth(4);
+    this.add.text(position.x, position.y - 20, icon, { fontFamily: "Nunito, sans-serif", fontSize: "24px", fontStyle: "bold", color: `#${color.toString(16).padStart(6, "0")}` }).setOrigin(0.5).setDepth(5);
+    this.add.text(position.x, position.y + 18, label, { fontFamily: "DM Mono, monospace", fontSize: "9px", color: "#d7dde7" }).setOrigin(0.5).setDepth(5);
+    const statusText = this.add.text(position.x, position.y + 34, "", { fontFamily: "DM Mono, monospace", fontSize: "7px", color: "#f5c85b" }).setOrigin(0.5).setDepth(6);
+    const itemVisual = this.add.container(position.x, position.y - 4).setDepth(14);
+    const progressBg = this.add.rectangle(position.x - width / 2 + 7, position.y + 40, width - 14, 5, 0x11151c).setOrigin(0, 0.5).setDepth(15).setVisible(false);
+    const progressFill = this.add.rectangle(position.x - width / 2 + 7, position.y + 40, width - 14, 5, 0x7ed8ba).setOrigin(0, 0.5).setDepth(16).setVisible(false);
+    return { id, type, position, item: null, itemVisual, statusText, progressBg, progressFill, processStartedAt: 0, processDuration: 0 };
+  }
+
+  private drawServeStation(): void {
+    this.add.rectangle(SERVE_POS.x, SERVE_POS.y, 116, 92, 0x1f3130).setStrokeStyle(4, 0x7ed8ba, 0.9).setDepth(5);
+    this.add.text(SERVE_POS.x, SERVE_POS.y - 13, "↑", { fontSize: "28px", color: "#7ed8ba", fontStyle: "bold" }).setOrigin(0.5).setDepth(6);
+    this.add.text(SERVE_POS.x, SERVE_POS.y + 22, "SERVE", { fontFamily: "DM Mono, monospace", fontSize: "10px", color: "#d7dde7" }).setOrigin(0.5).setDepth(6);
   }
 
   private makePlayer(index: 0 | 1, side: Side): Player {
-    const color = index === 0 ? 0xf2a94f : 0x62bed7;
-    const heldVisual = this.add.container(0, -31).setVisible(false);
-    const shadow = this.add.ellipse(0, 14, 54, 22, 0x10141a, 0.35);
-    const body = this.add.container(PLAYER_STARTS[side].x, PLAYER_STARTS[side].y, [shadow]);
-    const ring = this.add.circle(0, 0, 25, 0x202733).setStrokeStyle(5, color);
-    const face = this.add.circle(0, -3, 14, color); const apron = this.add.rectangle(0, 12, 25, 14, 0xf2eee4).setOrigin(0.5);
-    body.add([ring, face, apron, heldVisual]); body.setDepth(20);
-    const label = this.add.text(0, 38, `P${index + 1}`, { fontFamily: "Nunito, sans-serif", fontSize: "12px", fontStyle: "bold", color: "#ffffff" }).setOrigin(0.5);
-    const inputBadge = this.add.text(0, 54, "KEYBOARD", { fontFamily: "DM Mono, monospace", fontSize: "8px", color: index === 0 ? "#f6b75e" : "#76c8df", backgroundColor: "#18202dcc", padding: { x: 4, y: 2 } }).setOrigin(0.5);
-    body.add([label, inputBadge]);
-    return { side, position: { ...PLAYER_STARTS[side] }, held: null, body, heldVisual, label, inputBadge, processingUntil: 0 };
+    const color = index === 0 ? 0xf2a94f : 0x62bed7; const heldVisual = this.add.container(0, -31).setVisible(false);
+    const body = this.add.container(PLAYER_STARTS[side].x, PLAYER_STARTS[side].y, [this.add.ellipse(0, 14, 54, 22, 0x10141a, 0.35)]);
+    body.add([this.add.circle(0, 0, 25, 0x202733).setStrokeStyle(5, color), this.add.circle(0, -3, 14, color), this.add.rectangle(0, 12, 25, 14, 0xf2eee4), heldVisual]); body.setDepth(20);
+    body.add(this.add.text(0, 38, `P${index + 1}`, { fontFamily: "Nunito, sans-serif", fontSize: "12px", fontStyle: "bold", color: "#fff" }).setOrigin(0.5));
+    const inputBadge = this.add.text(0, 54, "TOUCH / KEYS", { fontFamily: "DM Mono, monospace", fontSize: "7px", color: index === 0 ? "#f6b75e" : "#76c8df", backgroundColor: "#18202dcc", padding: { x: 4, y: 2 } }).setOrigin(0.5); body.add(inputBadge);
+    return { side, position: { ...PLAYER_STARTS[side] }, held: null, body, heldVisual, inputBadge };
   }
 
-  private makePotato(x: number, y: number, state: PotatoState): Phaser.GameObjects.Container {
-    const container = this.add.container(x, y);
-    this.populatePotato(container, state);
-    return container.setDepth(14);
+  private setStationItem(station: Station, item: KitchenItem | null): void {
+    station.item = item; station.processStartedAt = 0; station.processDuration = 0; station.statusText.setText(""); station.progressBg.setVisible(false); station.progressFill.setVisible(false); this.refreshStationVisual(station);
   }
+  private refreshStationVisual(station: Station): void { station.itemVisual.removeAll(true); station.itemVisual.setVisible(Boolean(station.item)); if (station.item) this.populateItemVisual(station.itemVisual, station.item); }
+  private makeItemVisual(x: number, y: number, item: KitchenItem): Phaser.GameObjects.Container { const container = this.add.container(x, y); this.populateItemVisual(container, item); return container.setDepth(14); }
 
-  private populatePotato(container: Phaser.GameObjects.Container, state: PotatoState): void {
-    const color = state === "ruined" ? 0x6b6258 : state === "prepped" ? 0xffd77c : 0xc8904f;
-    const potato = this.add.ellipse(0, 0, 28, 22, color).setStrokeStyle(2, state === "ruined" ? 0x302d2b : 0x805a30);
-    container.add(potato);
-    if (state === "prepped") {
-      container.add(this.add.line(0, 0, -8, -6, 8, 6, 0xffffff, 0.7).setLineWidth(2));
-      container.add(this.add.line(0, 0, -8, 6, 8, -6, 0xffffff, 0.7).setLineWidth(2));
+  private populateItemVisual(container: Phaser.GameObjects.Container, item: KitchenItem): void {
+    if (item.kind === "ingredient") {
+      const definition = INGREDIENTS[item.ingredientId]; const color = item.state === "ruined" ? 0x655c54 : definition.color;
+      container.add(this.add.ellipse(0, 0, 30, 24, color).setStrokeStyle(2, 0x332b25));
+      container.add(this.add.text(0, 0, item.state === "ruined" ? "×" : definition.icon, { fontFamily: "Nunito, sans-serif", fontSize: "12px", fontStyle: "bold", color: item.state === "ruined" ? "#ff7e70" : "#fff" }).setOrigin(0.5));
+      if (item.state === "chopped") { container.add(this.add.line(0, 0, -11, -8, 11, 8, 0xffffff, 0.8).setLineWidth(2)); container.add(this.add.line(0, 0, -11, 8, 11, -8, 0xffffff, 0.8).setLineWidth(2)); }
+      return;
     }
-    if (state === "ruined") container.add(this.add.text(0, 0, "×", { fontSize: "18px", color: "#ff8b7e", fontStyle: "bold" }).setOrigin(0.5));
+    const recipe = RECIPES[item.recipeId]; if (item.state === "plated") container.add(this.add.circle(0, 2, 21, 0xf1eee7).setStrokeStyle(2, 0xaeb8c7));
+    const foodColor = item.state === "cooked" ? Phaser.Display.Color.ValueToColor(recipe.color).darken(22).color : recipe.color;
+    container.add(this.add.circle(0, item.state === "plated" ? 0 : 2, item.state === "assembled" ? 15 : 13, foodColor));
+    container.add(this.add.text(0, 0, item.state === "ruined" ? "×" : recipe.icon, { fontFamily: "DM Mono, monospace", fontSize: "9px", fontStyle: "bold", color: item.state === "ruined" ? "#ff7e70" : "#17202a" }).setOrigin(0.5));
   }
 
-  private createMess(pos: Vec2): void {
-    const mess = this.add.container(pos.x, pos.y);
-    mess.add(this.add.ellipse(0, 9, 72, 35, 0x5d4938, 0.75));
-    [[-22, 1], [15, -3], [28, 9], [-8, 12]].forEach(([x, y]) => mess.add(this.add.circle(x, y, 6, 0x3e332c, 0.7)));
-    mess.add(this.add.text(0, 36, "WASTED", { fontFamily: "DM Mono, monospace", fontSize: "9px", color: "#ff8b7e", backgroundColor: "#18202dcc", padding: { x: 4, y: 2 } }).setOrigin(0.5));
-    mess.setDepth(9); this.messes.push(mess);
+  private updateHeld(player: Player): void { player.heldVisual.removeAll(true); if (!player.held) { player.heldVisual.setVisible(false); return; } this.populateItemVisual(player.heldVisual, player.held); player.heldVisual.setVisible(true).setDepth(30); }
+  private nearestStation(position: Vec2): Station | null { return this.stations.map((station) => ({ station, range: distance(position, station.position) })).filter(({ range }) => range <= INTERACT_DISTANCE).sort((a, b) => a.range - b.range)[0]?.station ?? null; }
+  private nearestSource(position: Vec2): Source | null { return this.sources.map((source) => ({ source, range: distance(position, source.position) })).filter(({ range }) => range <= INTERACT_DISTANCE).sort((a, b) => a.range - b.range)[0]?.source ?? null; }
+  private updateSourceCounts(): void { this.sources?.forEach((source) => source.countText.setText(`STOCK ${this.restaurant.inventory[source.id]}`)); }
+  private isThrowable(item: KitchenItem): boolean { return item.kind === "ingredient" && item.state !== "ruined" && INGREDIENTS[item.ingredientId].throwable; }
+  private isCheeseBakeComponent(item: KitchenItem): boolean { return item.kind === "ingredient" && ((item.ingredientId === "potato" && item.state === "chopped") || (item.ingredientId === "cheese" && item.state === "raw")); }
+  private matchesCheeseBake(a: KitchenItem, b: KitchenItem): boolean { return this.isCheeseBakeComponent(a) && this.isCheeseBakeComponent(b) && a.kind === "ingredient" && b.kind === "ingredient" && a.ingredientId !== b.ingredientId; }
+  private isGardenComponent(item: KitchenItem): boolean { return item.kind === "ingredient" && item.state === "chopped" && (item.ingredientId === "tomato" || item.ingredientId === "onion"); }
+  private matchesGardenPlate(a: KitchenItem, b: KitchenItem): boolean { return this.isGardenComponent(a) && this.isGardenComponent(b) && a.kind === "ingredient" && b.kind === "ingredient" && a.ingredientId !== b.ingredientId; }
+  private ovenRecipeFor(item: KitchenItem): RecipeId | null {
+    if (item.kind === "ingredient" && item.ingredientId === "potato" && item.state === "chopped") return "roast-potato";
+    if (item.kind === "dish" && item.recipeId === "cheese-bake" && item.state === "assembled") return "cheese-bake";
+    return null;
   }
+  private recipeValue(recipeId: RecipeId): number { return RECIPES[recipeId].ingredients.reduce((total, requirement) => total + INGREDIENTS[requirement.ingredientId].purchaseCost, 0); }
+  private consumePlate(): boolean { if (this.restaurant.platesRemaining <= 0) { this.callout("NO CLEAN PLATES LEFT", "#ff7e70"); return false; } this.restaurant.platesRemaining -= 1; return true; }
 
-  private updateHeld(player: Player): void {
-    player.heldVisual.removeAll(true);
-    if (!player.held) { player.heldVisual.setVisible(false); return; }
-    this.populatePotato(player.heldVisual, player.held);
-    player.heldVisual.setVisible(true).setDepth(30);
+  private ruinHeld(player: Player, position: Vec2, message: string): void { const item = player.held!; player.held = null; this.updateHeld(player); this.restaurant.recordWaste(item.value); this.createRuinedItem(position, item); this.audioCues.play("miss"); this.callout(`${message} · $${item.value}`, "#ff7e70"); }
+  private createRuinedItem(position: Vec2, item: KitchenItem): void {
+    const ruined: KitchenItem = item.kind === "ingredient" ? { ...item, state: "ruined" } : { ...item, state: "ruined" };
+    const visual = this.add.container(position.x, position.y).setDepth(9); visual.add(this.add.ellipse(0, 11, 70, 34, 0x5d4938, 0.75)); this.populateItemVisual(visual, ruined);
+    visual.add(this.add.text(0, 36, "WASTED", { fontFamily: "DM Mono, monospace", fontSize: "8px", color: "#ff8b7e", backgroundColor: "#18202dcc", padding: { x: 4, y: 2 } }).setOrigin(0.5)); this.ruinedItems.push({ position, visual });
   }
-
-  private updateCounterVisuals(): void {
-    this.replacePotatoVisual(this.sharedVisual, this.shared, SHARED_POS);
-    this.replacePotatoVisual(this.destinationVisual, this.destination, DESTINATION_POS);
-  }
-
-  private replacePotatoVisual(oldVisual: Phaser.GameObjects.Container, state: PotatoState | null, pos: Vec2): void {
-    oldVisual.removeAll(true);
-    if (!state) { oldVisual.setVisible(false); return; }
-    this.populatePotato(oldVisual, state);
-    oldVisual.setPosition(pos.x, pos.y).setVisible(true).setDepth(15);
-  }
-
-  private updateHighlights(): void {
-    const stations = [SOURCE_POS, PREP_POS, SHARED_POS, DESTINATION_POS];
-    stations.forEach((pos, index) => {
-      const close = this.players.some((player) => distance(player.position, pos) <= INTERACT_DISTANCE);
-      // Existing station art remains static; a compact pulse marker avoids noisy outlines.
-      if (close && index === 2 && !this.flight) this.sharedVisual.setScale(1.06);
-      else if (index === 2) this.sharedVisual.setScale(1);
-    });
-  }
-
   private callout(message: string, color: string): void {
-    this.calloutTimer?.remove(false);
-    this.calloutText.setText(message).setColor(color).setVisible(true).setAlpha(1).setScale(0.92);
+    this.calloutTimer?.remove(false); this.calloutText.setText(message).setColor(color).setVisible(true).setAlpha(1).setScale(0.92);
     this.tweens.add({ targets: this.calloutText, scale: 1, duration: 100, ease: "Back.Out" });
-    this.calloutTimer = this.time.delayedCall(1300, () => this.tweens.add({ targets: this.calloutText, alpha: 0, duration: 220, onComplete: () => this.calloutText.setVisible(false) }));
+    this.calloutTimer = this.time.delayedCall(1350, () => this.tweens.add({ targets: this.calloutText, alpha: 0, duration: 220, onComplete: () => this.calloutText.setVisible(false) }));
   }
-
-  private debugSetPlayer(index: 0 | 1, x: number, y: number, held?: PotatoState | null): void {
-    const player = this.players[index]; player.position = clampToSide({ x, y }, player.side); player.body.setPosition(player.position.x, player.position.y);
-    if (held !== undefined) { player.held = held; this.updateHeld(player); }
-  }
-
+  private debugSetPlayer(index: 0 | 1, x: number, y: number, held?: KitchenItem | null): void { const player = this.players[index]; player.position = clampToSide({ x, y }, player.side); player.body.setPosition(player.position.x, player.position.y); if (held !== undefined) { player.held = held; this.updateHeld(player); } }
   private snapshot(): object {
-    return {
-      players: this.players.map((player) => ({ side: player.side, x: Math.round(player.position.x), y: Math.round(player.position.y), held: player.held })),
-      loose: this.loose ? { state: this.loose.state, ...this.loose.position } : null,
-      shared: this.shared, destination: this.destination, inFlight: this.flight?.state ?? null,
-      messCount: this.messes.length, completed: this.completed,
-    };
+    return { phase: this.restaurant.phase, cash: this.restaurant.cash, revenue: this.restaurant.revenue, spending: this.restaurant.ingredientSpending, waste: this.restaurant.wastedValue, inventory: { ...this.restaurant.inventory }, plates: this.restaurant.platesRemaining,
+      players: this.players.map((player) => ({ side: player.side, x: Math.round(player.position.x), y: Math.round(player.position.y), held: player.held })), stations: Object.fromEntries(this.stations.map((station) => [station.id, station.item])),
+      orders: this.restaurant.activeOrders.map((order) => ({ id: order.id, recipeId: order.recipeId })), inFlight: this.flight?.item ?? null, messCount: this.ruinedItems.length, summary: this.restaurant.summary() };
   }
-
-  private syncAccessibleStatus(): void {
-    const output = document.getElementById("game-status");
-    if (output) output.textContent = JSON.stringify(this.snapshot());
-  }
+  private syncAccessibleStatus(): void { const output = document.getElementById("game-status"); if (output) output.textContent = JSON.stringify(this.snapshot()); }
 }

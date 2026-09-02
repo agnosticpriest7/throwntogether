@@ -1,6 +1,6 @@
 # Thrown Together
 
-A browser-based, fixed-screen local co-op cooking prototype. Milestone 1 tests whether two players on opposite sides of a kitchen can quickly throw, catch, process, and safely return one potato.
+A browser-based, fixed-screen local co-op cooking prototype. Milestone 2 is a complete two-player test night: choose two dishes, buy stock with limited cash, prep the kitchen, serve timed orders, and review the night's finances.
 
 ## Play online
 
@@ -51,10 +51,22 @@ Vite's production base path is `/throwntogether/`, matching the repository-scope
 
 Touch controls are split into independent Player 1 (left) and Player 2 (right) panels and support simultaneous multi-touch input. Gamepads are assigned in browser gamepad-index order and each player's current assignment is shown under their character. Keyboard and touch controls remain active when pads are connected.
 
-Press **R**, either gamepad's **Start/Menu** button, or the **Restart** button above the game for an immediate clean reset.
+Menu selection and purchasing use ordinary buttons, so they work with mouse or touch. During kitchen play, press **R**, either gamepad's **Start/Menu** button, or **Restart Night** above the game to return to menu selection.
 
-## Prototype loop
+## Single-night loop
 
-Player 1 picks up the potato from the supply, throws it across the divider, and Player 2 automatically catches it when standing in the landing circle with free hands. Player 2 preps it at the knife station, places it on the shared counter, and Player 1 retrieves it and places it on the finish tray.
+1. Choose exactly two dishes from Roast Potato, Garden Plate, and Cheese Bake.
+2. Spend the restaurant's $40 starting cash on ingredient quantities of your choice.
+3. Use the untimed **CLOSED / PREP** phase to retrieve stock, chop ingredients, throw or use the shared counter, and stage the kitchen. Ovens remain paused while closed.
+4. Select **Open Restaurant** to begin a two-minute service. Cook, assemble, plate, and serve the oldest compatible ticket before its patience expires.
+5. Review spending, revenue, waste, completed and missed orders, and final cash, then select **Play Another Night**.
 
-The shared counter also accepts the raw potato in either direction, providing the slower, safe alternative to throwing. A missed catch ruins the potato and leaves a visible floor mess; reset to try again.
+Four clean plates are available each night. Missed throws permanently ruin purchased ingredients and their value appears as waste in the summary. Wrong plated dishes are refused at the serving window and remain in the player's hands.
+
+## Prototype recipes
+
+| Dish | Ingredients | Kitchen path | Sale price |
+|---|---|---|---:|
+| Roast Potato | Potato | Chop → bake → plate | $8 |
+| Garden Plate | Tomato + onion | Chop both → combine on plate | $10 |
+| Cheese Bake | Potato + cheese | Chop potato → assemble → bake → plate | $15 |

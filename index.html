@@ -4,18 +4,22 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#171c24" />
-    <title>Thrown Together — Transfer Test</title>
+    <title>Thrown Together — Single-Night Test</title>
   </head>
   <body>
     <main>
       <header>
         <div>
-          <span class="eyebrow">MILESTONE 1 · TRANSFER TEST</span>
+          <span class="eyebrow">MILESTONE 2 · SINGLE-NIGHT TEST</span>
           <h1>Thrown Together</h1>
         </div>
-        <button id="reset-button" type="button" aria-label="Restart prototype">Restart <kbd>R</kbd></button>
+        <button id="reset-button" type="button" aria-label="Restart night">Restart Night <kbd>R</kbd></button>
       </header>
-      <section id="game" aria-label="Thrown Together local co-op game"></section>
+      <div id="game-frame">
+        <section id="game" aria-label="Thrown Together local co-op game"></section>
+        <aside id="restaurant-hud" aria-label="Restaurant status" hidden></aside>
+        <section id="restaurant-overlay" aria-label="Restaurant setup"></section>
+      </div>
       <output id="game-status" class="sr-only" aria-live="polite">Game loading</output>
       <section id="touch-controls" aria-label="Touch controls">
         <article class="touch-player touch-player--one">
