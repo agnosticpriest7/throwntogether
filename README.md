@@ -47,8 +47,9 @@ Vite's production base path is `/throwntogether/`, matching the repository-scope
 | Gamepad 1 / 2 | Left stick | South face button (Xbox A) | Right trigger |
 | Player 1 keyboard | WASD | E | Q |
 | Player 2 keyboard | Arrow keys | Shift | `/` |
+| Touch Player 1 / 2 | Left/right on-screen D-pad | On-screen Use | On-screen Throw |
 
-Gamepads are assigned in browser gamepad-index order and each player's current assignment is shown under their character. Keyboard controls remain active as a debug fallback even when pads are connected.
+Touch controls are split into independent Player 1 (left) and Player 2 (right) panels and support simultaneous multi-touch input. Gamepads are assigned in browser gamepad-index order and each player's current assignment is shown under their character. Keyboard and touch controls remain active when pads are connected.
 
 Press **R**, either gamepad's **Start/Menu** button, or the **Restart** button above the game for an immediate clean reset.
 

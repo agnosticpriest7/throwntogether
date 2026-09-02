@@ -1,4 +1,5 @@
 import Phaser from "phaser";
+import { TouchControls } from "./TouchControls";
 
 export interface PlayerInput {
   x: number;
@@ -21,6 +22,7 @@ interface KeySet {
 export class InputManager {
   private readonly keys: [KeySet, KeySet];
   private readonly resetKey: Phaser.Input.Keyboard.Key;
+  private readonly touchControls = new TouchControls();
   private assigned: [number | null, number | null] = [null, null];
   private buttonWasDown = [false, false, false, false, false, false];
   private pendingInteract: [boolean, boolean] = [false, false];
@@ -73,6 +75,7 @@ export class InputManager {
     const keys = this.keys[player];
     const keyboardX = Number(keys.right.isDown) - Number(keys.left.isDown);
     const keyboardY = Number(keys.down.isDown) - Number(keys.up.isDown);
+    const touch = this.touchControls.movement(player);
     const padIndex = this.assigned[player];
     const pad = padIndex === null ? null : navigator.getGamepads?.()[padIndex] ?? null;
     const padX = Math.abs(pad?.axes[0] ?? 0) > 0.18 ? pad!.axes[0] : 0;
@@ -84,16 +87,18 @@ export class InputManager {
     const keyboardInteract = this.pendingInteract[player];
     const keyboardThrow = this.pendingThrow[player];
     const keyboardReset = this.pendingReset;
+    const touchInteract = this.touchControls.consumeInteract(player);
+    const touchThrow = this.touchControls.consumeThrow(player);
     this.pendingInteract[player] = false;
     this.pendingThrow[player] = false;
     if (player === 0) this.pendingReset = false;
     const result: PlayerInput = {
-      x: keyboardX || padX,
-      y: keyboardY || padY,
-      interactPressed: keyboardInteract || (interactDown && !this.buttonWasDown[base]),
-      throwPressed: keyboardThrow || (throwDown && !this.buttonWasDown[base + 1]),
+      x: touch.x || keyboardX || padX,
+      y: touch.y || keyboardY || padY,
+      interactPressed: touchInteract || keyboardInteract || (interactDown && !this.buttonWasDown[base]),
+      throwPressed: touchThrow || keyboardThrow || (throwDown && !this.buttonWasDown[base + 1]),
       resetPressed: keyboardReset || (resetDown && !this.buttonWasDown[base + 2]),
-      gamepadLabel: pad ? `PAD ${pad.index + 1} · ${InputManager.shortPadName(pad.id)}` : "KEYBOARD",
+      gamepadLabel: pad ? `PAD ${pad.index + 1} · ${InputManager.shortPadName(pad.id)}` : "TOUCH / KEYS",
     };
     this.buttonWasDown[base] = interactDown;
     this.buttonWasDown[base + 1] = throwDown;

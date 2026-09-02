@@ -12,6 +12,7 @@
 - The browser Gamepad API is polled every frame. The first two connected pad indices are assigned stably to Players 1 and 2 while connected; assignments are visible beneath the characters.
 - Standard mapping is used: axes 0/1, button 0 for interact, button 7/right trigger for throw, and button 9 for reset.
 - Both keyboard schemes remain enabled for debugging and simultaneous-input testing.
+- Touch controls use independent Pointer Events state for each player, including multi-touch D-pad holds and latched Use/Throw presses. They do not synthesize keyboard events.
 - Development builds expose an explicit `?test` scenario harness for repeatable browser checks; it is excluded from production by Vite's development flag.
 
 ## Throw and catch
@@ -28,6 +29,7 @@
 ## Known limitations / human playtesting
 
 - **Two-controller feel and assignment require human playtesting with two physical gamepads.** Automated checks can verify the input architecture but cannot reproduce hardware feel, browser-specific pad IDs, trigger response, or simultaneous wireless input.
+- Two-player multi-touch ergonomics should be assessed on the intended tablet/phone sizes; the responsive layout is functional in portrait and more comfortable in landscape.
 - Throw speed, landing distance, catch radius, and interaction distance are initial tuning values and should be assessed by two players side-by-side.
 - Browsers require a user input before Web Audio can start; the first pickup/throw interaction provides that gesture.
 - The floor mess is gameplay-visible but intentionally has no cleaning mechanic or movement penalty in Milestone 1.

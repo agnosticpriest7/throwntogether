@@ -17,6 +17,40 @@
       </header>
       <section id="game" aria-label="Thrown Together local co-op game"></section>
       <output id="game-status" class="sr-only" aria-live="polite">Game loading</output>
+      <section id="touch-controls" aria-label="Touch controls">
+        <article class="touch-player touch-player--one">
+          <div class="touch-player__heading"><strong>PLAYER 1</strong><span>LEFT KITCHEN</span></div>
+          <div class="touch-player__controls">
+            <div class="touch-dpad" aria-label="Player 1 directional pad">
+              <button class="touch-button touch-dpad__up" type="button" data-touch-player="0" data-touch-control="up" aria-label="Player 1 move up">▲</button>
+              <button class="touch-button touch-dpad__left" type="button" data-touch-player="0" data-touch-control="left" aria-label="Player 1 move left">◀</button>
+              <span class="touch-dpad__center" aria-hidden="true"></span>
+              <button class="touch-button touch-dpad__right" type="button" data-touch-player="0" data-touch-control="right" aria-label="Player 1 move right">▶</button>
+              <button class="touch-button touch-dpad__down" type="button" data-touch-player="0" data-touch-control="down" aria-label="Player 1 move down">▼</button>
+            </div>
+            <div class="touch-actions">
+              <button class="touch-button touch-action touch-action--use" type="button" data-touch-player="0" data-touch-control="interact" aria-label="Player 1 use">USE</button>
+              <button class="touch-button touch-action touch-action--throw" type="button" data-touch-player="0" data-touch-control="throw" aria-label="Player 1 throw">THROW</button>
+            </div>
+          </div>
+        </article>
+        <article class="touch-player touch-player--two">
+          <div class="touch-player__heading"><strong>PLAYER 2</strong><span>RIGHT KITCHEN</span></div>
+          <div class="touch-player__controls">
+            <div class="touch-dpad" aria-label="Player 2 directional pad">
+              <button class="touch-button touch-dpad__up" type="button" data-touch-player="1" data-touch-control="up" aria-label="Player 2 move up">▲</button>
+              <button class="touch-button touch-dpad__left" type="button" data-touch-player="1" data-touch-control="left" aria-label="Player 2 move left">◀</button>
+              <span class="touch-dpad__center" aria-hidden="true"></span>
+              <button class="touch-button touch-dpad__right" type="button" data-touch-player="1" data-touch-control="right" aria-label="Player 2 move right">▶</button>
+              <button class="touch-button touch-dpad__down" type="button" data-touch-player="1" data-touch-control="down" aria-label="Player 2 move down">▼</button>
+            </div>
+            <div class="touch-actions">
+              <button class="touch-button touch-action touch-action--use" type="button" data-touch-player="1" data-touch-control="interact" aria-label="Player 2 use">USE</button>
+              <button class="touch-button touch-action touch-action--throw" type="button" data-touch-player="1" data-touch-control="throw" aria-label="Player 2 throw">THROW</button>
+            </div>
+          </div>
+        </article>
+      </section>
       <footer>
         <div><strong>P1</strong> <kbd>WASD</kbd> move · <kbd>E</kbd> use · <kbd>Q</kbd> throw</div>
         <div><strong>P2</strong> <kbd>Arrows</kbd> move · <kbd>Shift</kbd> use · <kbd>/</kbd> throw</div>
