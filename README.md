@@ -2,6 +2,12 @@
 
 A browser-based, fixed-screen local co-op cooking prototype. Milestone 1 tests whether two players on opposite sides of a kitchen can quickly throw, catch, process, and safely return one potato.
 
+## Play online
+
+The latest successful build from `main` is available at:
+
+**[Play Thrown Together](https://agnosticpriest7.github.io/throwntogether/)**
+
 ## Requirements
 
 - Node.js 20.19+ (Node.js 22.12+ also supported)
@@ -27,6 +33,12 @@ To preview that bundle:
 ```sh
 npm run preview
 ```
+
+## Deployment
+
+GitHub Pages deployment is automatic. Every push to `main` runs the test suite and production build, uploads the generated `dist` directory, and deploys it only after those checks succeed. The workflow can also be started manually from **GitHub → Actions → Deploy game to GitHub Pages → Run workflow**.
+
+Vite's production base path is `/throwntogether/`, matching the repository-scoped Pages URL. Deployment configuration lives in `.github/workflows/deploy-pages.yml`; generated `dist` files are not committed.
 
 ## Controls
 
