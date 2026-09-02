@@ -53,6 +53,8 @@ Touch controls are split into independent Player 1 (left) and Player 2 (right) p
 
 Menu selection and purchasing use ordinary buttons, so they work with mouse or touch. During kitchen play, press **R**, either gamepad's **Start/Menu** button, or **Restart Night** above the game to return to menu selection.
 
+Select **Recipes** in the kitchen HUD at any time during Prep or Service to see the selected dishes' required ingredient states, ordered station steps, and selling prices.
+
 ## Single-night loop
 
 1. Choose exactly two dishes from Roast Potato, Garden Plate, and Cheese Bake.

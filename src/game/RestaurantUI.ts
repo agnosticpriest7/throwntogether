@@ -5,6 +5,7 @@ export class RestaurantUI {
   private readonly overlay = document.getElementById("restaurant-overlay")!;
   private readonly hud = document.getElementById("restaurant-hud")!;
   private lastHudRefresh = 0;
+  private recipeGuideOpen = false;
 
   constructor(private readonly model: RestaurantModel) {
     document.getElementById("reset-button")?.addEventListener("click", () => this.playAnotherNight());
@@ -26,7 +27,7 @@ export class RestaurantUI {
   refresh(now = performance.now()): void {
     if (now - this.lastHudRefresh < 100) return;
     this.lastHudRefresh = now;
-    if (this.model.phase === "prep" || this.model.phase === "service") this.renderHud();
+    if (this.model.phase === "prep" || this.model.phase === "service") this.updateHud(now);
     else if (this.model.phase === "summary" && !this.overlay.hidden) this.renderSummary();
   }
 
@@ -73,25 +74,53 @@ export class RestaurantUI {
   }
 
   private renderHud(): void {
-    const now = performance.now();
+    const menu = this.model.selectedRecipeIds.map((id) => RECIPES[id].displayName).join(" · ");
+    this.hud.innerHTML = `<div class="hud-bar"><strong class="phase-pill ${this.model.phase}">${this.model.phase === "prep" ? "CLOSED · PREP" : "OPEN · SERVICE"}</strong>
+      <span class="hud-cash">CASH <b></b></span><span class="hud-menu">${menu}</span><span class="hud-time"></span>
+      <button class="hud-recipes-button" id="toggle-recipe-guide" aria-expanded="${this.recipeGuideOpen}">RECIPES</button></div>
+      <div class="hud-stock"></div><div class="tickets"></div><div class="hud-feedback"></div>
+      ${this.model.phase === "prep" ? `<button class="open-action" id="open-restaurant">OPEN RESTAURANT</button>` : ""}
+      <aside class="recipe-guide" aria-label="Tonight's recipe guide" ${this.recipeGuideOpen ? "" : "hidden"}>
+        <div class="recipe-guide__header"><div><span>TONIGHT'S MENU</span><strong>How to make each dish</strong></div><button id="close-recipe-guide" aria-label="Close recipe guide">×</button></div>
+        <div class="recipe-guide__grid">${this.recipeGuideMarkup()}</div>
+      </aside>`;
+    this.hud.querySelector<HTMLButtonElement>("#open-restaurant")?.addEventListener("click", () => {
+      const events = this.model.startService(performance.now()); this.phaseChanged(events);
+    });
+    this.hud.querySelector<HTMLButtonElement>("#toggle-recipe-guide")?.addEventListener("click", () => this.toggleRecipeGuide());
+    this.hud.querySelector<HTMLButtonElement>("#close-recipe-guide")?.addEventListener("click", () => this.toggleRecipeGuide(false));
+    this.updateHud(performance.now());
+  }
+
+  private updateHud(now: number): void {
     const remaining = this.model.phase === "service" ? Math.max(0, this.model.serviceDurationMs - (now - this.model.serviceStartedAt)) : this.model.serviceDurationMs;
     const minutes = Math.floor(remaining / 60_000); const seconds = Math.ceil((remaining % 60_000) / 1000).toString().padStart(2, "0");
     const stock = selectedIngredientIds(this.model.selectedRecipeIds).map((id) => `<span><i style="--stock-color:#${INGREDIENTS[id].color.toString(16).padStart(6, "0")}"></i>${INGREDIENTS[id].displayName} ${this.model.inventory[id]}</span>`).join("");
-    const menu = this.model.selectedRecipeIds.map((id) => RECIPES[id].displayName).join(" · ");
     const orders = this.model.activeOrders.map((order) => {
       const recipe = RECIPES[order.recipeId]; const patience = Math.max(0, order.expiresAt - now); const percent = Math.max(0, Math.min(100, patience / (order.expiresAt - order.createdAt) * 100));
       return `<article class="ticket"><div><b>${recipe.icon}</b><strong>${recipe.displayName}</strong><span>${Math.ceil(patience / 1000)}s</span></div><i><em style="width:${percent}%"></em></i></article>`;
     }).join("");
-    this.hud.innerHTML = `<div class="hud-bar"><strong class="phase-pill ${this.model.phase}">${this.model.phase === "prep" ? "CLOSED · PREP" : "OPEN · SERVICE"}</strong>
-      <span class="hud-cash">CASH <b>$${this.model.cash + this.model.revenue}</b></span><span class="hud-menu">${menu}</span>
-      <span class="hud-time">${this.model.phase === "prep" ? "UNTIMED" : `${minutes}:${seconds}`}</span></div>
-      <div class="hud-stock">${stock}<span>PLATES ${this.model.platesRemaining}</span></div>
-      <div class="tickets">${orders || `<span class="tickets-empty">${this.model.phase === "prep" ? "Prep ingredients before opening" : "Waiting for next order…"}</span>`}</div>
-      <div class="hud-feedback">${this.model.lastFeedback}</div>
-      ${this.model.phase === "prep" ? `<button class="open-action" id="open-restaurant">OPEN RESTAURANT</button>` : ""}`;
-    this.hud.querySelector<HTMLButtonElement>("#open-restaurant")?.addEventListener("click", () => {
-      const events = this.model.startService(performance.now()); this.phaseChanged(events); this.renderHud();
-    });
+    const cash = this.hud.querySelector<HTMLElement>(".hud-cash b"); if (cash) cash.textContent = `$${this.model.cash + this.model.revenue}`;
+    const time = this.hud.querySelector<HTMLElement>(".hud-time"); if (time) time.textContent = this.model.phase === "prep" ? "UNTIMED" : `${minutes}:${seconds}`;
+    const stockPanel = this.hud.querySelector<HTMLElement>(".hud-stock"); if (stockPanel) stockPanel.innerHTML = `${stock}<span>PLATES ${this.model.platesRemaining}</span>`;
+    const tickets = this.hud.querySelector<HTMLElement>(".tickets"); if (tickets) tickets.innerHTML = orders || `<span class="tickets-empty">${this.model.phase === "prep" ? "Prep ingredients before opening" : "Waiting for next order…"}</span>`;
+    const feedback = this.hud.querySelector<HTMLElement>(".hud-feedback"); if (feedback) feedback.textContent = this.model.lastFeedback;
+  }
+
+  private recipeGuideMarkup(): string {
+    return this.model.selectedRecipeIds.map((id) => {
+      const recipe = RECIPES[id];
+      const ingredients = recipe.ingredients.map(({ ingredientId, state }) => `<li>${INGREDIENTS[ingredientId].displayName} <b>${state}</b></li>`).join("");
+      const steps = recipe.steps.map((step, index) => `<li><span>${index + 1}</span>${step.label}</li>`).join("");
+      return `<article class="recipe-guide__card"><h3><i style="--guide-color:#${recipe.color.toString(16).padStart(6, "0")}">${recipe.icon}</i>${recipe.displayName}</h3>
+        <div class="recipe-guide__ingredients"><strong>NEEDED</strong><ul>${ingredients}</ul></div><ol>${steps}</ol><p>Serve for <b>$${recipe.sellingPrice}</b></p></article>`;
+    }).join("");
+  }
+
+  private toggleRecipeGuide(open = !this.recipeGuideOpen): void {
+    this.recipeGuideOpen = open;
+    const guide = this.hud.querySelector<HTMLElement>(".recipe-guide"); if (guide) guide.hidden = !open;
+    this.hud.querySelector<HTMLButtonElement>("#toggle-recipe-guide")?.setAttribute("aria-expanded", String(open));
   }
 
   private renderSummary(): void {
@@ -106,7 +135,7 @@ export class RestaurantUI {
   }
 
   private playAnotherNight(): void {
-    this.model.resetNight(); this.phaseChanged(); this.render();
+    this.recipeGuideOpen = false; this.model.resetNight(); this.phaseChanged(); this.render();
   }
 
   private phaseChanged(events: ServiceEvent[] = []): void {
