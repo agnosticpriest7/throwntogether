@@ -14,7 +14,7 @@
 ## Input
 
 - The browser Gamepad API is polled every frame. The first two connected pad indices are assigned stably to Players 1 and 2 while connected; assignments are visible beneath the characters.
-- Standard mapping is used: axes 0/1, button 0 for interact, button 7/right trigger for throw, and button 9 for reset.
+- Standard mapping is used: axes 0/1, button 0 for interact, button 7/right trigger for throw, and button 9/Start to begin Prep when the menu is ready or open Service during Prep. Keyboard R remains the restart shortcut.
 - In management screens, buttons 6/7 (left/right triggers) switch Planning Hub tabs, stick/D-pad input uses spatial focus navigation, and button 0 confirms. Focus is restored across Planning Hub redraws so repeated purchases and menu selections remain controller-accessible.
 - Both keyboard schemes remain enabled for debugging and simultaneous-input testing.
 - Touch controls use independent Pointer Events state for each player, including multi-touch D-pad holds and latched Use/Throw presses. They do not synthesize keyboard events.
@@ -59,4 +59,5 @@
 - The four plates reset between nights; dirty dishes and washing are deferred beyond Milestone 3.
 - Saves use one versioned local-storage record and have no cloud synchronization or migration from future incompatible versions yet.
 - Appliance upgrades are represented as future data hooks only; no upgrade tree is active.
-- The floor mess is gameplay-visible but intentionally has no cleaning mechanic or movement penalty.
+- Pressing interact away from a station no longer drops or ruins the held item. Intentional disposal uses the shared divider trash chute and records wasted value without creating floor mess. Missed throws still create gameplay-visible floor mess with no cleaning mechanic or movement penalty.
+- The nearest counter or appliance within interaction range gets a high-contrast outline and brighter fill for immediate affordance feedback.

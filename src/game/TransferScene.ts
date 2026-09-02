@@ -13,7 +13,7 @@ import {
 } from "./config";
 import { canAutoCatch, clampToSide, distance, throwLanding } from "./rules";
 
-type StationType = "counter" | "chop" | "assembly" | "oven" | "fryer" | "plate";
+type StationType = "counter" | "chop" | "assembly" | "oven" | "fryer" | "plate" | "trash";
 
 interface Player {
   side: Side;
@@ -35,6 +35,9 @@ interface Station {
   progressFill: Phaser.GameObjects.Rectangle;
   processStartedAt: number;
   processDuration: number;
+  background: Phaser.GameObjects.Rectangle;
+  baseColor: number;
+  highlighted: boolean;
   visuals: Phaser.GameObjects.GameObject[];
 }
 
@@ -102,6 +105,10 @@ export class TransferScene extends Phaser.Scene {
     if (this.restaurant.phase !== this.lastPhase) { this.lastPhase = this.restaurant.phase; this.handlePhaseChange([]); }
     const kitchenActive = this.restaurant.phase === "prep" || this.restaurant.phase === "service";
     const inputs = [this.inputManager.read(0), this.inputManager.read(1)] as const;
+    if (inputs.some((input) => input.startPressed)) {
+      if (this.restaurant.phase === "planning" && this.restaurant.beginPrep()) this.handlePhaseChange([]);
+      else if (this.restaurant.phase === "prep") this.handlePhaseChange(this.restaurant.startService(performance.now()));
+    }
     inputs.forEach((input, index) => {
       const player = this.players[index]; player.inputBadge.setText(input.gamepadLabel);
       if (input.resetPressed) window.dispatchEvent(new Event("tt-restart-night"));
@@ -115,6 +122,7 @@ export class TransferScene extends Phaser.Scene {
       if (input.interactPressed) this.interact(index as 0 | 1);
       if (input.throwPressed) this.throwItem(index as 0 | 1);
     });
+    this.updateInteractionHighlights(kitchenActive);
     if (this.flight) this.updateFlight(delta);
     this.updateStations(performance.now());
     if (this.restaurant.phase === "service") this.handleServiceEvents(this.restaurant.updateService(performance.now()));
@@ -169,7 +177,8 @@ export class TransferScene extends Phaser.Scene {
       }
       return;
     }
-    if (!station) { this.ruinHeld(player, player.position, "DROPPED · WASTED"); return; }
+    if (!station) { this.callout("MOVE CLOSER TO A COUNTER · USE TRASH TO DISCARD", "#ffdc74"); return; }
+    if (station.type === "trash") { this.trashHeld(player); return; }
     if (station.type === "chop") { this.useChop(player, station); return; }
     if (station.type === "assembly") { this.useAssembly(player, station); return; }
     if (station.type === "oven" || station.type === "fryer") { this.useCooker(player, station); return; }
@@ -306,6 +315,7 @@ export class TransferScene extends Phaser.Scene {
     this.sources = SOURCE_LAYOUT.map(({ id, position }) => this.drawSource(id, position));
     this.stations = [
       this.drawStation("shared", "counter", SHARED_POS, "SHARED", "⇄", 0xa7b2c2, 112),
+      this.drawStation("trash", "trash", { x: 480, y: 440 }, "TRASH", "×", 0xc85f58, 70),
       this.drawStation("left-counter", "counter", { x: 340, y: 305 }, "STAGING", "□", 0x8391a6),
       this.drawStation("right-counter", "counter", { x: 660, y: 305 }, "STAGING", "□", 0x8391a6),
     ];
@@ -330,7 +340,7 @@ export class TransferScene extends Phaser.Scene {
     const itemVisual = this.add.container(position.x, position.y - 4).setDepth(14);
     const progressBg = this.add.rectangle(position.x - width / 2 + 7, position.y + 40, width - 14, 5, 0x11151c).setOrigin(0, 0.5).setDepth(15).setVisible(false);
     const progressFill = this.add.rectangle(position.x - width / 2 + 7, position.y + 40, width - 14, 5, 0x7ed8ba).setOrigin(0, 0.5).setDepth(16).setVisible(false);
-    return { id, type, position, item: null, itemVisual, statusText, progressBg, progressFill, processStartedAt: 0, processDuration: 0, visuals: [background, iconText, labelText, statusText, itemVisual, progressBg, progressFill] };
+    return { id, type, position, item: null, itemVisual, statusText, progressBg, progressFill, processStartedAt: 0, processDuration: 0, background, baseColor: color, highlighted: false, visuals: [background, iconText, labelText, statusText, itemVisual, progressBg, progressFill] };
   }
 
   private configureApplianceStations(): void {
@@ -388,6 +398,15 @@ export class TransferScene extends Phaser.Scene {
   }
 
   private updateHeld(player: Player): void { player.heldVisual.removeAll(true); if (!player.held) { player.heldVisual.setVisible(false); return; } this.populateItemVisual(player.heldVisual, player.held); player.heldVisual.setVisible(true).setDepth(30); }
+  private updateInteractionHighlights(kitchenActive: boolean): void {
+    const active = new Set<Station>();
+    if (kitchenActive) this.players.forEach((player) => { const station = this.nearestStation(player.position); if (station) active.add(station); });
+    this.stations.forEach((station) => {
+      const highlighted = active.has(station); if (station.highlighted === highlighted) return;
+      station.highlighted = highlighted;
+      station.background.setFillStyle(highlighted ? 0x3b4656 : 0x222a35, 1).setStrokeStyle(highlighted ? 6 : 3, highlighted ? 0xffe38a : station.baseColor, highlighted ? 1 : 0.82);
+    });
+  }
   private nearestStation(position: Vec2): Station | null { return this.stations.map((station) => ({ station, range: distance(position, station.position) })).filter(({ range }) => range <= INTERACT_DISTANCE).sort((a, b) => a.range - b.range)[0]?.station ?? null; }
   private nearestSource(position: Vec2): Source | null { return this.sources.map((source) => ({ source, range: distance(position, source.position) })).filter(({ range }) => range <= INTERACT_DISTANCE).sort((a, b) => a.range - b.range)[0]?.source ?? null; }
   private updateSourceCounts(): void { this.sources?.forEach((source) => source.countText.setText(`STOCK ${this.restaurant.inventory[source.id]}`)); }
@@ -405,7 +424,7 @@ export class TransferScene extends Phaser.Scene {
   private recipeValueCents(recipeId: RecipeId): number { return RECIPES[recipeId].ingredients.reduce((total, requirement) => total + INGREDIENTS[requirement.ingredientId].purchaseCostCents, 0); }
   private consumePlate(): boolean { if (this.restaurant.platesRemaining <= 0) { this.callout("NO CLEAN PLATES LEFT", "#ff7e70"); return false; } this.restaurant.platesRemaining -= 1; return true; }
 
-  private ruinHeld(player: Player, position: Vec2, message: string): void { const item = player.held!; player.held = null; this.updateHeld(player); this.restaurant.recordWaste(item.valueCents); this.createRuinedItem(position, item); this.audioCues.play("miss"); this.callout(`${message} · ${formatMoney(item.valueCents)}`, "#ff7e70"); }
+  private trashHeld(player: Player): void { const item = player.held!; player.held = null; this.updateHeld(player); this.restaurant.recordWaste(item.valueCents); this.audioCues.play("miss"); this.callout(`TRASHED · ${formatMoney(item.valueCents)} WASTED`, "#ff7e70"); }
   private createRuinedItem(position: Vec2, item: KitchenItem): void {
     const ruined: KitchenItem = item.kind === "ingredient" ? { ...item, state: "ruined" } : { ...item, state: "ruined" };
     const visual = this.add.container(position.x, position.y).setDepth(9); visual.add(this.add.ellipse(0, 11, 70, 34, 0x5d4938, 0.75)); this.populateItemVisual(visual, ruined);
@@ -420,7 +439,8 @@ export class TransferScene extends Phaser.Scene {
   private snapshot(): object {
     return { phase: this.restaurant.phase, day: this.restaurant.day, cashCents: this.restaurant.cashCents, revenueCents: this.restaurant.revenueCents, spendingCents: this.restaurant.ingredientSpendingCents, wasteCents: this.restaurant.wastedValueCents, inventory: { ...this.restaurant.inventory }, installedSlots: [...this.restaurant.installedSlots], plates: this.restaurant.platesRemaining,
       players: this.players.map((player) => ({ side: player.side, x: Math.round(player.position.x), y: Math.round(player.position.y), held: player.held })), stations: Object.fromEntries(this.stations.map((station) => [station.id, station.item])),
-      orders: this.restaurant.activeOrders.map((order) => ({ id: order.id, recipeId: order.recipeId })), inFlight: this.flight?.item ?? null, messCount: this.ruinedItems.length, summary: this.restaurant.summary() };
+      orders: this.restaurant.activeOrders.map((order) => ({ id: order.id, recipeId: order.recipeId })), inFlight: this.flight?.item ?? null, messCount: this.ruinedItems.length,
+      highlightedStations: this.stations.filter((station) => station.highlighted).map((station) => station.id), summary: this.restaurant.summary() };
   }
   private syncAccessibleStatus(): void { const output = document.getElementById("game-status"); if (output) output.textContent = JSON.stringify(this.snapshot()); }
 }

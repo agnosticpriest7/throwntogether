@@ -32,6 +32,7 @@ if (import.meta.env.DEV && new URLSearchParams(location.search).has("test")) {
     ["Give plated Cheese", () => window.__THROWN_TOGETHER__?.giveDish(1, "cheese-bake", "plated")], ["Give plated Fries", () => window.__THROWN_TOGETHER__?.giveDish(1, "fries", "plated")],
     ["P1 → slot 1", () => actAt(0, 120, 150)], ["P2 → slot 2", () => actAt(1, 820, 150)], ["P2 → slot 3", () => actAt(1, 660, 150)], ["P2 → slot 4", () => actAt(1, 660, 440)],
     ["P2 → serve", () => actAt(1, 830, 440)], ["P1 → shared", () => actAt(0, 420, 305)], ["P2 → shared", () => actAt(1, 540, 305)],
+    ["P1 floor interact", () => actAt(0, 250, 530)], ["P1 → trash", () => actAt(0, 420, 440)],
     ["Ready catch", () => window.__THROWN_TOGETHER__?.setPlayer(1, 690, 305)], ["P1 throw", () => window.__THROWN_TOGETHER__?.throw(0)], ["Land throw", () => window.__THROWN_TOGETHER__?.advanceFlight()],
     ["Only Roast Order", () => onlyOrder("roast-potato")], ["Only Garden Order", () => onlyOrder("garden-plate")], ["Only Fries Order", () => onlyOrder("fries")],
     ["Expire soon", () => { const first = restaurant.activeOrders[0]; if (first) first.expiresAt = performance.now() - 1; }], ["End service", () => window.__THROWN_TOGETHER__?.endService()],

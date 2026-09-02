@@ -6,6 +6,7 @@ export interface PlayerInput {
   y: number;
   interactPressed: boolean;
   throwPressed: boolean;
+  startPressed: boolean;
   resetPressed: boolean;
   gamepadLabel: string;
 }
@@ -83,7 +84,7 @@ export class InputManager {
     const base = player * 3;
     const interactDown = (pad?.buttons[0]?.pressed ?? false);
     const throwDown = (pad?.buttons[7]?.pressed ?? false) || (pad?.buttons[7]?.value ?? 0) > 0.55;
-    const resetDown = pad?.buttons[9]?.pressed ?? false;
+    const startDown = pad?.buttons[9]?.pressed ?? false;
     const keyboardInteract = this.pendingInteract[player];
     const keyboardThrow = this.pendingThrow[player];
     const keyboardReset = this.pendingReset;
@@ -97,12 +98,13 @@ export class InputManager {
       y: touch.y || keyboardY || padY,
       interactPressed: touchInteract || keyboardInteract || (interactDown && !this.buttonWasDown[base]),
       throwPressed: touchThrow || keyboardThrow || (throwDown && !this.buttonWasDown[base + 1]),
-      resetPressed: keyboardReset || (resetDown && !this.buttonWasDown[base + 2]),
+      startPressed: startDown && !this.buttonWasDown[base + 2],
+      resetPressed: keyboardReset,
       gamepadLabel: pad ? `PAD ${pad.index + 1} · ${InputManager.shortPadName(pad.id)}` : "TOUCH / KEYS",
     };
     this.buttonWasDown[base] = interactDown;
     this.buttonWasDown[base + 1] = throwDown;
-    this.buttonWasDown[base + 2] = resetDown;
+    this.buttonWasDown[base + 2] = startDown;
     return result;
   }
 

@@ -87,7 +87,7 @@ export class RestaurantUI {
       <div class="planning-stats"><span>CASH <b>${formatMoney(this.model.cashCents)}</b></span><span>REPUTATION <b>LV ${rep.level}</b></span><span>DEMAND <b>${demand.potential}</b></span><span>DINING <b>${demand.capacity}</b></span></div></header>
       <nav class="planning-tabs" aria-label="Planning sections">${tabs.map((tab) => `<button data-section="${tab}" class="${tab === this.planningSection ? "is-active" : ""}">${tab.toUpperCase()}</button>`).join("")}</nav>
       <section class="planning-content" aria-label="${this.sectionTitle()} planning section">${this.planningContent()}</section>
-      <footer class="planning-footer"><span>${this.model.lastFeedback}</span><button class="primary-action" id="begin-prep" ${this.model.selectedRecipeIds.length !== 2 ? "disabled" : ""}>BEGIN PREP →</button></footer></div>`;
+      <footer class="planning-footer"><span>${this.model.lastFeedback}</span><button class="primary-action" id="begin-prep" ${this.model.selectedRecipeIds.length !== 2 ? "disabled" : ""}>BEGIN PREP · START/MENU →</button></footer></div>`;
     this.overlay.querySelectorAll<HTMLButtonElement>("[data-section]").forEach((button) => button.addEventListener("click", () => { this.planningSection = button.dataset.section as PlanningSection; this.renderPlanning(); }));
     this.bindPlanningActions();
     this.overlay.querySelector<HTMLButtonElement>("#begin-prep")?.addEventListener("click", () => { if (this.model.beginPrep()) { this.phaseChanged(); this.render(); } else this.renderPlanning(); });
@@ -175,7 +175,7 @@ export class RestaurantUI {
     const menu = this.model.selectedRecipeIds.map((id) => RECIPES[id].displayName).join(" · ");
     this.hud.innerHTML = `<div class="hud-bar"><strong class="phase-pill ${this.model.phase}">${this.model.phase === "prep" ? "CLOSED · PREP" : "OPEN · SERVICE"}</strong><span class="hud-day">DAY ${this.model.day}</span>
       <span class="hud-cash">CASH <b></b></span><span class="hud-menu">${menu}</span><span class="hud-time"></span><button class="hud-recipes-button" id="toggle-recipe-guide" aria-expanded="${this.recipeGuideOpen}">RECIPES</button></div>
-      <div class="hud-stock"></div><div class="tickets"></div><div class="hud-feedback"></div>${this.model.phase === "prep" ? `<button class="open-action" id="open-restaurant">OPEN RESTAURANT</button>` : ""}
+      <div class="hud-stock"></div><div class="tickets"></div><div class="hud-feedback"></div>${this.model.phase === "prep" ? `<button class="open-action" id="open-restaurant">OPEN RESTAURANT · START/MENU</button>` : ""}
       <aside class="recipe-guide" aria-label="Tonight's recipe guide" ${this.recipeGuideOpen ? "" : "hidden"}><div class="recipe-guide__header"><div><span>TONIGHT'S MENU</span><strong>How to make each dish</strong></div><button id="close-recipe-guide" aria-label="Close recipe guide">×</button></div><div class="recipe-guide__grid">${this.recipeGuideMarkup()}</div></aside>`;
     this.hud.querySelector<HTMLButtonElement>("#open-restaurant")?.addEventListener("click", () => { const events = this.model.startService(performance.now()); this.phaseChanged(events); });
     this.hud.querySelector<HTMLButtonElement>("#toggle-recipe-guide")?.addEventListener("click", () => this.toggleRecipeGuide());
