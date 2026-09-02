@@ -51,7 +51,7 @@ Vite's production base path is `/throwntogether/`, matching the repository-scope
 
 Touch controls are split into independent Player 1 (left) and Player 2 (right) panels and support simultaneous multi-touch input. Gamepads are assigned in browser gamepad-index order and each player's current assignment is shown under their character. Keyboard and touch controls remain active when pads are connected.
 
-Planning uses native focusable controls for keyboard and touch. On a connected gamepad, use either stick/D-pad to move focus and the south face button to select. During kitchen play, press **R**, either gamepad's **Start/Menu** button, or **Restart Night** above the game to restore the saved start-of-Prep planning state.
+Planning uses native focusable controls for keyboard and touch. On a connected gamepad, use the left/right triggers to switch Planning Hub tabs, the stick/D-pad to move through the visible options, and the south face button to select. Moving down through a section reaches **BEGIN PREP** once two dishes are selected. During kitchen play, press **R**, either gamepad's **Start/Menu** button, or **Restart Night** above the game to restore the saved start-of-Prep planning state.
 
 Select **Recipes** in the kitchen HUD at any time during Prep or Service to see the selected dishes' required ingredient states, ordered station steps, and selling prices.
 

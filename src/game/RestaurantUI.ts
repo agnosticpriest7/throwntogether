@@ -6,6 +6,26 @@ import {
 import { RestaurantModel, type ServiceEvent } from "./RestaurantModel";
 
 type PlanningSection = "overview" | "pantry" | "supplier" | "kitchen" | "menu" | "marketing";
+type NavigationDirection = "up" | "down" | "left" | "right";
+
+export interface NavigationRect { left: number; top: number; right: number; bottom: number; }
+
+export function spatialNavigationTarget(rects: NavigationRect[], currentIndex: number, direction: NavigationDirection): number {
+  const current = rects[currentIndex];
+  if (!current) return rects.length ? 0 : -1;
+  const currentX = (current.left + current.right) / 2; const currentY = (current.top + current.bottom) / 2;
+  let bestIndex = currentIndex; let bestScore = Number.POSITIVE_INFINITY;
+  rects.forEach((rect, index) => {
+    if (index === currentIndex) return;
+    const x = (rect.left + rect.right) / 2; const y = (rect.top + rect.bottom) / 2;
+    const primary = direction === "down" ? y - currentY : direction === "up" ? currentY - y : direction === "right" ? x - currentX : currentX - x;
+    if (primary <= 4) return;
+    const secondary = direction === "down" || direction === "up" ? Math.abs(x - currentX) : Math.abs(y - currentY);
+    const score = primary * primary + secondary * secondary * 4;
+    if (score < bestScore) { bestScore = score; bestIndex = index; }
+  });
+  return bestIndex;
+}
 
 export class RestaurantUI {
   private readonly overlay = document.getElementById("restaurant-overlay")!;
@@ -16,6 +36,9 @@ export class RestaurantUI {
   private readonly supplierQuantities: Record<IngredientId, number> = { potato: 1, tomato: 1, onion: 1, cheese: 1 };
   private gamepadNavReadyAt = 0;
   private gamepadConfirmHeld = false;
+  private gamepadTabDirection = 0;
+  private gamepadNavigationActive = false;
+  private planningFocusKey: string | null = null;
 
   constructor(private readonly model: RestaurantModel) {
     document.getElementById("reset-button")?.addEventListener("click", () => this.restartNight());
@@ -68,6 +91,7 @@ export class RestaurantUI {
     this.overlay.querySelectorAll<HTMLButtonElement>("[data-section]").forEach((button) => button.addEventListener("click", () => { this.planningSection = button.dataset.section as PlanningSection; this.renderPlanning(); }));
     this.bindPlanningActions();
     this.overlay.querySelector<HTMLButtonElement>("#begin-prep")?.addEventListener("click", () => { if (this.model.beginPrep()) { this.phaseChanged(); this.render(); } else this.renderPlanning(); });
+    if (this.gamepadNavigationActive) this.restorePlanningFocus();
   }
 
   private planningContent(): string {
@@ -188,22 +212,69 @@ export class RestaurantUI {
 
   private restartNight(): void { if (this.model.restartNight()) { this.recipeGuideOpen = false; this.planningSection = "overview"; this.phaseChanged(); this.render(); } }
   private purchaseCue(): void { window.dispatchEvent(new Event("tt-purchase")); }
+  private navigationKey(button: HTMLButtonElement): string {
+    if (button.dataset.section) return `section:${button.dataset.section}`;
+    if (button.id) return `id:${button.id}`;
+    const data = Object.entries(button.dataset).sort(([a], [b]) => a.localeCompare(b)).map(([key, value]) => `${key}:${value}`).join("|");
+    return data || `text:${button.textContent?.trim() ?? ""}`;
+  }
+  private visibleButtons(): HTMLButtonElement[] {
+    return [...this.overlay.querySelectorAll<HTMLButtonElement>("button:not(:disabled)")].filter((button) => button.offsetParent !== null);
+  }
+  private focusButton(button: HTMLButtonElement): void {
+    button.focus();
+    if (this.model.phase === "planning") this.planningFocusKey = this.navigationKey(button);
+    button.scrollIntoView({ block: "nearest", inline: "nearest" });
+  }
+  private restorePlanningFocus(): void {
+    const buttons = this.visibleButtons();
+    const key = this.planningFocusKey ?? `section:${this.planningSection}`;
+    const target = buttons.find((button) => this.navigationKey(button) === key)
+      ?? buttons.find((button) => button.dataset.section === this.planningSection);
+    if (target) this.focusButton(target);
+  }
+  private switchPlanningSection(direction: number): void {
+    const sections: PlanningSection[] = ["overview", "pantry", "supplier", "kitchen", "menu", "marketing"];
+    const nextIndex = (sections.indexOf(this.planningSection) + direction + sections.length) % sections.length;
+    this.planningSection = sections[nextIndex]; this.planningFocusKey = `section:${this.planningSection}`;
+    this.renderPlanning();
+  }
+  private moveManagementFocus(direction: NavigationDirection): void {
+    const buttons = this.visibleButtons(); if (!buttons.length) return;
+    let currentIndex = buttons.indexOf(document.activeElement as HTMLButtonElement);
+    if (currentIndex < 0 && this.model.phase === "planning") currentIndex = buttons.findIndex((button) => button.dataset.section === this.planningSection);
+    if (currentIndex < 0) currentIndex = 0;
+    if (this.model.phase === "planning") {
+      const targetIndex = spatialNavigationTarget(buttons.map((button) => button.getBoundingClientRect()), currentIndex, direction);
+      this.focusButton(buttons[targetIndex]);
+    } else {
+      const delta = direction === "up" || direction === "left" ? -1 : 1;
+      this.focusButton(buttons[(currentIndex + delta + buttons.length) % buttons.length]);
+    }
+  }
   private pollManagementGamepad(): void {
     const tick = (now: number) => {
       if (this.model.phase === "landing" || this.model.phase === "planning" || this.model.phase === "summary") {
         const pad = [...(navigator.getGamepads?.() ?? [])].find((candidate) => candidate?.connected);
         if (pad) {
-          const previous = (pad.axes[1] ?? 0) < -0.6 || Boolean(pad.buttons[12]?.pressed) || (pad.axes[0] ?? 0) < -0.6 || Boolean(pad.buttons[14]?.pressed);
-          const next = (pad.axes[1] ?? 0) > 0.6 || Boolean(pad.buttons[13]?.pressed) || (pad.axes[0] ?? 0) > 0.6 || Boolean(pad.buttons[15]?.pressed);
-          const buttons = [...this.overlay.querySelectorAll<HTMLButtonElement>("button:not(:disabled)")].filter((button) => button.offsetParent !== null);
-          if ((previous || next) && now >= this.gamepadNavReadyAt && buttons.length) {
-            const current = Math.max(0, buttons.indexOf(document.activeElement as HTMLButtonElement)); const target = (current + (next ? 1 : -1) + buttons.length) % buttons.length;
-            buttons[target].focus(); this.gamepadNavReadyAt = now + 180;
+          const vertical = (pad.axes[1] ?? 0) < -0.6 || pad.buttons[12]?.pressed ? "up" : (pad.axes[1] ?? 0) > 0.6 || pad.buttons[13]?.pressed ? "down" : null;
+          const horizontal = (pad.axes[0] ?? 0) < -0.6 || pad.buttons[14]?.pressed ? "left" : (pad.axes[0] ?? 0) > 0.6 || pad.buttons[15]?.pressed ? "right" : null;
+          const tabDirection = (pad.buttons[6]?.pressed || (pad.buttons[6]?.value ?? 0) > 0.5) ? -1 : (pad.buttons[7]?.pressed || (pad.buttons[7]?.value ?? 0) > 0.5) ? 1 : 0;
+          if (this.model.phase === "planning" && tabDirection && !this.gamepadTabDirection) {
+            this.gamepadNavigationActive = true; this.switchPlanningSection(tabDirection);
+          }
+          this.gamepadTabDirection = tabDirection;
+          const direction = vertical ?? horizontal;
+          if (direction && now >= this.gamepadNavReadyAt) {
+            this.gamepadNavigationActive = true; this.moveManagementFocus(direction); this.gamepadNavReadyAt = now + 180;
           }
           const confirm = Boolean(pad.buttons[0]?.pressed);
-          if (confirm && !this.gamepadConfirmHeld) (document.activeElement as HTMLButtonElement | null)?.click();
+          if (confirm && !this.gamepadConfirmHeld) {
+            const focused = document.activeElement as HTMLButtonElement | null;
+            if (focused?.tagName === "BUTTON") { this.gamepadNavigationActive = true; this.planningFocusKey = this.navigationKey(focused); focused.click(); }
+          }
           this.gamepadConfirmHeld = confirm;
-        } else this.gamepadConfirmHeld = false;
+        } else { this.gamepadConfirmHeld = false; this.gamepadTabDirection = 0; }
       }
       requestAnimationFrame(tick);
     };
