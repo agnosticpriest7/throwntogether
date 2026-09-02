@@ -4,7 +4,7 @@ import { InputManager } from "./InputManager";
 import { RestaurantModel, type ServiceEvent } from "./RestaurantModel";
 import type { RestaurantUI } from "./RestaurantUI";
 import {
-  CHOP_TIME_MS, INGREDIENTS, RECIPES, ingredientItem,
+  APPLIANCES, CHOP_TIME_MS, INGREDIENTS, KITCHEN_SLOTS, RECIPES, formatMoney, ingredientItem,
   type IngredientId, type KitchenItem, type RecipeId,
 } from "./data";
 import {
@@ -13,7 +13,7 @@ import {
 } from "./config";
 import { canAutoCatch, clampToSide, distance, throwLanding } from "./rules";
 
-type StationType = "counter" | "chop" | "assembly" | "oven" | "plate";
+type StationType = "counter" | "chop" | "assembly" | "oven" | "fryer" | "plate";
 
 interface Player {
   side: Side;
@@ -35,6 +35,7 @@ interface Station {
   progressFill: Phaser.GameObjects.Rectangle;
   processStartedAt: number;
   processDuration: number;
+  visuals: Phaser.GameObjects.GameObject[];
 }
 
 interface Source { id: IngredientId; position: Vec2; countText: Phaser.GameObjects.Text }
@@ -49,10 +50,6 @@ const SOURCE_LAYOUT: Array<{ id: IngredientId; position: Vec2 }> = [
   { id: "potato", position: { x: 95, y: 305 } }, { id: "tomato", position: { x: 215, y: 305 } },
   { id: "onion", position: { x: 95, y: 440 } }, { id: "cheese", position: { x: 215, y: 440 } },
 ];
-const OVEN_POS = { x: 120, y: 150 };
-const CHOP_POS = { x: 820, y: 150 };
-const ASSEMBLY_POS = { x: 660, y: 150 };
-const PLATE_POS = { x: 660, y: 440 };
 const SERVE_POS = { x: 830, y: 440 };
 
 export class TransferScene extends Phaser.Scene {
@@ -66,7 +63,8 @@ export class TransferScene extends Phaser.Scene {
   private flight: Flight | null = null;
   private calloutText!: Phaser.GameObjects.Text;
   private calloutTimer?: Phaser.Time.TimerEvent;
-  private lastPhase = "menu";
+  private slotMarkers: Phaser.GameObjects.GameObject[] = [];
+  private lastPhase = "landing";
 
   constructor(private readonly restaurant: RestaurantModel) { super("transfer"); }
   attachUI(ui: RestaurantUI): void { this.ui = ui; }
@@ -85,7 +83,7 @@ export class TransferScene extends Phaser.Scene {
     Object.assign(window, {
       __THROWN_TOGETHER__: {
         snapshot: () => this.snapshot(),
-        reset: () => { this.restaurant.resetNight(); this.resetKitchen(); },
+        reset: () => { this.restaurant.restartNight(); this.configureApplianceStations(); this.resetKitchen(); },
         setPlayer: (player: 0 | 1, x: number, y: number, held?: KitchenItem | null) => this.debugSetPlayer(player, x, y, held),
         interact: (player: 0 | 1) => this.interact(player), throw: (player: 0 | 1) => this.throwItem(player),
         advanceFlight: () => { if (this.flight) this.updateFlight(THROW_DURATION_MS); },
@@ -93,7 +91,7 @@ export class TransferScene extends Phaser.Scene {
           const item = ingredientItem(id); item.state = state; this.players[player].held = item; this.updateHeld(this.players[player]);
         },
         giveDish: (player: 0 | 1, id: RecipeId, state: "assembled" | "cooked" | "plated") => {
-          this.players[player].held = { kind: "dish", recipeId: id, state, value: this.recipeValue(id) }; this.updateHeld(this.players[player]);
+          this.players[player].held = { kind: "dish", recipeId: id, state, valueCents: this.recipeValueCents(id) }; this.updateHeld(this.players[player]);
         },
         endService: () => this.handleServiceEvents(this.restaurant.endService(performance.now())),
       },
@@ -125,11 +123,11 @@ export class TransferScene extends Phaser.Scene {
 
   private handlePhaseChange(events: ServiceEvent[]): void {
     this.lastPhase = this.restaurant.phase;
-    if (this.restaurant.phase === "menu") this.resetKitchen();
-    if (this.restaurant.phase === "prep") { this.resetKitchen(); this.callout("CLOSED · PREP TIME", "#f5c85b"); }
+    if (this.restaurant.phase === "landing" || this.restaurant.phase === "planning") this.resetKitchen();
+    if (this.restaurant.phase === "prep") { this.configureApplianceStations(); this.resetKitchen(); this.callout("CLOSED · PREP TIME", "#f5c85b"); }
     if (this.restaurant.phase === "service") {
       this.audioCues.play("serviceStart"); this.callout("RESTAURANT OPEN!", "#7ed8ba");
-      this.stations.filter((station) => station.type === "oven").forEach((station) => this.tryStartOven(station, performance.now()));
+      this.stations.filter((station) => station.type === "oven" || station.type === "fryer").forEach((station) => this.tryStartCooking(station, performance.now()));
     }
     if (this.restaurant.phase === "summary") this.callout("SERVICE CLOSED", "#ffdc74");
     this.handleServiceEvents(events); this.ui?.render();
@@ -174,7 +172,7 @@ export class TransferScene extends Phaser.Scene {
     if (!station) { this.ruinHeld(player, player.position, "DROPPED · WASTED"); return; }
     if (station.type === "chop") { this.useChop(player, station); return; }
     if (station.type === "assembly") { this.useAssembly(player, station); return; }
-    if (station.type === "oven") { this.useOven(player, station); return; }
+    if (station.type === "oven" || station.type === "fryer") { this.useCooker(player, station); return; }
     if (station.type === "plate") { this.usePlate(player, station); return; }
     if (station.item) { this.callout("WORKSPACE OCCUPIED", "#ffdc74"); return; }
     this.setStationItem(station, player.held); player.held = null; this.updateHeld(player); this.audioCues.play("pickup");
@@ -195,19 +193,19 @@ export class TransferScene extends Phaser.Scene {
       this.setStationItem(station, held); player.held = null; this.updateHeld(player); return;
     }
     if (this.matchesCheeseBake(station.item, held) && this.restaurant.selectedRecipeIds.includes("cheese-bake")) {
-      this.setStationItem(station, { kind: "dish", recipeId: "cheese-bake", state: "assembled", value: station.item.value + held.value });
+      this.setStationItem(station, { kind: "dish", recipeId: "cheese-bake", state: "assembled", valueCents: station.item.valueCents + held.valueCents });
       player.held = null; this.updateHeld(player); this.audioCues.play("complete"); this.callout("CHEESE BAKE ASSEMBLED", "#7ed8ba"); return;
     }
     this.callout("THOSE ITEMS DON'T COMBINE HERE", "#ff7e70");
   }
 
-  private useOven(player: Player, station: Station): void {
-    if (station.item) { this.callout("OVEN OCCUPIED", "#ffdc74"); return; }
-    const item = player.held!; const recipeId = this.ovenRecipeFor(item);
-    if (!recipeId || !this.restaurant.selectedRecipeIds.includes(recipeId)) { this.callout("OVEN REFUSES THAT ITEM", "#ff7e70"); return; }
+  private useCooker(player: Player, station: Station): void {
+    if (station.item) { this.callout(`${station.type.toUpperCase()} OCCUPIED`, "#ffdc74"); return; }
+    const item = player.held!; const recipeId = this.cookingRecipeFor(item, station.type);
+    if (!recipeId || !this.restaurant.selectedRecipeIds.includes(recipeId)) { this.callout(`${station.type.toUpperCase()} REFUSES THAT ITEM`, "#ff7e70"); return; }
     this.setStationItem(station, item); player.held = null; this.updateHeld(player);
     if (this.restaurant.phase === "prep") { station.statusText.setText("READY WHEN OPEN"); this.callout("STAGED · WAITS FOR SERVICE", "#f5c85b"); }
-    else this.tryStartOven(station, performance.now());
+    else this.tryStartCooking(station, performance.now());
   }
 
   private usePlate(player: Player, station: Station): void {
@@ -215,7 +213,7 @@ export class TransferScene extends Phaser.Scene {
     if (station.item) {
       if (this.matchesGardenPlate(station.item, held) && this.restaurant.selectedRecipeIds.includes("garden-plate")) {
         if (!this.consumePlate()) return;
-        this.setStationItem(station, { kind: "dish", recipeId: "garden-plate", state: "plated", value: station.item.value + held.value });
+        this.setStationItem(station, { kind: "dish", recipeId: "garden-plate", state: "plated", valueCents: station.item.valueCents + held.valueCents });
         player.held = null; this.updateHeld(player); this.audioCues.play("complete"); this.callout("GARDEN PLATE READY", "#7ed8ba"); return;
       }
       this.callout("PLATING STATION OCCUPIED", "#ffdc74"); return;
@@ -236,7 +234,7 @@ export class TransferScene extends Phaser.Scene {
     if (!held || held.kind !== "dish" || held.state !== "plated") { this.callout("ONLY PLATED DISHES CAN BE SERVED", "#ff7e70"); return; }
     if (!this.restaurant.serveDish(held.recipeId)) { this.callout("NO MATCHING ORDER · REFUSED", "#ff7e70"); return; }
     player.held = null; this.updateHeld(player); this.audioCues.play("orderComplete");
-    this.callout(`${RECIPES[held.recipeId].displayName.toUpperCase()} SERVED! +$${RECIPES[held.recipeId].sellingPrice}`, "#7ed8ba"); this.ui?.refresh(performance.now() + 1000);
+    this.callout(`${RECIPES[held.recipeId].displayName.toUpperCase()} SERVED! +${formatMoney(RECIPES[held.recipeId].sellingPriceCents)}`, "#7ed8ba"); this.ui?.refresh(performance.now() + 1000);
   }
 
   private throwItem(index: 0 | 1): void {
@@ -264,15 +262,15 @@ export class TransferScene extends Phaser.Scene {
     flight.visual.destroy(); flight.shadow.destroy(); flight.indicator.destroy(); this.flight = null;
     if (caught) { receiver.held = flight.item; this.updateHeld(receiver); this.audioCues.play("catch"); this.callout(`P${flight.receiver + 1} CAUGHT IT!`, "#7ed8ba"); }
     else {
-      this.createRuinedItem(flight.to, flight.item); this.restaurant.recordWaste(flight.item.value); this.audioCues.play("miss");
-      this.callout(receiver.held ? `HANDS FULL · $${flight.item.value} WASTED` : `MISSED · $${flight.item.value} WASTED`, "#ff7e70");
+      this.createRuinedItem(flight.to, flight.item); this.restaurant.recordWaste(flight.item.valueCents); this.audioCues.play("miss");
+      this.callout(receiver.held ? `HANDS FULL · ${formatMoney(flight.item.valueCents)} WASTED` : `MISSED · ${formatMoney(flight.item.valueCents)} WASTED`, "#ff7e70");
     }
   }
 
   private updateStations(now: number): void {
     this.stations.forEach((station) => {
       if (!station.item) { station.progressBg.setVisible(false); station.progressFill.setVisible(false); return; }
-      if (station.type === "oven" && station.processStartedAt === 0 && this.restaurant.phase === "service") this.tryStartOven(station, now);
+      if ((station.type === "oven" || station.type === "fryer") && station.processStartedAt === 0 && this.restaurant.phase === "service") this.tryStartCooking(station, now);
       if (station.processStartedAt <= 0) return;
       const progress = Math.min(1, (now - station.processStartedAt) / station.processDuration);
       station.progressBg.setVisible(true); station.progressFill.setVisible(true).setScale(progress, 1);
@@ -280,18 +278,18 @@ export class TransferScene extends Phaser.Scene {
       station.processStartedAt = 0; station.progressBg.setVisible(false); station.progressFill.setVisible(false);
       if (station.type === "chop" && station.item.kind === "ingredient") {
         station.item.state = "chopped"; station.statusText.setText("CHOPPED · TAKE"); this.refreshStationVisual(station); this.audioCues.play("complete");
-      } else if (station.type === "oven") {
-        const recipeId = this.ovenRecipeFor(station.item);
-        if (recipeId) this.setStationItem(station, { kind: "dish", recipeId, state: "cooked", value: station.item.value });
-        station.statusText.setText("COOKED · TAKE"); this.audioCues.play("complete"); this.callout("OVEN READY!", "#7ed8ba");
+      } else if (station.type === "oven" || station.type === "fryer") {
+        const recipeId = this.cookingRecipeFor(station.item, station.type);
+        if (recipeId) this.setStationItem(station, { kind: "dish", recipeId, state: "cooked", valueCents: station.item.valueCents });
+        station.statusText.setText("COOKED · TAKE"); this.audioCues.play("complete"); this.callout(`${station.type.toUpperCase()} READY!`, "#7ed8ba");
       }
     });
   }
 
-  private tryStartOven(station: Station, now: number): void {
+  private tryStartCooking(station: Station, now: number): void {
     if (!station.item || station.processStartedAt > 0 || station.item.state === "cooked") return;
-    const recipeId = this.ovenRecipeFor(station.item); if (!recipeId) return;
-    station.processStartedAt = now; station.processDuration = RECIPES[recipeId].cookTimeMs ?? 5000; station.statusText.setText("BAKING"); this.audioCues.play("process");
+    const recipeId = this.cookingRecipeFor(station.item, station.type); if (!recipeId) return;
+    station.processStartedAt = now; station.processDuration = RECIPES[recipeId].cookTimeMs ?? 5000; station.statusText.setText(station.type === "fryer" ? "FRYING" : "BAKING"); this.audioCues.play("process");
   }
 
   private drawKitchen(): void {
@@ -303,19 +301,15 @@ export class TransferScene extends Phaser.Scene {
     for (let y = 84; y <= 536; y += 32) g.lineBetween(36, y, 924, y);
     g.fillStyle(0x171c24).fillRoundedRect(444, 84, 72, 452, 6);
     g.fillStyle(0x687488).fillRoundedRect(438, 94, 84, 156, 8).fillRoundedRect(438, 360, 84, 158, 8);
-    this.add.text(62, 55, "PLAYER 1 · STORAGE + OVEN", { fontFamily: "DM Mono, monospace", fontSize: "10px", color: "#f6b75e" });
-    this.add.text(898, 55, "PLAYER 2 · PREP + SERVE", { fontFamily: "DM Mono, monospace", fontSize: "10px", color: "#76c8df" }).setOrigin(1, 0);
+    this.add.text(62, 55, "PLAYER 1 · LEFT KITCHEN", { fontFamily: "DM Mono, monospace", fontSize: "10px", color: "#f6b75e" });
+    this.add.text(898, 55, "PLAYER 2 · RIGHT KITCHEN", { fontFamily: "DM Mono, monospace", fontSize: "10px", color: "#76c8df" }).setOrigin(1, 0);
     this.sources = SOURCE_LAYOUT.map(({ id, position }) => this.drawSource(id, position));
     this.stations = [
-      this.drawStation("oven", "oven", OVEN_POS, "OVEN", "▦", 0xd47755),
-      this.drawStation("left-counter", "counter", { x: 340, y: 155 }, "STAGING", "□", 0x8391a6),
-      this.drawStation("left-counter-2", "counter", { x: 340, y: 445 }, "STAGING", "□", 0x8391a6),
       this.drawStation("shared", "counter", SHARED_POS, "SHARED", "⇄", 0xa7b2c2, 112),
-      this.drawStation("assembly", "assembly", ASSEMBLY_POS, "ASSEMBLE", "+", 0xe1ad54),
-      this.drawStation("chop", "chop", CHOP_POS, "CHOP", "╱", 0x66b9a8),
+      this.drawStation("left-counter", "counter", { x: 340, y: 305 }, "STAGING", "□", 0x8391a6),
       this.drawStation("right-counter", "counter", { x: 660, y: 305 }, "STAGING", "□", 0x8391a6),
-      this.drawStation("plate", "plate", PLATE_POS, "PLATE", "○", 0x7988d9),
     ];
+    this.configureApplianceStations();
     this.drawServeStation();
   }
 
@@ -329,14 +323,33 @@ export class TransferScene extends Phaser.Scene {
   }
 
   private drawStation(id: string, type: StationType, position: Vec2, label: string, icon: string, color: number, width = 108): Station {
-    this.add.rectangle(position.x, position.y, width, 92, 0x222a35).setStrokeStyle(3, color, 0.82).setDepth(4);
-    this.add.text(position.x, position.y - 20, icon, { fontFamily: "Nunito, sans-serif", fontSize: "24px", fontStyle: "bold", color: `#${color.toString(16).padStart(6, "0")}` }).setOrigin(0.5).setDepth(5);
-    this.add.text(position.x, position.y + 18, label, { fontFamily: "DM Mono, monospace", fontSize: "9px", color: "#d7dde7" }).setOrigin(0.5).setDepth(5);
+    const background = this.add.rectangle(position.x, position.y, width, 92, 0x222a35).setStrokeStyle(3, color, 0.82).setDepth(4);
+    const iconText = this.add.text(position.x, position.y - 20, icon, { fontFamily: "Nunito, sans-serif", fontSize: "24px", fontStyle: "bold", color: `#${color.toString(16).padStart(6, "0")}` }).setOrigin(0.5).setDepth(5);
+    const labelText = this.add.text(position.x, position.y + 18, label, { fontFamily: "DM Mono, monospace", fontSize: "9px", color: "#d7dde7" }).setOrigin(0.5).setDepth(5);
     const statusText = this.add.text(position.x, position.y + 34, "", { fontFamily: "DM Mono, monospace", fontSize: "7px", color: "#f5c85b" }).setOrigin(0.5).setDepth(6);
     const itemVisual = this.add.container(position.x, position.y - 4).setDepth(14);
     const progressBg = this.add.rectangle(position.x - width / 2 + 7, position.y + 40, width - 14, 5, 0x11151c).setOrigin(0, 0.5).setDepth(15).setVisible(false);
     const progressFill = this.add.rectangle(position.x - width / 2 + 7, position.y + 40, width - 14, 5, 0x7ed8ba).setOrigin(0, 0.5).setDepth(16).setVisible(false);
-    return { id, type, position, item: null, itemVisual, statusText, progressBg, progressFill, processStartedAt: 0, processDuration: 0 };
+    return { id, type, position, item: null, itemVisual, statusText, progressBg, progressFill, processStartedAt: 0, processDuration: 0, visuals: [background, iconText, labelText, statusText, itemVisual, progressBg, progressFill] };
+  }
+
+  private configureApplianceStations(): void {
+    const permanent = this.stations.filter((station) => !station.id.startsWith("slot-"));
+    this.stations.filter((station) => station.id.startsWith("slot-")).forEach((station) => station.visuals.forEach((visual) => visual.destroy()));
+    this.slotMarkers.forEach((marker) => marker.destroy()); this.slotMarkers = []; this.stations = permanent;
+    KITCHEN_SLOTS.forEach((slot) => {
+      if (slot.requiredKitchenLevel > this.restaurant.kitchenLevel) { this.drawSlotMarker({ x: slot.x, y: slot.y }, "EXPANSION", 0x4e5664); return; }
+      const applianceId = this.restaurant.installedSlots[slot.index];
+      if (!applianceId) { this.drawSlotMarker({ x: slot.x, y: slot.y }, `SLOT ${slot.index + 1} EMPTY`, 0x687488); return; }
+      const appliance = APPLIANCES[applianceId];
+      this.stations.push(this.drawStation(`slot-${slot.index}`, appliance.stationType, { x: slot.x, y: slot.y }, appliance.displayName.toUpperCase(), appliance.icon, appliance.color));
+    });
+  }
+
+  private drawSlotMarker(position: Vec2, label: string, color: number): void {
+    const box = this.add.rectangle(position.x, position.y, 108, 92, 0x1a2029, 0.6).setStrokeStyle(2, color, 0.7).setDepth(3);
+    const text = this.add.text(position.x, position.y, label, { fontFamily: "DM Mono, monospace", fontSize: "8px", color: `#${color.toString(16).padStart(6, "0")}`, align: "center" }).setOrigin(0.5).setDepth(4);
+    this.slotMarkers.push(box, text);
   }
 
   private drawServeStation(): void {
@@ -383,15 +396,16 @@ export class TransferScene extends Phaser.Scene {
   private matchesCheeseBake(a: KitchenItem, b: KitchenItem): boolean { return this.isCheeseBakeComponent(a) && this.isCheeseBakeComponent(b) && a.kind === "ingredient" && b.kind === "ingredient" && a.ingredientId !== b.ingredientId; }
   private isGardenComponent(item: KitchenItem): boolean { return item.kind === "ingredient" && item.state === "chopped" && (item.ingredientId === "tomato" || item.ingredientId === "onion"); }
   private matchesGardenPlate(a: KitchenItem, b: KitchenItem): boolean { return this.isGardenComponent(a) && this.isGardenComponent(b) && a.kind === "ingredient" && b.kind === "ingredient" && a.ingredientId !== b.ingredientId; }
-  private ovenRecipeFor(item: KitchenItem): RecipeId | null {
-    if (item.kind === "ingredient" && item.ingredientId === "potato" && item.state === "chopped") return "roast-potato";
-    if (item.kind === "dish" && item.recipeId === "cheese-bake" && item.state === "assembled") return "cheese-bake";
+  private cookingRecipeFor(item: KitchenItem, stationType: StationType): RecipeId | null {
+    if (stationType === "oven" && item.kind === "ingredient" && item.ingredientId === "potato" && item.state === "chopped") return "roast-potato";
+    if (stationType === "oven" && item.kind === "dish" && item.recipeId === "cheese-bake" && item.state === "assembled") return "cheese-bake";
+    if (stationType === "fryer" && item.kind === "ingredient" && item.ingredientId === "potato" && item.state === "chopped") return "fries";
     return null;
   }
-  private recipeValue(recipeId: RecipeId): number { return RECIPES[recipeId].ingredients.reduce((total, requirement) => total + INGREDIENTS[requirement.ingredientId].purchaseCost, 0); }
+  private recipeValueCents(recipeId: RecipeId): number { return RECIPES[recipeId].ingredients.reduce((total, requirement) => total + INGREDIENTS[requirement.ingredientId].purchaseCostCents, 0); }
   private consumePlate(): boolean { if (this.restaurant.platesRemaining <= 0) { this.callout("NO CLEAN PLATES LEFT", "#ff7e70"); return false; } this.restaurant.platesRemaining -= 1; return true; }
 
-  private ruinHeld(player: Player, position: Vec2, message: string): void { const item = player.held!; player.held = null; this.updateHeld(player); this.restaurant.recordWaste(item.value); this.createRuinedItem(position, item); this.audioCues.play("miss"); this.callout(`${message} · $${item.value}`, "#ff7e70"); }
+  private ruinHeld(player: Player, position: Vec2, message: string): void { const item = player.held!; player.held = null; this.updateHeld(player); this.restaurant.recordWaste(item.valueCents); this.createRuinedItem(position, item); this.audioCues.play("miss"); this.callout(`${message} · ${formatMoney(item.valueCents)}`, "#ff7e70"); }
   private createRuinedItem(position: Vec2, item: KitchenItem): void {
     const ruined: KitchenItem = item.kind === "ingredient" ? { ...item, state: "ruined" } : { ...item, state: "ruined" };
     const visual = this.add.container(position.x, position.y).setDepth(9); visual.add(this.add.ellipse(0, 11, 70, 34, 0x5d4938, 0.75)); this.populateItemVisual(visual, ruined);
@@ -404,7 +418,7 @@ export class TransferScene extends Phaser.Scene {
   }
   private debugSetPlayer(index: 0 | 1, x: number, y: number, held?: KitchenItem | null): void { const player = this.players[index]; player.position = clampToSide({ x, y }, player.side); player.body.setPosition(player.position.x, player.position.y); if (held !== undefined) { player.held = held; this.updateHeld(player); } }
   private snapshot(): object {
-    return { phase: this.restaurant.phase, cash: this.restaurant.cash, revenue: this.restaurant.revenue, spending: this.restaurant.ingredientSpending, waste: this.restaurant.wastedValue, inventory: { ...this.restaurant.inventory }, plates: this.restaurant.platesRemaining,
+    return { phase: this.restaurant.phase, day: this.restaurant.day, cashCents: this.restaurant.cashCents, revenueCents: this.restaurant.revenueCents, spendingCents: this.restaurant.ingredientSpendingCents, wasteCents: this.restaurant.wastedValueCents, inventory: { ...this.restaurant.inventory }, installedSlots: [...this.restaurant.installedSlots], plates: this.restaurant.platesRemaining,
       players: this.players.map((player) => ({ side: player.side, x: Math.round(player.position.x), y: Math.round(player.position.y), held: player.held })), stations: Object.fromEntries(this.stations.map((station) => [station.id, station.item])),
       orders: this.restaurant.activeOrders.map((order) => ({ id: order.id, recipeId: order.recipeId })), inFlight: this.flight?.item ?? null, messCount: this.ruinedItems.length, summary: this.restaurant.summary() };
   }

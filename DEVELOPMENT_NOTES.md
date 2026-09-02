@@ -3,10 +3,12 @@
 ## Architecture
 
 - Phaser owns the fixed 960×600 canvas and render loop; all artwork is programmatic geometry.
-- `RestaurantModel` owns the pure single-night economy, inventory, selected menu, ticket queue, service clock, order results, and summary calculations.
-- Recipe and ingredient definitions live in `data.ts`; costs, sell prices, required states, steps, chop times, and cook times are data rather than scene conditionals.
+- `RestaurantModel` owns the versioned Endless save, cent-based economy, persistent inventory, appliance ownership/installation, expansions, reputation, demand, nightly menu/advertising, ticket queue, service clock, and multi-day summary calculations.
+- Recipe, ingredient, bulk tier, appliance, authored slot, expansion, reputation-demand, and advertising definitions live in `data.ts`.
 - `RestaurantUI` owns phase overlays and the live HUD. `TransferScene` owns players, carried/in-flight items, stations, processing progress, and physical interactions.
-- Ingredient and dish state uses the typed states `raw`, `chopped`, `assembled`, `cooked`, and `ruined`. The abstraction is deliberately limited to the three prototype recipes.
+- Management sections are deliberately non-linear: Overview, Pantry, Supplier, Kitchen, Menu, and Marketing can be revisited until Begin Prep locks planning.
+- The Phaser kitchen rebuilds its appliance stations from the saved authored slot configuration at Prep. Divider, shared counter, storage, staging, and serving structures do not consume slots.
+- Ingredient and dish state uses the typed states `raw`, `chopped`, `assembled`, `cooked`, and `ruined`. Fries uses the same data-driven cooking path with a fryer station.
 - Pure side-clamping, landing, and catch rules live in `rules.ts` and have automated unit coverage.
 
 ## Input
@@ -15,6 +17,7 @@
 - Standard mapping is used: axes 0/1, button 0 for interact, button 7/right trigger for throw, and button 9 for reset.
 - Both keyboard schemes remain enabled for debugging and simultaneous-input testing.
 - Touch controls use independent Pointer Events state for each player, including multi-touch D-pad holds and latched Use/Throw presses. They do not synthesize keyboard events.
+- Planning buttons are native keyboard/touch controls. A lightweight management poll lets either connected gamepad navigate focus with the stick/D-pad and select with the south face button.
 - Development builds expose an explicit `?test` scenario harness for repeatable browser checks; it is excluded from production by Vite's development flag.
 
 ## Throw and catch
@@ -28,18 +31,23 @@
 - The divider's central counter is a single shared slot. Either player can deposit or retrieve any usable kitchen item while remaining within their own movement bounds.
 - Ingredients can be thrown; assemblies and cooked dishes use the shared counter as their safe transfer route.
 
-## Milestone 2 human playtest checklist
+## Milestone 3 human playtest checklist
 
-- Is choosing two dishes a meaningful decision?
-- Does buying ingredients make wasted food feel consequential?
-- Is purchasing understandable without explanation?
-- Does Prep feel useful?
-- Are tickets readable while both players are moving?
-- Is 2 minutes long enough to expose coordination issues?
-- Do throwing and the shared counter both remain useful?
-- Does either player fall into a permanent boring role?
-- Do the three recipes feel meaningfully different?
-- Does the Night Summary make players want another night?
+- Does persistent cash make later nights more interesting?
+- Is bulk buying tempting?
+- Does bulk stock influence menu choices naturally?
+- Is it obvious leftovers persist?
+- Does finite appliance space create real choices?
+- Is appliance swapping understandable?
+- Does buying the fryer feel like gaining a new capability?
+- Does Fries make the fryer meaningful?
+- Do players want to save for kitchen expansion?
+- Is dining capacity understandable without table simulation?
+- Does reputation clearly explain baseline turnout?
+- Does advertising feel like voluntary risk/reward?
+- Can players knowingly create too much demand?
+- Does the restaurant feel increasingly like theirs?
+- Is Planning quick enough that players still want to get back to cooking?
 
 ## Known limitations
 
@@ -47,5 +55,7 @@
 - Two-player multi-touch ergonomics should be assessed on the intended tablet/phone sizes; the responsive layout is functional in portrait and more comfortable in landscape.
 - Throw speed, landing distance, catch radius, and interaction distance are initial tuning values and should be assessed by two players side-by-side.
 - Browsers require a user input before Web Audio can start; the first pickup/throw interaction provides that gesture.
-- The four plates reset between nights; dishwashing and persistent inventory are intentionally outside Milestone 2.
+- The four plates reset between nights; dirty dishes and washing are deferred beyond Milestone 3.
+- Saves use one versioned local-storage record and have no cloud synchronization or migration from future incompatible versions yet.
+- Appliance upgrades are represented as future data hooks only; no upgrade tree is active.
 - The floor mess is gameplay-visible but intentionally has no cleaning mechanic or movement penalty.
