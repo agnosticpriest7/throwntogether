@@ -95,6 +95,13 @@ body[data-phase="landing"] #game-frame, body[data-phase="planning"] #game-frame,
 .endless-landing { width: min(620px, 100%); }
 .landing-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin: 24px 0 12px; }
 .danger-action { border-color: #9d4e4e; color: #ffc2b8; background: #532f35; }
+.in-game-confirmation { position: absolute; inset: 0; z-index: 100; display: grid; place-items: center; padding: 24px; border-radius: 16px; background: #2f211fbb; backdrop-filter: blur(5px); }
+.confirmation-card { width: min(480px, 100%); padding: 24px; border: 5px solid #49352d; border-radius: 18px; color: #49352d; background: #fff1cf; box-shadow: 0 12px 0 #49352d66, 0 28px 60px #26171388; text-align: center; }
+.confirmation-card h3 { margin: 7px 0 5px; font-size: 25px; }
+.confirmation-card p { margin: 0 auto 20px; color: #725449; font-size: 13px; }
+.confirmation-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.confirmation-actions button { min-height: 52px; }
+.confirmation-actions button:focus-visible { outline: 5px solid #ffd45f; outline-offset: 3px; }
 .planning-hub { display: grid; grid-template-rows: auto auto minmax(0, 1fr) auto; width: min(920px, 100%); height: 100%; min-height: 0; }
 .planning-top { display: flex; align-items: center; justify-content: space-between; gap: 15px; height: auto; padding: 0 2px 8px; }
 .planning-top h2 { margin: 3px 0 0; font-size: 24px; }

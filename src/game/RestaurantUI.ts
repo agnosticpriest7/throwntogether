@@ -8,8 +8,17 @@ import { PlayerSession, type PlayerMode } from "./PlayerSession";
 
 type PlanningSection = "overview" | "pantry" | "supplier" | "kitchen" | "menu" | "staff" | "marketing";
 type NavigationDirection = "up" | "down" | "left" | "right";
+export type ConfirmationKind = "new-restaurant" | "reset-save";
 
 export interface NavigationRect { left: number; top: number; right: number; bottom: number; }
+
+export function confirmationMarkup(kind: ConfirmationKind): string {
+  const resetting = kind === "reset-save";
+  return `<section class="in-game-confirmation" role="alertdialog" aria-modal="true" aria-labelledby="confirmation-title" aria-describedby="confirmation-description">
+    <div class="confirmation-card"><span class="flow-kicker">CONFIRM ACTION</span><h3 id="confirmation-title">${resetting ? "Reset Endless save?" : "Start a new restaurant?"}</h3>
+    <p id="confirmation-description">${resetting ? "This permanently removes the saved restaurant and all progression." : "This overwrites the current Endless restaurant with a fresh Day 1 save."}</p>
+    <div class="confirmation-actions"><button id="confirmation-cancel">CANCEL</button><button class="danger-action" id="confirmation-accept">${resetting ? "RESET SAVE" : "START NEW"}</button></div></div></section>`;
+}
 
 export function spatialNavigationTarget(rects: NavigationRect[], currentIndex: number, direction: NavigationDirection): number {
   const current = rects[currentIndex];
@@ -40,6 +49,7 @@ export class RestaurantUI {
   private gamepadTabDirection = 0;
   private gamepadNavigationActive = false;
   private planningFocusKey: string | null = null;
+  private pendingConfirmation: ConfirmationKind | null = null;
 
   constructor(private readonly model: RestaurantModel, private readonly playerSession: PlayerSession) {
     document.getElementById("reset-button")?.addEventListener("click", () => this.restartNight());
@@ -72,17 +82,17 @@ export class RestaurantUI {
       <div class="landing-actions"><button class="primary-action" id="new-restaurant">NEW RESTAURANT</button>
       <button id="continue-restaurant" ${this.model.hasSave ? "" : "disabled"}>CONTINUE RESTAURANT</button>
       ${this.model.hasSave ? `<button class="danger-action" id="reset-save">RESET ENDLESS SAVE</button>` : ""}</div>
-      <p class="flow-feedback">${this.model.hasSave ? `Saved restaurant · Day ${this.model.day} · ${formatMoney(this.model.cashCents)}` : "No Endless restaurant save found."}</p></div>`;
+      <p class="flow-feedback">${this.model.hasSave ? `Saved restaurant · Day ${this.model.day} · ${formatMoney(this.model.cashCents)}` : "No Endless restaurant save found."}</p></div>${this.pendingConfirmation ? confirmationMarkup(this.pendingConfirmation) : ""}`;
+    if (this.pendingConfirmation) this.overlay.querySelector<HTMLElement>(".endless-landing")!.inert = true;
     this.bindModeButtons(this.overlay);
     this.overlay.querySelector<HTMLButtonElement>("#new-restaurant")?.addEventListener("click", () => {
-      if (this.model.hasSave && !confirm("Start a NEW RESTAURANT and overwrite the current Endless save?")) return;
+      if (this.model.hasSave) { this.openConfirmation("new-restaurant"); return; }
       this.model.newRestaurant(); this.planningSection = "overview"; this.render();
     });
     this.overlay.querySelector<HTMLButtonElement>("#continue-restaurant")?.addEventListener("click", () => { if (this.model.continueRestaurant()) this.render(); });
-    this.overlay.querySelector<HTMLButtonElement>("#reset-save")?.addEventListener("click", () => {
-      if (!confirm("RESET ENDLESS SAVE? This permanently removes the saved restaurant.")) return;
-      this.model.resetEndlessSave(true); this.render();
-    });
+    this.overlay.querySelector<HTMLButtonElement>("#reset-save")?.addEventListener("click", () => this.openConfirmation("reset-save"));
+    this.overlay.querySelector<HTMLButtonElement>("#confirmation-cancel")?.addEventListener("click", () => { this.pendingConfirmation = null; this.renderLanding(); });
+    this.overlay.querySelector<HTMLButtonElement>("#confirmation-accept")?.addEventListener("click", () => this.acceptConfirmation());
   }
 
   private renderPlanning(): void {
@@ -231,6 +241,15 @@ export class RestaurantUI {
   }
 
   private restartNight(): void { if (this.model.restartNight()) { this.recipeGuideOpen = false; this.planningSection = "overview"; this.phaseChanged(); this.render(); } }
+  private openConfirmation(kind: ConfirmationKind): void {
+    this.pendingConfirmation = kind; this.renderLanding();
+    this.overlay.querySelector<HTMLButtonElement>("#confirmation-cancel")?.focus();
+  }
+  private acceptConfirmation(): void {
+    const kind = this.pendingConfirmation; this.pendingConfirmation = null;
+    if (kind === "new-restaurant") { this.model.newRestaurant(); this.planningSection = "overview"; this.render(); return; }
+    if (kind === "reset-save") { this.model.resetEndlessSave(true); this.render(); }
+  }
   private bindModeButtons(root: ParentNode): void {
     root.querySelectorAll<HTMLButtonElement>("[data-player-mode]").forEach((button) => button.addEventListener("click", () => this.playerSession.setMode(button.dataset.playerMode as PlayerMode)));
   }
@@ -242,7 +261,8 @@ export class RestaurantUI {
     return data || `text:${button.textContent?.trim() ?? ""}`;
   }
   private visibleButtons(): HTMLButtonElement[] {
-    return [...this.overlay.querySelectorAll<HTMLButtonElement>("button:not(:disabled)")].filter((button) => button.offsetParent !== null);
+    const scope = this.pendingConfirmation ? this.overlay.querySelector(".in-game-confirmation") ?? this.overlay : this.overlay;
+    return [...scope.querySelectorAll<HTMLButtonElement>("button:not(:disabled)")].filter((button) => button.offsetParent !== null);
   }
   private focusButton(button: HTMLButtonElement): void {
     button.focus();
