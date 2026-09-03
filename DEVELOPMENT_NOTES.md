@@ -59,5 +59,7 @@
 - The four plates reset between nights; dirty dishes and washing are deferred beyond Milestone 3.
 - Saves use one versioned local-storage record and have no cloud synchronization or migration from future incompatible versions yet.
 - Appliance upgrades are represented as future data hooks only; no upgrade tree is active.
+- Desktop and TV layouts preserve the 16:10 kitchen surface and scale it from available viewport height so the header, game, and control legend fit without page scrolling. Phone layouts retain their taller scrollable presentation.
+- Default order patience is 38.5 seconds (10% longer than the original 35-second prototype value).
 - Pressing interact away from a station no longer drops or ruins the held item. Intentional disposal uses the shared divider trash chute and records wasted value without creating floor mess. Missed throws still create gameplay-visible floor mess with no cleaning mechanic or movement penalty.
 - The nearest counter or appliance within interaction range gets a high-contrast outline and brighter fill for immediate affordance feedback.

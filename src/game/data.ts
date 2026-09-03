@@ -33,7 +33,7 @@ export const SAVE_KEY = "thrown-together:endless-save";
 export const STARTING_CASH_CENTS = 15_000;
 export const STARTING_REPUTATION_POINTS = 0;
 export const SERVICE_DURATION_MS = 120_000;
-export const ORDER_PATIENCE_MS = 35_000;
+export const ORDER_PATIENCE_MS = 38_500;
 
 export const INGREDIENTS: Record<IngredientId, IngredientDefinition> = {
   potato: { id: "potato", displayName: "Potato", purchaseCostCents: 200, initialState: "raw", throwable: true, choppable: true, color: 0xc8904f, icon: "P" },

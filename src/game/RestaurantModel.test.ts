@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { RestaurantModel, type StorageLike } from "./RestaurantModel";
-import { SAVE_KEY, bulkQuote } from "./data";
+import { ORDER_PATIENCE_MS, SAVE_KEY, bulkQuote } from "./data";
 
 class MemoryStorage implements StorageLike {
   data = new Map<string, string>();
@@ -124,6 +124,12 @@ describe("Persistent economy", () => {
 });
 
 describe("Preserved service order rules", () => {
+  it("uses the configured 10% longer default order patience", () => {
+    const model = modelWithMenu(); model.beginPrep(); model.startService(0); model.activeOrders = []; model.ordersGenerated = 0;
+    const order = model.forceOrder("roast-potato", 1_000);
+    expect(ORDER_PATIENCE_MS).toBe(38_500); expect(order?.expiresAt).toBe(39_500);
+  });
+
   it("refuses an incorrect dish and pays the data-defined price for a correct dish", () => {
     const model = modelWithMenu(); model.beginPrep(); model.startService(0); model.activeOrders = []; model.ordersGenerated = 0;
     model.forceOrder("roast-potato", 0);
