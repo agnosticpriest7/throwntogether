@@ -4,7 +4,7 @@ import { InputManager } from "./InputManager";
 import { RestaurantModel, type ServiceEvent } from "./RestaurantModel";
 import type { RestaurantUI } from "./RestaurantUI";
 import {
-  APPLIANCES, CHOP_TIME_MS, INGREDIENTS, KITCHEN_SLOTS, RECIPES, formatMoney, ingredientItem,
+  APPLIANCES, CHOP_TIME_MS, DISHWASH_DURATION_MS, INGREDIENTS, KITCHEN_SLOTS, RECIPES, formatMoney, ingredientItem,
   type IngredientId, type KitchenItem, type RecipeId,
 } from "./data";
 import {
@@ -13,7 +13,7 @@ import {
 } from "./config";
 import { canAutoCatch, clampToSide, distance, throwLanding } from "./rules";
 
-type StationType = "counter" | "chop" | "assembly" | "oven" | "fryer" | "plate" | "trash";
+type StationType = "counter" | "chop" | "assembly" | "oven" | "fryer" | "plate" | "trash" | "pickup" | "sink";
 
 interface Player {
   side: Side;
@@ -53,8 +53,6 @@ const SOURCE_LAYOUT: Array<{ id: IngredientId; position: Vec2 }> = [
   { id: "potato", position: { x: 95, y: 305 } }, { id: "tomato", position: { x: 215, y: 305 } },
   { id: "onion", position: { x: 95, y: 440 } }, { id: "cheese", position: { x: 215, y: 440 } },
 ];
-const SERVE_POS = { x: 830, y: 440 };
-
 export class TransferScene extends Phaser.Scene {
   private inputManager!: InputManager;
   private readonly audioCues = new AudioCues();
@@ -68,6 +66,10 @@ export class TransferScene extends Phaser.Scene {
   private calloutTimer?: Phaser.Time.TimerEvent;
   private slotMarkers: Phaser.GameObjects.GameObject[] = [];
   private lastPhase = "landing";
+  private diningGraphics!: Phaser.GameObjects.Graphics;
+  private diningLabels: Phaser.GameObjects.GameObject[] = [];
+  private debugText!: Phaser.GameObjects.Text;
+  private aiDebug = false;
 
   constructor(private readonly restaurant: RestaurantModel) { super("transfer"); }
   attachUI(ui: RestaurantUI): void { this.ui = ui; }
@@ -81,6 +83,7 @@ export class TransferScene extends Phaser.Scene {
       backgroundColor: "#18202dee", padding: { x: 13, y: 7 },
     }).setOrigin(0.5).setDepth(50).setVisible(false);
     this.resetKitchen();
+    this.input.keyboard?.on("keydown-F3", () => { this.aiDebug = !this.aiDebug; this.debugText.setVisible(this.aiDebug); });
     window.addEventListener("tt-purchase", () => this.audioCues.play("purchase"));
     window.addEventListener("tt-phase-change", ((event: CustomEvent<{ events?: ServiceEvent[] }>) => this.handlePhaseChange(event.detail?.events ?? [])) as EventListener);
     Object.assign(window, {
@@ -126,6 +129,7 @@ export class TransferScene extends Phaser.Scene {
     if (this.flight) this.updateFlight(delta);
     this.updateStations(performance.now());
     if (this.restaurant.phase === "service") this.handleServiceEvents(this.restaurant.updateService(performance.now()));
+    this.renderDiningRoom();
     this.updateSourceCounts(); this.ui?.refresh(); this.syncAccessibleStatus();
   }
 
@@ -145,6 +149,13 @@ export class TransferScene extends Phaser.Scene {
     events.forEach((event) => {
       if (event.type === "order-arrived") this.audioCues.play("order");
       if (event.type === "order-expired") this.audioCues.play("expire");
+      if (event.type === "customer-arrived") this.audioCues.play("customerArrival");
+      if (event.type === "customer-seated") this.audioCues.play("seating");
+      if (event.type === "server-pickup") this.audioCues.play("serverPickup");
+      if (event.type === "delivery-complete") this.audioCues.play("delivery");
+      if (event.type === "customer-left") this.audioCues.play(event.happy ? "satisfied" : "unhappy");
+      if (event.type === "dirty-dish-returned") this.audioCues.play("dirtyReturn");
+      if (event.type === "plate-washed") this.audioCues.play("plateWashed");
       if (event.type === "service-ended") { this.audioCues.play("serviceEnd"); this.ui?.render(); }
     });
   }
@@ -164,9 +175,9 @@ export class TransferScene extends Phaser.Scene {
   private interact(index: 0 | 1): void {
     if (this.restaurant.phase !== "prep" && this.restaurant.phase !== "service") return;
     const player = this.players[index];
-    if (distance(player.position, SERVE_POS) <= INTERACT_DISTANCE) { if (player.held) this.serve(player); return; }
     const source = this.nearestSource(player.position); const station = this.nearestStation(player.position);
     if (!player.held) {
+      if (station?.type === "sink") { this.startHumanWash(station); return; }
       if (station?.item && station.processStartedAt === 0) {
         player.held = station.item; this.setStationItem(station, null); this.updateHeld(player); this.audioCues.play("pickup"); return;
       }
@@ -179,6 +190,8 @@ export class TransferScene extends Phaser.Scene {
     }
     if (!station) { this.callout("MOVE CLOSER TO A COUNTER · USE TRASH TO DISCARD", "#ffdc74"); return; }
     if (station.type === "trash") { this.trashHeld(player); return; }
+    if (station.type === "pickup") { this.serve(player); return; }
+    if (station.type === "sink") { this.callout("PUT FOOD SOMEWHERE SAFE BEFORE WASHING", "#ffdc74"); return; }
     if (station.type === "chop") { this.useChop(player, station); return; }
     if (station.type === "assembly") { this.useAssembly(player, station); return; }
     if (station.type === "oven" || station.type === "fryer") { this.useCooker(player, station); return; }
@@ -243,7 +256,7 @@ export class TransferScene extends Phaser.Scene {
     if (!held || held.kind !== "dish" || held.state !== "plated") { this.callout("ONLY PLATED DISHES CAN BE SERVED", "#ff7e70"); return; }
     if (!this.restaurant.serveDish(held.recipeId)) { this.callout("NO MATCHING ORDER · REFUSED", "#ff7e70"); return; }
     player.held = null; this.updateHeld(player); this.audioCues.play("orderComplete");
-    this.callout(`${RECIPES[held.recipeId].displayName.toUpperCase()} SERVED! +${formatMoney(RECIPES[held.recipeId].sellingPriceCents)}`, "#7ed8ba"); this.ui?.refresh(performance.now() + 1000);
+    this.callout(`${RECIPES[held.recipeId].displayName.toUpperCase()} READY FOR SERVER`, "#7ed8ba"); this.ui?.refresh(performance.now() + 1000);
   }
 
   private throwItem(index: 0 | 1): void {
@@ -278,6 +291,12 @@ export class TransferScene extends Phaser.Scene {
 
   private updateStations(now: number): void {
     this.stations.forEach((station) => {
+      if (station.type === "sink" && station.processStartedAt > 0) {
+        const progress = Math.min(1, (now - station.processStartedAt) / station.processDuration);
+        station.progressBg.setVisible(true); station.progressFill.setVisible(true).setScale(progress, 1);
+        if (progress >= 1) { station.processStartedAt = 0; station.progressBg.setVisible(false); station.progressFill.setVisible(false); station.statusText.setText("CLEAN PLATE RETURNED"); const event = this.restaurant.completePlateWash("human"); if (event) this.handleServiceEvents([event]); }
+        return;
+      }
       if (!station.item) { station.progressBg.setVisible(false); station.progressFill.setVisible(false); return; }
       if ((station.type === "oven" || station.type === "fryer") && station.processStartedAt === 0 && this.restaurant.phase === "service") this.tryStartCooking(station, now);
       if (station.processStartedAt <= 0) return;
@@ -312,15 +331,21 @@ export class TransferScene extends Phaser.Scene {
     g.fillStyle(0x687488).fillRoundedRect(438, 94, 84, 156, 8).fillRoundedRect(438, 360, 84, 158, 8);
     this.add.text(62, 55, "PLAYER 1 · LEFT KITCHEN", { fontFamily: "DM Mono, monospace", fontSize: "10px", color: "#f6b75e" });
     this.add.text(898, 55, "PLAYER 2 · RIGHT KITCHEN", { fontFamily: "DM Mono, monospace", fontSize: "10px", color: "#76c8df" }).setOrigin(1, 0);
+    g.fillStyle(0x263841).fillRoundedRect(944, 84, 300, 452, 8);
+    g.lineStyle(4, 0x7d8b96, 0.9).lineBetween(936, 84, 936, 536);
+    this.add.text(1094, 55, "DINING ROOM · AI STAFF", { fontFamily: "DM Mono, monospace", fontSize: "10px", color: "#9de0ca" }).setOrigin(0.5, 0);
     this.sources = SOURCE_LAYOUT.map(({ id, position }) => this.drawSource(id, position));
     this.stations = [
       this.drawStation("shared", "counter", SHARED_POS, "SHARED", "⇄", 0xa7b2c2, 112),
       this.drawStation("trash", "trash", { x: 480, y: 440 }, "TRASH", "×", 0xc85f58, 70),
       this.drawStation("left-counter", "counter", { x: 340, y: 305 }, "STAGING", "□", 0x8391a6),
       this.drawStation("right-counter", "counter", { x: 660, y: 305 }, "STAGING", "□", 0x8391a6),
+      this.drawStation("pickup", "pickup", { x: 880, y: 305 }, "SERVICE PICKUP", "↑", 0x7ed8ba, 100),
+      this.drawStation("sink", "sink", { x: 820, y: 440 }, "DISH SINK", "≈", 0x72b7da, 100),
     ];
     this.configureApplianceStations();
-    this.drawServeStation();
+    this.diningGraphics = this.add.graphics().setDepth(8);
+    this.debugText = this.add.text(952, 88, "", { fontFamily: "DM Mono, monospace", fontSize: "7px", color: "#ffdc74", backgroundColor: "#111821dd", padding: { x: 4, y: 3 } }).setDepth(40).setVisible(false);
   }
 
   private drawSource(id: IngredientId, position: Vec2): Source {
@@ -360,12 +385,6 @@ export class TransferScene extends Phaser.Scene {
     const box = this.add.rectangle(position.x, position.y, 108, 92, 0x1a2029, 0.6).setStrokeStyle(2, color, 0.7).setDepth(3);
     const text = this.add.text(position.x, position.y, label, { fontFamily: "DM Mono, monospace", fontSize: "8px", color: `#${color.toString(16).padStart(6, "0")}`, align: "center" }).setOrigin(0.5).setDepth(4);
     this.slotMarkers.push(box, text);
-  }
-
-  private drawServeStation(): void {
-    this.add.rectangle(SERVE_POS.x, SERVE_POS.y, 116, 92, 0x1f3130).setStrokeStyle(4, 0x7ed8ba, 0.9).setDepth(5);
-    this.add.text(SERVE_POS.x, SERVE_POS.y - 13, "↑", { fontSize: "28px", color: "#7ed8ba", fontStyle: "bold" }).setOrigin(0.5).setDepth(6);
-    this.add.text(SERVE_POS.x, SERVE_POS.y + 22, "SERVE", { fontFamily: "DM Mono, monospace", fontSize: "10px", color: "#d7dde7" }).setOrigin(0.5).setDepth(6);
   }
 
   private makePlayer(index: 0 | 1, side: Side): Player {
@@ -422,13 +441,65 @@ export class TransferScene extends Phaser.Scene {
     return null;
   }
   private recipeValueCents(recipeId: RecipeId): number { return RECIPES[recipeId].ingredients.reduce((total, requirement) => total + INGREDIENTS[requirement.ingredientId].purchaseCostCents, 0); }
-  private consumePlate(): boolean { if (this.restaurant.platesRemaining <= 0) { this.callout("NO CLEAN PLATES LEFT", "#ff7e70"); return false; } this.restaurant.platesRemaining -= 1; return true; }
+  private consumePlate(): boolean { if (!this.restaurant.useCleanPlate()) { this.callout("NO CLEAN PLATES · WASH AT SINK", "#ff7e70"); return false; } return true; }
+
+  private startHumanWash(station: Station): void {
+    if (station.processStartedAt > 0) { this.callout("WASHING IN PROGRESS", "#f5c85b"); return; }
+    if (!this.restaurant.claimDirtyPlate()) { this.callout("NO DIRTY PLATES AT RETURN", "#ffdc74"); return; }
+    station.processStartedAt = performance.now(); station.processDuration = DISHWASH_DURATION_MS; station.statusText.setText("WASHING"); this.audioCues.play("process");
+  }
 
   private trashHeld(player: Player): void { const item = player.held!; player.held = null; this.updateHeld(player); this.restaurant.recordWaste(item.valueCents); this.audioCues.play("miss"); this.callout(`TRASHED · ${formatMoney(item.valueCents)} WASTED`, "#ff7e70"); }
   private createRuinedItem(position: Vec2, item: KitchenItem): void {
     const ruined: KitchenItem = item.kind === "ingredient" ? { ...item, state: "ruined" } : { ...item, state: "ruined" };
     const visual = this.add.container(position.x, position.y).setDepth(9); visual.add(this.add.ellipse(0, 11, 70, 34, 0x5d4938, 0.75)); this.populateItemVisual(visual, ruined);
     visual.add(this.add.text(0, 36, "WASTED", { fontFamily: "DM Mono, monospace", fontSize: "8px", color: "#ff8b7e", backgroundColor: "#18202dcc", padding: { x: 4, y: 2 } }).setOrigin(0.5)); this.ruinedItems.push({ position, visual });
+  }
+  private renderDiningRoom(): void {
+    if (!this.diningGraphics) return;
+    const pickup = this.stations.find(({ type }) => type === "pickup"); if (pickup) pickup.statusText.setText(`SLOTS ${this.restaurant.readyDishes.length}/3`);
+    const sink = this.stations.find(({ type }) => type === "sink"); if (sink && sink.processStartedAt === 0) sink.statusText.setText(`DIRTY ${this.restaurant.dirtyReturnQueue}`);
+    this.diningGraphics.clear(); this.diningLabels.forEach((object) => object.destroy()); this.diningLabels = [];
+    const graphics = this.diningGraphics; const now = performance.now();
+    graphics.fillStyle(0x1b252d, 0.75).fillRoundedRect(958, 92, 272, 432, 8);
+    graphics.fillStyle(0x6c7b88).fillRect(1222, 250, 10, 86);
+    this.diningLabels.push(this.add.text(1217, 293, "ENTRANCE", { fontFamily: "DM Mono, monospace", fontSize: "7px", color: "#d7dde7" }).setOrigin(0.5).setAngle(-90).setDepth(12));
+    graphics.fillStyle(0x394c55).fillRoundedRect(948, 418, 38, 72, 5);
+    this.diningLabels.push(this.add.text(967, 454, `DIRTY\n${this.restaurant.dirtyReturnQueue}`, { fontFamily: "DM Mono, monospace", fontSize: "7px", align: "center", color: "#f0b78a" }).setOrigin(0.5).setDepth(12));
+    this.restaurant.diningTables.forEach((table) => {
+      const colors: Record<string, number> = { clean: 0x527b68, reserved: 0x756743, waiting_food: 0x8a6640, eating: 0x3f6f7c, dirty: 0x744d47 };
+      graphics.fillStyle(0x12171c, 0.35).fillEllipse(table.x, table.y + 12, 82, 30);
+      graphics.fillStyle(colors[table.state] ?? 0x5b6672).fillRoundedRect(table.x - 34, table.y - 22, 68, 44, 8);
+      graphics.lineStyle(2, 0xd1dae2, 0.55).strokeRoundedRect(table.x - 34, table.y - 22, 68, 44, 8);
+      graphics.fillStyle(0x8995a5).fillCircle(table.x - 47, table.y, 10).fillCircle(table.x + 47, table.y, 10);
+      if (table.state === "dirty") { graphics.lineStyle(3, 0xe8e5dc).strokeCircle(table.x, table.y, 9); graphics.lineStyle(2, 0xaa665d).lineBetween(table.x - 5, table.y - 5, table.x + 5, table.y + 5); }
+      this.diningLabels.push(this.add.text(table.x, table.y + 31, `${table.id.toUpperCase()} · ${table.state.replaceAll("_", " ").toUpperCase()}`, { fontFamily: "DM Mono, monospace", fontSize: "6px", color: "#d7dde7" }).setOrigin(0.5).setDepth(12));
+    });
+    this.restaurant.customers.filter(({ state }) => state !== "failed").forEach((customer) => {
+      const table = this.restaurant.diningTables.find(({ id }) => id === customer.tableId);
+      const waitingIndex = this.restaurant.customers.filter(({ state }) => state === "arriving" || state === "waiting_for_table").findIndex(({ id }) => id === customer.id);
+      const seatingTask = this.restaurant.activeStaff.find(({ task }) => task?.type === "seat" && task.targetId === String(customer.id))?.task;
+      const walkProgress = seatingTask ? Phaser.Math.Clamp((now - seatingTask.startedAt) / (seatingTask.endsAt - seatingTask.startedAt), 0, 1) : 1;
+      const x = table ? Phaser.Math.Linear(customer.state === "walking_to_table" ? 1202 : table.x, table.x, walkProgress) : 1202 - (waitingIndex % 2) * 24;
+      const y = table ? Phaser.Math.Linear(customer.state === "walking_to_table" ? 305 : table.y - 8, table.y - 8, walkProgress) : 365 + Math.floor(Math.max(0, waitingIndex) / 2) * 30;
+      for (let member = 0; member < customer.size; member++) { const offset = customer.size === 2 ? (member ? 13 : -13) : 0; graphics.fillStyle(customer.failureReason ? 0xb95851 : 0xd6c583).fillCircle(x + offset, y, 9); graphics.fillStyle(0x28323d).fillCircle(x + offset, y - 2, 3); }
+      this.diningLabels.push(this.add.text(x, y + 12, customer.state === "waiting_for_food" ? RECIPES[customer.recipeId].icon : customer.state.replaceAll("_", " "), { fontFamily: "DM Mono, monospace", fontSize: "6px", color: "#fff" }).setOrigin(0.5).setDepth(12));
+    });
+    this.restaurant.activeStaff.forEach((staff, index) => {
+      let x = staff.role === "dishwasher" ? 840 : 992 + index * 22; let y = staff.role === "dishwasher" ? 440 : 510;
+      const tableId = staff.task?.destination.match(/Table (\d+)/)?.[1]; const table = tableId ? this.restaurant.diningTables.find(({ id }) => id === `t${tableId}`) : undefined;
+      if (staff.task && table) {
+        const progress = Phaser.Math.Clamp((now - staff.task.startedAt) / (staff.task.endsAt - staff.task.startedAt), 0, 1);
+        const start = staff.task.type === "deliver" ? { x: 965, y: 305 } : { x: 1202, y: 305 };
+        x = Phaser.Math.Linear(start.x, table.x, progress); y = Phaser.Math.Linear(start.y, table.y + 38, progress);
+      } else if (staff.task?.type === "clear") {
+        const dirtyTable = this.restaurant.diningTables.find(({ id }) => id === staff.task?.targetId); const progress = Phaser.Math.Clamp((now - staff.task.startedAt) / (staff.task.endsAt - staff.task.startedAt), 0, 1);
+        if (dirtyTable) { x = Phaser.Math.Linear(dirtyTable.x, 967, progress); y = Phaser.Math.Linear(dirtyTable.y + 38, 454, progress); }
+      }
+      graphics.fillStyle(staff.role === "server" ? 0x8e79d3 : 0x62aeca).fillCircle(x, y, 12); graphics.fillStyle(0xf2eee4).fillRect(x - 7, y + 8, 14, 10);
+      this.diningLabels.push(this.add.text(x, y + 21, `${staff.name} · ${staff.state}`, { fontFamily: "DM Mono, monospace", fontSize: "6px", color: "#dcd4ff" }).setOrigin(0.5).setDepth(12));
+    });
+    if (this.aiDebug) this.debugText.setText(this.restaurant.activeStaff.map((staff) => `${staff.name}: ${staff.state}\n task=${staff.task?.type ?? "none"} target=${staff.task?.targetId ?? "-"}\n dest=${staff.task?.destination ?? "idle"}`).join("\n"));
   }
   private callout(message: string, color: string): void {
     this.calloutTimer?.remove(false); this.calloutText.setText(message).setColor(color).setVisible(true).setAlpha(1).setScale(0.92);
@@ -439,7 +510,7 @@ export class TransferScene extends Phaser.Scene {
   private snapshot(): object {
     return { phase: this.restaurant.phase, day: this.restaurant.day, cashCents: this.restaurant.cashCents, revenueCents: this.restaurant.revenueCents, spendingCents: this.restaurant.ingredientSpendingCents, wasteCents: this.restaurant.wastedValueCents, inventory: { ...this.restaurant.inventory }, installedSlots: [...this.restaurant.installedSlots], plates: this.restaurant.platesRemaining,
       players: this.players.map((player) => ({ side: player.side, x: Math.round(player.position.x), y: Math.round(player.position.y), held: player.held })), stations: Object.fromEntries(this.stations.map((station) => [station.id, station.item])),
-      orders: this.restaurant.activeOrders.map((order) => ({ id: order.id, recipeId: order.recipeId })), inFlight: this.flight?.item ?? null, messCount: this.ruinedItems.length,
+      orders: this.restaurant.activeOrders.map((order) => ({ id: order.id, recipeId: order.recipeId, tableId: order.tableId, customerId: order.customerId })), readyDishes: this.restaurant.readyDishes.map((dish) => ({ ...dish })), customers: this.restaurant.customers.map((customer) => ({ ...customer })), tables: this.restaurant.diningTables.map((table) => ({ ...table })), staff: this.restaurant.activeStaff.map((staff) => ({ ...staff })), dirtyReturn: this.restaurant.dirtyReturnQueue, inFlight: this.flight?.item ?? null, messCount: this.ruinedItems.length,
       highlightedStations: this.stations.filter((station) => station.highlighted).map((station) => station.id), summary: this.restaurant.summary() };
   }
   private syncAccessibleStatus(): void { const output = document.getElementById("game-status"); if (output) output.textContent = JSON.stringify(this.snapshot()); }

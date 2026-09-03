@@ -3,6 +3,7 @@ export type RecipeId = "roast-potato" | "garden-plate" | "cheese-bake" | "fries"
 export type ItemState = "raw" | "chopped" | "assembled" | "cooked" | "plated" | "ruined";
 export type ApplianceId = "prep-station" | "oven" | "assembly-station" | "plating-station" | "fryer";
 export type AdId = "none" | "flyers" | "campaign";
+export type StaffRoleId = "server" | "dishwasher";
 
 export interface IngredientDefinition {
   id: IngredientId; displayName: string; purchaseCostCents: number; initialState: "raw";
@@ -23,17 +24,28 @@ export interface BulkTier { minQuantity: number; discountBps: number; label: str
 export interface AdvertisingDefinition { id: AdId; displayName: string; costCents: number; demandBonusBps: number; description: string }
 export interface ReputationLevel { level: number; minimumPoints: number; baselineDemand: number }
 export interface KitchenSlotDefinition { index: number; x: number; y: number; side: "left" | "right"; requiredKitchenLevel: number }
+export interface StaffRoleDefinition { id: StaffRoleId; displayName: string; hireCostCents: number; wageCents: number; color: number; taskPriority: string[] }
+export interface StaffCandidateDefinition { id: string; name: string; role: StaffRoleId; colorVariant: number; startingHired?: boolean; startingScheduled?: boolean }
+export interface TableDefinition { id: string; x: number; y: number; seats: 2; requiredDiningLevel: number }
 export interface IngredientItem { kind: "ingredient"; ingredientId: IngredientId; state: "raw" | "chopped" | "ruined"; valueCents: number }
 export interface DishItem { kind: "dish"; recipeId: RecipeId; state: "assembled" | "cooked" | "plated" | "ruined"; valueCents: number }
 export type KitchenItem = IngredientItem | DishItem;
 
 export const CHOP_TIME_MS = 1400;
-export const SAVE_VERSION = 1;
+export const SAVE_VERSION = 2;
 export const SAVE_KEY = "thrown-together:endless-save";
 export const STARTING_CASH_CENTS = 15_000;
 export const STARTING_REPUTATION_POINTS = 0;
 export const SERVICE_DURATION_MS = 120_000;
 export const ORDER_PATIENCE_MS = 38_500;
+export const TABLE_WAIT_PATIENCE_MS = 30_000;
+export const EATING_DURATION_MS = 7_000;
+export const SERVER_SEAT_DURATION_MS = 2_400;
+export const SERVER_DELIVERY_DURATION_MS = 2_200;
+export const SERVER_CLEAR_DURATION_MS = 2_600;
+export const DISHWASH_DURATION_MS = 2_500;
+export const PICKUP_SLOT_COUNT = 3;
+export const PLATE_COUNT = 6;
 
 export const INGREDIENTS: Record<IngredientId, IngredientDefinition> = {
   potato: { id: "potato", displayName: "Potato", purchaseCostCents: 200, initialState: "raw", throwable: true, choppable: true, color: 0xc8904f, icon: "P" },
@@ -88,6 +100,22 @@ export const ADVERTISING: Record<AdId, AdvertisingDefinition> = {
   flyers: { id: "flyers", displayName: "Local Flyers", costCents: 2000, demandBonusBps: 2500, description: "+25% demand" },
   campaign: { id: "campaign", displayName: "Local Campaign", costCents: 5000, demandBonusBps: 5000, description: "+50% demand" },
 };
+export const STAFF_ROLES: Record<StaffRoleId, StaffRoleDefinition> = {
+  server: { id: "server", displayName: "Server", hireCostCents: 10_000, wageCents: 3_000, color: 0x59b7d9, taskPriority: ["deliver", "seat", "clear", "idle"] },
+  dishwasher: { id: "dishwasher", displayName: "Dishwasher", hireCostCents: 12_000, wageCents: 3_500, color: 0x9b86df, taskPriority: ["wash", "idle"] },
+};
+export const STAFF_CANDIDATES: StaffCandidateDefinition[] = [
+  { id: "server-ada", name: "Ada", role: "server", colorVariant: 0, startingHired: true, startingScheduled: true },
+  { id: "server-milo", name: "Milo", role: "server", colorVariant: 1 },
+  { id: "dishwasher-june", name: "June", role: "dishwasher", colorVariant: 0 },
+];
+export const TABLES: TableDefinition[] = [
+  { id: "t1", x: 1035, y: 145, seats: 2, requiredDiningLevel: 1 },
+  { id: "t2", x: 1175, y: 145, seats: 2, requiredDiningLevel: 1 },
+  { id: "t3", x: 1105, y: 315, seats: 2, requiredDiningLevel: 1 },
+  { id: "t4", x: 1035, y: 475, seats: 2, requiredDiningLevel: 2 },
+  { id: "t5", x: 1175, y: 475, seats: 2, requiredDiningLevel: 2 },
+];
 export const REPUTATION_LEVELS: ReputationLevel[] = [
   { level: 1, minimumPoints: 0, baselineDemand: 8 }, { level: 2, minimumPoints: 100, baselineDemand: 10 },
   { level: 3, minimumPoints: 220, baselineDemand: 13 }, { level: 4, minimumPoints: 360, baselineDemand: 16 },
@@ -104,7 +132,7 @@ export const KITCHEN_SLOTS: KitchenSlotDefinition[] = [
   { index: 5, x: 340, y: 445, side: "left", requiredKitchenLevel: 2 },
 ];
 export const KITCHEN_EXPANSION = { id: "kitchen-expansion-1", displayName: "Kitchen Expansion I", costCents: 40_000, fromSlots: 4, toSlots: 6 } as const;
-export const DINING_EXPANSION = { id: "dining-expansion-1", displayName: "Dining Expansion I", costCents: 30_000, fromCapacity: 10, toCapacity: 16 } as const;
+export const DINING_EXPANSION = { id: "dining-expansion-1", displayName: "Dining Expansion I", costCents: 30_000, fromCapacity: 6, toCapacity: 10, fromTables: 3, toTables: 5 } as const;
 
 export const RECIPE_IDS = Object.keys(RECIPES) as RecipeId[];
 export const INGREDIENT_IDS = Object.keys(INGREDIENTS) as IngredientId[];

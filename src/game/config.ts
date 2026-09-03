@@ -1,4 +1,4 @@
-export const GAME_WIDTH = 960;
+export const GAME_WIDTH = 1280;
 export const GAME_HEIGHT = 600;
 export const PLAYER_SPEED = 230;
 export const INTERACT_DISTANCE = 78;

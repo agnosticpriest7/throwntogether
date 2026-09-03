@@ -1,6 +1,6 @@
 # Thrown Together
 
-A browser-based, fixed-screen local co-op cooking prototype. Milestone 3 adds the foundation of Endless Mode: one persistent restaurant, bulk purchasing, finite appliance slots, equipment-gated menus, demand management, expansion, and a repeatable multi-night service loop.
+A browser-based, fixed-screen local co-op cooking prototype. Milestone 4 adds a living dining room, table-linked orders, deterministic AI servers, persistent staff and shift wages, finite dirty dishes, human washing, and an optional AI dishwasher to the persistent Endless restaurant.
 
 ## Play online
 
@@ -59,19 +59,32 @@ Select **Recipes** in the kitchen HUD at any time during Prep or Service to see 
 
 ## Endless restaurant loop
 
-1. Start a new restaurant or continue the versioned browser save. A new restaurant begins on Day 1 with $150, an empty pantry, Reputation Level 1, four installed core workstations, Kitchen Level 1, and Dining Level 1.
-2. Move freely among Overview, Pantry, Supplier, Kitchen, Menu, and Marketing. Buy bulk ingredients, store/install owned appliances, choose two available dishes, and optionally advertise.
-3. Select **Begin Prep** to lock management for the night. Retrieve persistent stock, chop, throw/catch, use the shared counter, and stage installed cooking equipment while closed.
-4. Select **Open Restaurant** for a two-minute service. Tickets are paced up to admitted demand, which is reputation demand plus advertising capped by dining capacity.
-5. Review operations, finances, remaining inventory, and reputation. Select **Next Day** to return to Planning with cash, leftovers, appliances, expansions, and reputation intact.
+1. Start a new restaurant or continue the versioned browser save. A new restaurant begins on Day 1 with $150, an empty pantry, Reputation Level 1, four installed core workstations, three two-seat tables, six plates, and server Ada already hired.
+2. Move freely among Overview, Pantry, Supplier, Kitchen, Menu, Staff, and Marketing. Buy bulk ingredients, configure appliances, choose two dishes, schedule hired employees, and optionally advertise.
+3. Select **Begin Prep** to pay that shift's scheduled payroll exactly once and lock management. Retrieve persistent stock, chop, throw/catch, use the shared counter, and stage equipment while closed.
+4. Select **Open Restaurant** for a two-minute service. Customers arrive over time; servers seat parties, which creates table-linked kitchen tickets.
+5. Plate the matching food and put it in **Service Pickup**. An available server reserves it, delivers it to the correct table, and only then credits revenue.
+6. After customers eat, servers clear plates to **Dirty Return**. Either chef can wash at the sink, or a scheduled dishwasher washes one plate at a time. Clean plates return to circulation.
+7. Review customer, dining, staff, financial, inventory, and reputation results. Select **Next Day** with the restaurant state preserved.
 
-Supplier discounts are 5% at 5 units, 10% at 10 units, and 20% at 20 units. Ingredients never spoil or decay. Advertising is charged once and expires after service. Four clean plates reset each night; dishwashing remains outside this milestone.
+Supplier discounts are 5% at 5 units, 10% at 10 units, and 20% at 20 units. Ingredients never spoil or decay. Advertising is charged once and expires after service. Dining Level 1 provides three two-seat tables; the $300 Dining Expansion permanently adds two more tables. Physical turnover means a room can serve more customers than it seats simultaneously.
 
 The kitchen begins with four active authored appliance positions and can expand to six. Appliances can be purchased into storage and installed, stored, moved, or swapped during Planning only. A stored appliance does not unlock its recipes.
 
 ## Save management
 
-Endless state is autosaved in versioned browser local storage after purchases, menu/marketing decisions, kitchen configuration, expansions, and completed nights. The landing screen provides **New Restaurant**, **Continue Restaurant**, and a confirmed **Reset Endless Save** action. Saves currently remain in the browser/profile where they were created.
+Endless state is autosaved in versioned browser local storage after purchases, menu/marketing/staff decisions, kitchen configuration, expansions, and completed nights. Save v2 persists employee identity and scheduling and migrates Milestone 3 v1 saves by adding the starting server without discarding restaurant progress. The landing screen provides **New Restaurant**, **Continue Restaurant**, and a confirmed **Reset Endless Save** action. Saves remain in the browser/profile where they were created.
+
+## Staff and plates
+
+| Employee role | Hire cost | Wage per scheduled shift | Priority |
+|---|---:|---:|---|
+| Server | $100 | $30 | Deliver food → seat parties → clear tables → idle |
+| Dishwasher | $120 | $35 | Wash returned plates → idle |
+
+Hires are permanent; scheduling is remembered until changed. Off employees cost nothing. If current cash cannot cover scheduled payroll, **Begin Prep** is blocked. Two servers reserve tasks independently so they cannot claim the same pickup dish, customer, or table.
+
+The six-plate pool is conserved across clean, plated/in-use, returned-dirty, and currently-washing states. Food abandoned after its customer leaves is orphaned and earns no revenue. Human chefs remain kitchen-bound; staff are deterministic role AI and never cook recipes.
 
 ## Prototype recipes
 

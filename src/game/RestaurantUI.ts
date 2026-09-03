@@ -1,11 +1,11 @@
 import {
   ADVERTISING, AD_IDS, APPLIANCES, APPLIANCE_IDS, DINING_EXPANSION, INGREDIENTS, INGREDIENT_IDS,
-  KITCHEN_EXPANSION, RECIPES, RECIPE_IDS, bulkQuote, formatMoney, selectedIngredientIds,
+  KITCHEN_EXPANSION, RECIPES, RECIPE_IDS, STAFF_CANDIDATES, STAFF_ROLES, bulkQuote, formatMoney, selectedIngredientIds,
   type AdId, type ApplianceId, type IngredientId, type RecipeId,
 } from "./data";
 import { RestaurantModel, type ServiceEvent } from "./RestaurantModel";
 
-type PlanningSection = "overview" | "pantry" | "supplier" | "kitchen" | "menu" | "marketing";
+type PlanningSection = "overview" | "pantry" | "supplier" | "kitchen" | "menu" | "staff" | "marketing";
 type NavigationDirection = "up" | "down" | "left" | "right";
 
 export interface NavigationRect { left: number; top: number; right: number; bottom: number; }
@@ -63,8 +63,8 @@ export class RestaurantUI {
   }
 
   private renderLanding(): void {
-    this.overlay.innerHTML = `<div class="flow-panel endless-landing"><span class="flow-kicker">MILESTONE 3 · ENDLESS RESTAURANT</span><h2>Your restaurant, night after night</h2>
-      <p>Build a pantry, configure a finite kitchen, choose your demand, serve, reinvest, and continue.</p>
+    this.overlay.innerHTML = `<div class="flow-panel endless-landing"><span class="flow-kicker">MILESTONE 4 · DINING + STAFF</span><h2>Your restaurant is alive</h2>
+      <p>Plan the menu, schedule staff, cook together, and watch a physical dining room turn over through service.</p>
       <div class="landing-actions"><button class="primary-action" id="new-restaurant">NEW RESTAURANT</button>
       <button id="continue-restaurant" ${this.model.hasSave ? "" : "disabled"}>CONTINUE RESTAURANT</button>
       ${this.model.hasSave ? `<button class="danger-action" id="reset-save">RESET ENDLESS SAVE</button>` : ""}</div>
@@ -82,7 +82,7 @@ export class RestaurantUI {
 
   private renderPlanning(): void {
     const rep = this.model.reputationProgress(); const demand = this.model.demandPreview();
-    const tabs: PlanningSection[] = ["overview", "pantry", "supplier", "kitchen", "menu", "marketing"];
+    const tabs: PlanningSection[] = ["overview", "pantry", "supplier", "kitchen", "menu", "staff", "marketing"];
     this.overlay.innerHTML = `<div class="planning-hub"><header class="planning-top"><div><span class="flow-kicker">DAY ${this.model.day} · PLANNING</span><h2>Restaurant Hub</h2></div>
       <div class="planning-stats"><span>CASH <b>${formatMoney(this.model.cashCents)}</b></span><span>REPUTATION <b>LV ${rep.level}</b></span><span>DEMAND <b>${demand.potential}</b></span><span>DINING <b>${demand.capacity}</b></span></div></header>
       <nav class="planning-tabs" aria-label="Planning sections">${tabs.map((tab) => `<button data-section="${tab}" class="${tab === this.planningSection ? "is-active" : ""}">${tab.toUpperCase()}</button>`).join("")}</nav>
@@ -99,6 +99,7 @@ export class RestaurantUI {
     if (this.planningSection === "supplier") return this.supplierMarkup();
     if (this.planningSection === "kitchen") return this.kitchenMarkup();
     if (this.planningSection === "menu") return this.menuMarkup();
+    if (this.planningSection === "staff") return this.staffMarkup();
     if (this.planningSection === "marketing") return this.marketingMarkup();
     return this.overviewMarkup();
   }
@@ -106,11 +107,11 @@ export class RestaurantUI {
 
   private overviewMarkup(): string {
     const demand = this.model.demandPreview(); const rep = this.model.reputationProgress();
-    return `<div class="overview-grid"><article><span>RESTAURANT</span><h3>Day ${this.model.day}</h3><p>Kitchen Level ${this.model.kitchenLevel} · ${this.model.kitchenSlotCapacity} active slots<br>Dining Level ${this.model.diningLevel} · ${this.model.diningCapacity} customers</p></article>
+    return `<div class="overview-grid"><article><span>RESTAURANT</span><h3>Day ${this.model.day}</h3><p>Kitchen Level ${this.model.kitchenLevel} · ${this.model.kitchenSlotCapacity} active slots<br>Dining Level ${this.model.diningLevel} · ${this.model.diningCapacity / 2} tables / ${this.model.diningCapacity} seats</p></article>
       <article><span>REPUTATION</span><h3>Level ${rep.level}</h3><p>${rep.points} points · ${rep.nextLevelAt ? `${rep.percent}% to Level ${rep.level + 1}` : "Maximum level"}</p><i><em style="width:${rep.percent}%"></em></i></article>
-      <article><span>TONIGHT'S DEMAND</span><h3>${demand.admitted} admitted</h3><p>${demand.baseline} baseline + ${demand.adBonus} advertising<br>${demand.turnedAway} may be turned away by capacity</p></article>
+      <article><span>TONIGHT'S DEMAND</span><h3>${demand.potential} potential guests</h3><p>${demand.baseline} baseline + ${demand.adBonus} advertising<br>${demand.capacity} seats · turnover determines capacity</p></article>
       <article><span>PANTRY</span><h3>${INGREDIENT_IDS.reduce((sum, id) => sum + this.model.inventory[id], 0)} ingredients</h3><p>${INGREDIENT_IDS.map((id) => `${INGREDIENTS[id].displayName} ${this.model.inventory[id]}`).join(" · ")}</p></article></div>
-      <div class="hub-callout"><strong>Plan in any order.</strong><span>Review stock, buy in bulk, configure appliances, choose two dishes, and set advertising before Prep locks management.</span></div>`;
+      <div class="hub-callout"><strong>Plan in any order.</strong><span>Review stock, configure the kitchen, choose dishes, schedule staff, and set advertising. Tonight's payroll: ${formatMoney(this.model.scheduledPayrollCents)}${this.model.payrollChargedDay === this.model.day ? " · PAID" : ""}.</span></div>`;
   }
 
   private pantryMarkup(): string {
@@ -140,7 +141,7 @@ export class RestaurantUI {
       <h4 class="subheading">STORED APPLIANCES</h4><div class="stored-row">${APPLIANCE_IDS.map((id) => `<span>${APPLIANCES[id].displayName} <b>${this.model.storedCount(id)}</b></span>`).join("")}</div>
       <h4 class="subheading">APPLIANCE SHOP</h4><div class="shop-grid">${shopIds.map((id) => `<article><strong>${id === "prep-station" ? "Extra Prep Station" : id === "oven" ? "Second Oven" : APPLIANCES[id].displayName}</strong><span>${formatMoney(APPLIANCES[id].priceCents)}</span><button data-buy-appliance="${id}" ${this.model.cashCents < APPLIANCES[id].priceCents ? "disabled" : ""}>BUY TO STORAGE</button></article>`).join("")}</div>
       <h4 class="subheading">PERMANENT EXPANSIONS</h4><div class="shop-grid expansions"><article><strong>${KITCHEN_EXPANSION.displayName}</strong><span>${this.model.kitchenLevel >= 2 ? "OWNED · 6 positions" : `${formatMoney(KITCHEN_EXPANSION.costCents)} · 4 → 6 positions`}</span><button data-expansion="kitchen" ${this.model.kitchenLevel >= 2 || this.model.cashCents < KITCHEN_EXPANSION.costCents ? "disabled" : ""}>EXPAND KITCHEN</button></article>
-      <article><strong>${DINING_EXPANSION.displayName}</strong><span>${this.model.diningLevel >= 2 ? "OWNED · 16 capacity" : `${formatMoney(DINING_EXPANSION.costCents)} · 10 → 16 capacity`}</span><button data-expansion="dining" ${this.model.diningLevel >= 2 || this.model.cashCents < DINING_EXPANSION.costCents ? "disabled" : ""}>EXPAND DINING</button></article></div>`;
+      <article><strong>${DINING_EXPANSION.displayName}</strong><span>${this.model.diningLevel >= 2 ? "OWNED · 5 tables / 10 seats" : `${formatMoney(DINING_EXPANSION.costCents)} · 3 → 5 tables`}</span><button data-expansion="dining" ${this.model.diningLevel >= 2 || this.model.cashCents < DINING_EXPANSION.costCents ? "disabled" : ""}>EXPAND DINING</button></article></div>`;
   }
 
   private menuMarkup(): string {
@@ -152,11 +153,21 @@ export class RestaurantUI {
     }).join("")}</div>`;
   }
 
+  private staffMarkup(): string {
+    const payroll = this.model.scheduledPayrollCents;
+    return `<div class="section-heading"><div><span class="flow-kicker">STAFF ROSTER</span><h3>Hire once, schedule per shift</h3></div><p>Payroll is charged exactly once when Prep begins.</p></div>
+      <div class="staff-grid">${STAFF_CANDIDATES.map((candidate) => {
+        const role = STAFF_ROLES[candidate.role]; const employee = this.model.staffRoster.find(({ id }) => id === candidate.id);
+        return `<article class="staff-card ${employee?.scheduled ? "is-scheduled" : ""}"><i style="--staff-color:#${candidate.colorVariant.toString(16).padStart(6, "0")}">${candidate.name[0]}</i><div><strong>${candidate.name}</strong><span>${role.displayName}</span><small>${candidate.role === "server" ? "Seats guests · delivers food · clears tables" : "Washes returned plates at the sink"}</small></div>
+          ${employee ? `<button data-schedule="${employee.id}" data-working="${employee.scheduled ? "false" : "true"}">${employee.scheduled ? `WORKING · ${formatMoney(role.wageCents)}` : `OFF · SCHEDULE ${formatMoney(role.wageCents)}`}</button>` : `<button data-hire="${candidate.id}" ${this.model.cashCents < role.hireCostCents ? "disabled" : ""}>HIRE · ${formatMoney(role.hireCostCents)}</button>`}</article>`;
+      }).join("")}</div><div class="payroll-total"><span>TONIGHT'S SCHEDULED PAYROLL</span><b>${formatMoney(payroll)}</b><small>${this.model.payrollChargedDay === this.model.day ? "PAID FOR THIS SHIFT" : payroll > this.model.cashCents ? "Insufficient cash — Prep is blocked" : "Charged when BEGIN PREP is confirmed"}</small></div>`;
+  }
+
   private marketingMarkup(): string {
     const demand = this.model.demandPreview();
     return `<div class="section-heading"><div><span class="flow-kicker">MARKETING</span><h3>Choose your own pressure</h3></div><p>Advertising applies to Day ${this.model.day} only.</p></div><div class="ad-grid">${AD_IDS.map((id) => {
       const ad = ADVERTISING[id]; return `<button class="ad-card ${this.model.selectedAdId === id ? "is-selected" : ""}" data-ad="${id}" aria-pressed="${this.model.selectedAdId === id}"><strong>${ad.displayName}</strong><b>${formatMoney(ad.costCents)}</b><span>${ad.description}</span></button>`;
-    }).join("")}</div><div class="demand-preview"><div><span>REPUTATION BASELINE</span><b>${demand.baseline}</b></div><div><span>AD EFFECT</span><b>+${demand.adBonus}</b></div><div><span>POTENTIAL DEMAND</span><b>${demand.potential}</b></div><div><span>DINING CAPACITY</span><b>${demand.capacity}</b></div><div class="${demand.turnedAway ? "warning" : ""}"><span>POTENTIALLY TURNED AWAY</span><b>${demand.turnedAway}</b></div></div>`;
+    }).join("")}</div><div class="demand-preview"><div><span>REPUTATION BASELINE</span><b>${demand.baseline}</b></div><div><span>AD EFFECT</span><b>+${demand.adBonus}</b></div><div><span>POTENTIAL ARRIVALS</span><b>${demand.potential}</b></div><div><span>SIMULTANEOUS SEATS</span><b>${demand.capacity}</b></div><div class="${demand.turnedAway ? "warning" : ""}"><span>PRESSURE ABOVE ONE SEATING</span><b>${demand.turnedAway}</b></div></div>`;
   }
 
   private bindPlanningActions(): void {
@@ -169,6 +180,8 @@ export class RestaurantUI {
     this.overlay.querySelectorAll<HTMLButtonElement>("[data-expansion]").forEach((button) => button.addEventListener("click", () => { const bought = button.dataset.expansion === "kitchen" ? this.model.buyKitchenExpansion() : this.model.buyDiningExpansion(); if (bought) this.purchaseCue(); this.renderPlanning(); }));
     this.overlay.querySelectorAll<HTMLButtonElement>("[data-recipe]").forEach((button) => button.addEventListener("click", () => { this.model.toggleRecipe(button.dataset.recipe as RecipeId); this.renderPlanning(); }));
     this.overlay.querySelectorAll<HTMLButtonElement>("[data-ad]").forEach((button) => button.addEventListener("click", () => { const oldSpend = this.model.advertisingSpendingCents; if (this.model.selectAdvertising(button.dataset.ad as AdId) && this.model.advertisingSpendingCents > oldSpend) this.purchaseCue(); this.renderPlanning(); }));
+    this.overlay.querySelectorAll<HTMLButtonElement>("[data-hire]").forEach((button) => button.addEventListener("click", () => { if (this.model.hireEmployee(button.dataset.hire!)) this.purchaseCue(); this.renderPlanning(); }));
+    this.overlay.querySelectorAll<HTMLButtonElement>("[data-schedule]").forEach((button) => button.addEventListener("click", () => { this.model.setEmployeeScheduled(button.dataset.schedule!, button.dataset.working === "true"); this.renderPlanning(); }));
   }
 
   private renderHud(): void {
@@ -187,10 +200,10 @@ export class RestaurantUI {
     const remaining = this.model.phase === "service" ? Math.max(0, this.model.serviceDurationMs - (now - this.model.serviceStartedAt)) : this.model.serviceDurationMs;
     const minutes = Math.floor(remaining / 60_000); const seconds = Math.ceil((remaining % 60_000) / 1000).toString().padStart(2, "0");
     const stock = selectedIngredientIds(this.model.selectedRecipeIds).map((id) => `<span><i style="--stock-color:#${INGREDIENTS[id].color.toString(16).padStart(6, "0")}"></i>${INGREDIENTS[id].displayName} ${this.model.inventory[id]}</span>`).join("");
-    const orders = this.model.activeOrders.map((order) => { const recipe = RECIPES[order.recipeId]; const patience = Math.max(0, order.expiresAt - now); const percent = Math.max(0, Math.min(100, patience / (order.expiresAt - order.createdAt) * 100)); return `<article class="ticket"><div><b>${recipe.icon}</b><strong>${recipe.displayName}</strong><span>${Math.ceil(patience / 1000)}s</span></div><i><em style="width:${percent}%"></em></i></article>`; }).join("");
+    const orders = this.model.activeOrders.map((order) => { const recipe = RECIPES[order.recipeId]; const patience = Math.max(0, order.expiresAt - now); const percent = Math.max(0, Math.min(100, patience / (order.expiresAt - order.createdAt) * 100)); return `<article class="ticket"><div><b>${recipe.icon}</b><strong>${recipe.displayName}<small> · TABLE ${order.tableId.slice(1)}</small></strong><span>${Math.ceil(patience / 1000)}s</span></div><i><em style="width:${percent}%"></em></i></article>`; }).join("");
     this.setText(".hud-cash b", formatMoney(this.model.cashCents)); this.setText(".hud-time", this.model.phase === "prep" ? "UNTIMED" : `${minutes}:${seconds}`);
-    const stockPanel = this.hud.querySelector<HTMLElement>(".hud-stock"); if (stockPanel) stockPanel.innerHTML = `${stock}<span>PLATES ${this.model.platesRemaining}</span><span>DEMAND ${this.model.admittedCustomers}</span>`;
-    const tickets = this.hud.querySelector<HTMLElement>(".tickets"); if (tickets) tickets.innerHTML = orders || `<span class="tickets-empty">${this.model.phase === "prep" ? "Prep ingredients before opening" : this.model.ordersGenerated >= this.model.admittedCustomers ? "All customers admitted" : "Waiting for next order…"}</span>`;
+    const stockPanel = this.hud.querySelector<HTMLElement>(".hud-stock"); if (stockPanel) stockPanel.innerHTML = `${stock}<span>CLEAN ${this.model.platesRemaining}</span><span>DIRTY ${this.model.dirtyReturnQueue + this.model.claimedDirtyPlates}</span><span>PICKUP ${this.model.readyDishes.length}/3</span><span>ARRIVALS ${this.model.arrivals}/${this.model.potentialCustomers}</span>`;
+    const tickets = this.hud.querySelector<HTMLElement>(".tickets"); if (tickets) tickets.innerHTML = orders || `<span class="tickets-empty">${this.model.phase === "prep" ? "Prep ingredients before opening" : this.model.arrivals >= this.model.potentialCustomers ? "All guests have arrived" : "Waiting for a party to be seated…"}</span>`;
     this.setText(".hud-feedback", this.model.lastFeedback);
   }
 
@@ -202,10 +215,10 @@ export class RestaurantUI {
   private renderSummary(): void {
     const summary = this.model.summary(); const inventory = INGREDIENT_IDS.map((id) => `<span>${INGREDIENTS[id].displayName} <b>${summary.remainingInventory[id]}</b></span>`).join("");
     this.overlay.innerHTML = `<div class="flow-panel endless-summary"><span class="flow-kicker">DAY ${summary.day} · NIGHT SUMMARY</span><h2>The restaurant carries on</h2><div class="summary-columns">
-      <section><h3>OPERATIONS</h3><dl><div><dt>Potential customers</dt><dd>${summary.potentialCustomers}</dd></div><div><dt>Admitted customers</dt><dd>${summary.admittedCustomers}</dd></div><div><dt>Turned away by capacity</dt><dd>${summary.customersTurnedAway}</dd></div><div><dt>Orders completed</dt><dd>${summary.ordersCompleted}</dd></div><div><dt>Orders missed / expired</dt><dd>${summary.ordersMissed}</dd></div></dl></section>
-      <section><h3>FINANCIALS</h3><dl><div><dt>Starting cash</dt><dd>${formatMoney(summary.startingCashCents)}</dd></div><div><dt>Ingredient spending</dt><dd>−${formatMoney(summary.ingredientSpendingCents)}</dd></div><div><dt>Advertising spending</dt><dd>−${formatMoney(summary.advertisingSpendingCents)}</dd></div><div><dt>Capital spending</dt><dd>−${formatMoney(summary.capitalSpendingCents)}</dd></div><div><dt>Revenue</dt><dd class="positive">+${formatMoney(summary.revenueCents)}</dd></div><div><dt>Wasted value</dt><dd>${formatMoney(summary.wastedIngredientValueCents)}</dd></div><div class="summary-final"><dt>Ending cash</dt><dd>${formatMoney(summary.endingCashCents)}</dd></div></dl></section>
+      <section><h3>CUSTOMERS + DINING</h3><dl><div><dt>Potential / arrivals</dt><dd>${summary.potentialCustomers} / ${summary.arrivals}</dd></div><div><dt>Guests seated</dt><dd>${summary.seatedCustomers}</dd></div><div><dt>Meals delivered</dt><dd>${summary.mealsDelivered}</dd></div><div><dt>Left waiting for table</dt><dd>${summary.leftWaitingForTable}</dd></div><div><dt>Left waiting for food</dt><dd>${summary.leftWaitingForFood}</dd></div><div><dt>Peak seats occupied</dt><dd>${summary.peakSeatsOccupied}</dd></div><div><dt>Table turns</dt><dd>${summary.tableTurns}</dd></div></dl></section>
+      <section><h3>FINANCIALS</h3><dl><div><dt>Starting cash</dt><dd>${formatMoney(summary.startingCashCents)}</dd></div><div><dt>Ingredient spending</dt><dd>−${formatMoney(summary.ingredientSpendingCents)}</dd></div><div><dt>Advertising spending</dt><dd>−${formatMoney(summary.advertisingSpendingCents)}</dd></div><div><dt>Payroll</dt><dd>−${formatMoney(summary.payrollCents)}</dd></div><div><dt>Capital spending</dt><dd>−${formatMoney(summary.capitalSpendingCents)}</dd></div><div><dt>Revenue</dt><dd class="positive">+${formatMoney(summary.revenueCents)}</dd></div><div><dt>Wasted value</dt><dd>${formatMoney(summary.wastedIngredientValueCents)}</dd></div><div class="summary-final"><dt>Ending cash</dt><dd>${formatMoney(summary.endingCashCents)}</dd></div></dl></section>
       <section><h3>INVENTORY</h3><div class="summary-inventory">${inventory}</div><p>Remaining base value <b>${formatMoney(summary.remainingInventoryValueCents)}</b></p></section>
-      <section><h3>REPUTATION</h3><p>Started Level ${summary.startingReputation.level} · ${summary.startingReputation.points} pts</p><strong class="reputation-change ${summary.reputationChange >= 0 ? "positive" : "negative"}">${summary.reputationChange >= 0 ? "+" : ""}${summary.reputationChange} reputation</strong><p>Now Level ${summary.endingReputation.level} · ${summary.endingReputation.points} pts<br>${summary.endingReputation.nextLevelAt ? `${summary.endingReputation.percent}% to next level` : "Maximum level"}</p></section>
+      <section><h3>STAFF + REPUTATION</h3><p>${summary.scheduledEmployees.join(" · ") || "No employees scheduled"}<br>${summary.serverDeliveries} deliveries · ${summary.tablesCleared} tables cleared · ${summary.dishwasherPlatesWashed} plates AI-washed</p><p>Started Level ${summary.startingReputation.level} · ${summary.startingReputation.points} pts</p><strong class="reputation-change ${summary.reputationChange >= 0 ? "positive" : "negative"}">${summary.reputationChange >= 0 ? "+" : ""}${summary.reputationChange} reputation</strong><p>Now Level ${summary.endingReputation.level} · ${summary.endingReputation.points} pts<br>${summary.endingReputation.nextLevelAt ? `${summary.endingReputation.percent}% to next level` : "Maximum level"}</p></section>
       </div><button class="primary-action" id="next-day">NEXT DAY →</button></div>`;
     this.overlay.querySelector<HTMLButtonElement>("#next-day")?.addEventListener("click", () => { if (this.model.nextDay()) { this.planningSection = "overview"; this.phaseChanged(); this.render(); } });
   }
@@ -234,7 +247,7 @@ export class RestaurantUI {
     if (target) this.focusButton(target);
   }
   private switchPlanningSection(direction: number): void {
-    const sections: PlanningSection[] = ["overview", "pantry", "supplier", "kitchen", "menu", "marketing"];
+    const sections: PlanningSection[] = ["overview", "pantry", "supplier", "kitchen", "menu", "staff", "marketing"];
     const nextIndex = (sections.indexOf(this.planningSection) + direction + sections.length) % sections.length;
     this.planningSection = sections[nextIndex]; this.planningFocusKey = `section:${this.planningSection}`;
     this.renderPlanning();

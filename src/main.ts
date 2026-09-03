@@ -23,6 +23,7 @@ if (import.meta.env.DEV && new URLSearchParams(location.search).has("test")) {
     ["New restaurant", () => { restaurant.newRestaurant(); restaurantUI.render(); phaseChanged(); }],
     ["Fund restaurant", () => { restaurant.cashCents = 100_000; restaurant.save(); restaurantUI.render(); }],
     ["Setup Roast + Garden", () => quickSetup(false)], ["Setup Fries + Roast", () => quickSetup(true)],
+    ["Setup with dishwasher", () => staffSetup()],
     ["Open service", () => phaseChanged(restaurant.startService(performance.now()))],
     ["P1 take potato", () => actAt(0, 95, 305)], ["Give P1 raw potato", () => window.__THROWN_TOGETHER__?.giveIngredient(0, "potato")],
     ["Give P1 chopped potato", () => window.__THROWN_TOGETHER__?.giveIngredient(0, "potato", "chopped")],
@@ -31,11 +32,12 @@ if (import.meta.env.DEV && new URLSearchParams(location.search).has("test")) {
     ["Give plated Roast", () => window.__THROWN_TOGETHER__?.giveDish(1, "roast-potato", "plated")], ["Give plated Garden", () => window.__THROWN_TOGETHER__?.giveDish(1, "garden-plate", "plated")],
     ["Give plated Cheese", () => window.__THROWN_TOGETHER__?.giveDish(1, "cheese-bake", "plated")], ["Give plated Fries", () => window.__THROWN_TOGETHER__?.giveDish(1, "fries", "plated")],
     ["P1 → slot 1", () => actAt(0, 120, 150)], ["P2 → slot 2", () => actAt(1, 820, 150)], ["P2 → slot 3", () => actAt(1, 660, 150)], ["P2 → slot 4", () => actAt(1, 660, 440)],
-    ["P2 → serve", () => actAt(1, 830, 440)], ["P1 → shared", () => actAt(0, 420, 305)], ["P2 → shared", () => actAt(1, 540, 305)],
+    ["P2 → pickup", () => actAt(1, 880, 305)], ["P2 wash dish", () => actAt(1, 820, 440)], ["P1 → shared", () => actAt(0, 420, 305)], ["P2 → shared", () => actAt(1, 540, 305)],
     ["P1 floor interact", () => actAt(0, 250, 530)], ["P1 → trash", () => actAt(0, 420, 440)],
     ["Ready catch", () => window.__THROWN_TOGETHER__?.setPlayer(1, 690, 305)], ["P1 throw", () => window.__THROWN_TOGETHER__?.throw(0)], ["Land throw", () => window.__THROWN_TOGETHER__?.advanceFlight()],
     ["Only Roast Order", () => onlyOrder("roast-potato")], ["Only Garden Order", () => onlyOrder("garden-plate")], ["Only Fries Order", () => onlyOrder("fries")],
     ["Expire soon", () => { const first = restaurant.activeOrders[0]; if (first) first.expiresAt = performance.now() - 1; }], ["End service", () => window.__THROWN_TOGETHER__?.endService()],
+    ["Return dirty plate", () => { if (restaurant.platesRemaining > 0) { restaurant.platesRemaining -= 1; restaurant.dirtyReturnQueue += 1; } }],
     ["Next day", () => { restaurant.nextDay(); restaurantUI.render(); phaseChanged(); }],
   ];
   scenarios.forEach(([label, run]) => { const button = document.createElement("button"); button.type = "button"; button.textContent = label; button.addEventListener("click", run); harness.append(button); });
@@ -47,6 +49,11 @@ if (import.meta.env.DEV && new URLSearchParams(location.search).has("test")) {
     if (withFries) { restaurant.purchaseAppliance("fryer"); restaurant.removeAppliance(2); restaurant.installAppliance("fryer", 2); }
     restaurant.purchaseIngredients("potato", 10); restaurant.purchaseIngredients("tomato", 5); restaurant.purchaseIngredients("onion", 5);
     restaurant.toggleRecipe("roast-potato"); restaurant.toggleRecipe(withFries ? "fries" : "garden-plate"); restaurant.beginPrep(); phaseChanged();
+  }
+  function staffSetup(): void {
+    restaurant.newRestaurant(); restaurant.cashCents = 100_000; restaurant.hireEmployee("dishwasher-june"); restaurant.setEmployeeScheduled("dishwasher-june", true);
+    restaurant.purchaseIngredients("potato", 10); restaurant.purchaseIngredients("tomato", 5); restaurant.purchaseIngredients("onion", 5);
+    restaurant.toggleRecipe("roast-potato"); restaurant.toggleRecipe("garden-plate"); restaurant.beginPrep(); phaseChanged();
   }
   function actAt(player: 0 | 1, x: number, y: number): void { const api = window.__THROWN_TOGETHER__; api?.setPlayer(player, x, y); api?.interact(player); }
   function onlyOrder(recipeId: RecipeId): void { restaurant.activeOrders.splice(0); restaurant.ordersGenerated = 0; restaurant.forceOrder(recipeId, performance.now()); restaurantUI.refresh(performance.now() + 1000); }

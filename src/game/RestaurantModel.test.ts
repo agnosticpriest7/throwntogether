@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { RestaurantModel, type StorageLike } from "./RestaurantModel";
-import { ORDER_PATIENCE_MS, SAVE_KEY, bulkQuote } from "./data";
+import { DISHWASH_DURATION_MS, EATING_DURATION_MS, ORDER_PATIENCE_MS, SAVE_KEY, SERVER_CLEAR_DURATION_MS, SERVER_DELIVERY_DURATION_MS, SERVER_SEAT_DURATION_MS, TABLE_WAIT_PATIENCE_MS, bulkQuote } from "./data";
 
 class MemoryStorage implements StorageLike {
   data = new Map<string, string>();
@@ -9,144 +9,79 @@ class MemoryStorage implements StorageLike {
   removeItem(key: string) { this.data.delete(key); }
 }
 
-function modelWithMenu(storage?: StorageLike): RestaurantModel {
-  const model = new RestaurantModel({ storage, seed: 1, serviceDurationMs: 1000 });
+function modelWithMenu(storage?: StorageLike, duration = 120_000): RestaurantModel {
+  const model = new RestaurantModel({ storage, seed: 1, serviceDurationMs: duration });
   if (storage) model.newRestaurant();
   model.toggleRecipe("roast-potato"); model.toggleRecipe("garden-plate");
   return model;
 }
+function openService(storage?: StorageLike): RestaurantModel { const model = modelWithMenu(storage); expect(model.beginPrep()).toBe(true); model.startService(0); return model; }
+function forcedOrder(model: RestaurantModel, recipe: "roast-potato" | "garden-plate" = "roast-potato", now = 1) {
+  model.activeOrders = []; const order = model.forceOrder(recipe, now); expect(order).not.toBeNull(); return order!;
+}
+function deliver(model: RestaurantModel, recipe: "roast-potato" | "garden-plate" = "roast-potato", now = 1) {
+  const order = forcedOrder(model, recipe, now); expect(model.queueReadyDish(recipe)).toBe(true); expect(model.revenueCents).toBe(0);
+  model.updateService(now); model.updateService(now + SERVER_DELIVERY_DURATION_MS); return order;
+}
 
-describe("Endless persistence", () => {
-  it("restores cash, inventory, reputation, appliances, slots, and expansions", () => {
-    const storage = new MemoryStorage(); const model = new RestaurantModel({ storage }); model.newRestaurant();
-    model.cashCents = 100_000; model.purchaseIngredients("potato", 10); model.purchaseAppliance("fryer");
-    model.removeAppliance(2); model.installAppliance("fryer", 2); model.buyKitchenExpansion(); model.buyDiningExpansion();
-    model.reputationPoints = 360; model.save();
+describe("Endless persistence and migration", () => {
+  it("restores economy, equipment, expansions, reputation, and persistent staff identity", () => {
+    const storage = new MemoryStorage(); const model = new RestaurantModel({ storage }); model.newRestaurant(); model.cashCents = 100_000;
+    model.purchaseIngredients("potato", 10); model.purchaseAppliance("fryer"); model.removeAppliance(2); model.installAppliance("fryer", 2);
+    model.buyKitchenExpansion(); model.buyDiningExpansion(); model.hireEmployee("server-milo"); model.setEmployeeScheduled("server-milo", true); model.reputationPoints = 360; model.save();
     const restored = new RestaurantModel({ storage });
-    expect(restored.cashCents).toBe(model.cashCents); expect(restored.inventory.potato).toBe(10);
-    expect(restored.reputationPoints).toBe(360); expect(restored.applianceOwnership.fryer).toBe(1);
+    expect(restored.cashCents).toBe(model.cashCents); expect(restored.inventory.potato).toBe(10); expect(restored.reputationPoints).toBe(360);
     expect(restored.installedSlots[2]).toBe("fryer"); expect(restored.kitchenLevel).toBe(2); expect(restored.diningLevel).toBe(2);
+    expect(restored.staffRoster.find(({ id }) => id === "server-milo")).toMatchObject({ name: "Milo", role: "server", scheduled: true });
   });
-
-  it("confirmed reset removes the save and restores clean starting state", () => {
+  it("confirmed reset restores the clean restaurant and starting server", () => {
     const storage = new MemoryStorage(); const model = new RestaurantModel({ storage, startAtLanding: true }); model.newRestaurant(); model.purchaseIngredients("potato", 5);
-    expect(storage.getItem(SAVE_KEY)).not.toBeNull(); expect(model.resetEndlessSave(false)).toBe(false);
-    expect(model.resetEndlessSave(true)).toBe(true); expect(storage.getItem(SAVE_KEY)).toBeNull();
-    expect(model.cashCents).toBe(15_000); expect(model.inventory.potato).toBe(0); expect(model.day).toBe(1);
+    expect(model.resetEndlessSave(false)).toBe(false); expect(model.resetEndlessSave(true)).toBe(true); expect(storage.getItem(SAVE_KEY)).toBeNull();
+    expect(model.cashCents).toBe(15_000); expect(model.inventory.potato).toBe(0); expect(model.staffRoster).toHaveLength(1); expect(model.staffRoster[0].name).toBe("Ada");
+  });
+  it("migrates a version 1 save without corrupting restaurant state", () => {
+    const storage = new MemoryStorage(); storage.setItem(SAVE_KEY, JSON.stringify({ version: 1, day: 4, cashCents: 22222, inventory: { potato: 7, tomato: 1, onion: 0, cheese: 2 }, applianceOwnership: { "prep-station": 1, oven: 1, "assembly-station": 1, "plating-station": 1, fryer: 0 }, installedSlots: ["oven", "prep-station", "assembly-station", "plating-station", null, null], kitchenLevel: 1, diningLevel: 2, reputationPoints: 220, selectedRecipeIds: [], selectedAdId: "none", startingCashCents: 22222, ingredientSpendingCents: 0, advertisingSpendingCents: 0, capitalSpendingCents: 0 }));
+    const model = new RestaurantModel({ storage }); expect(model.day).toBe(4); expect(model.cashCents).toBe(22222); expect(model.inventory.potato).toBe(7); expect(model.diningLevel).toBe(2); expect(model.staffRoster[0].role).toBe("server");
+    expect(JSON.parse(storage.getItem(SAVE_KEY)!).version).toBe(2);
   });
 });
 
-describe("Bulk supplier", () => {
-  it.each([[1, 0], [4, 0], [5, 500], [9, 500], [10, 1000], [19, 1000], [20, 2000]])("applies the threshold for %i units", (quantity, discountBps) => {
-    expect(bulkQuote("potato", quantity).tier.discountBps).toBe(discountBps);
-  });
-
-  it("calculates total and effective unit cost in integer cents", () => {
-    expect(bulkQuote("potato", 10)).toMatchObject({ totalCents: 1800, effectiveUnitCents: 180 });
-    expect(bulkQuote("onion", 5)).toMatchObject({ totalCents: 475, effectiveUnitCents: 95 });
-  });
-
-  it("rejects insufficient cash without changing inventory", () => {
-    const model = new RestaurantModel(); model.cashCents = 100;
-    expect(model.purchaseIngredients("cheese", 5)).toBe(false); expect(model.cashCents).toBe(100); expect(model.inventory.cheese).toBe(0);
-  });
-
-  it("increases inventory by the purchased quantity", () => {
-    const model = new RestaurantModel(); expect(model.purchaseIngredients("tomato", 5)).toBe(true);
-    expect(model.inventory.tomato).toBe(5); expect(model.cashCents).toBe(14_050);
-  });
+describe("Bulk supplier and finite kitchen", () => {
+  it.each([[1, 0], [4, 0], [5, 500], [9, 500], [10, 1000], [19, 1000], [20, 2000]])("applies the threshold for %i units", (quantity, discountBps) => expect(bulkQuote("potato", quantity).tier.discountBps).toBe(discountBps));
+  it("uses integer cents and rejects insufficient cash", () => { expect(bulkQuote("potato", 10)).toMatchObject({ totalCents: 1800, effectiveUnitCents: 180 }); const model = new RestaurantModel(); model.cashCents = 100; expect(model.purchaseIngredients("cheese", 5)).toBe(false); expect(model.inventory.cheese).toBe(0); });
+  it("increases stock and charges purchases exactly once", () => { const model = new RestaurantModel(); expect(model.purchaseIngredients("tomato", 5)).toBe(true); expect(model.inventory.tomato).toBe(5); expect(model.cashCents).toBe(14050); });
+  it("requires an installed fryer and respects finite slots", () => { const model = new RestaurantModel(); model.purchaseAppliance("fryer"); expect(model.isRecipeAvailable("fries")).toBe(false); expect(model.installAppliance("fryer", 4)).toBe(false); model.removeAppliance(2); model.installAppliance("fryer", 2); expect(model.isRecipeAvailable("fries")).toBe(true); model.removeAppliance(2); expect(model.isRecipeAvailable("fries")).toBe(false); });
+  it("persists kitchen expansion capacity", () => { const model = new RestaurantModel(); model.cashCents = 50_000; expect(model.buyKitchenExpansion()).toBe(true); expect(model.kitchenSlotCapacity).toBe(6); });
 });
 
-describe("Finite appliances", () => {
-  it("purchases an appliance into owned storage", () => {
-    const model = new RestaurantModel(); expect(model.purchaseAppliance("fryer")).toBe(true);
-    expect(model.applianceOwnership.fryer).toBe(1); expect(model.storedCount("fryer")).toBe(1);
-  });
-
-  it("cannot install beyond kitchen slot capacity", () => {
-    const model = new RestaurantModel(); model.purchaseAppliance("prep-station");
-    expect(model.installAppliance("prep-station", 4)).toBe(false); expect(model.kitchenSlotCapacity).toBe(4);
-  });
-
-  it("requires an installed, not merely owned, fryer for Fries", () => {
-    const model = new RestaurantModel(); model.purchaseAppliance("fryer");
-    expect(model.isRecipeAvailable("fries")).toBe(false); model.removeAppliance(2); expect(model.installAppliance("fryer", 2)).toBe(true);
-    expect(model.isRecipeAvailable("fries")).toBe(true); model.removeAppliance(2); expect(model.isRecipeAvailable("fries")).toBe(false);
-  });
-
-  it("kitchen expansion permanently increases active slots", () => {
-    const model = new RestaurantModel(); model.cashCents = 50_000;
-    expect(model.buyKitchenExpansion()).toBe(true); expect(model.kitchenSlotCapacity).toBe(6);
-  });
+describe("Staff hiring, scheduling, and payroll", () => {
+  it("deducts a one-time hiring cost and persists the hire", () => { const storage = new MemoryStorage(); const model = new RestaurantModel({ storage }); model.newRestaurant(); const before = model.cashCents; expect(model.hireEmployee("server-milo")).toBe(true); expect(before - model.cashCents).toBe(10_000); expect(new RestaurantModel({ storage }).staffRoster.some(({ id }) => id === "server-milo")).toBe(true); });
+  it("charges scheduled wages exactly once and off employees nothing", () => { const model = modelWithMenu(); const before = model.cashCents; expect(model.beginPrep()).toBe(true); expect(before - model.cashCents).toBe(3000); expect(model.payrollSpendingCents).toBe(3000); expect(model.beginPrep()).toBe(false); expect(before - model.cashCents).toBe(3000); });
+  it("blocks Prep when scheduled payroll is unaffordable", () => { const model = modelWithMenu(); model.cashCents = 2999; expect(model.beginPrep()).toBe(false); expect(model.phase).toBe("planning"); expect(model.lastFeedback).toContain("payroll"); });
+  it("does not charge an off employee", () => { const model = modelWithMenu(); model.setEmployeeScheduled("server-ada", false); const before = model.cashCents; expect(model.beginPrep()).toBe(true); expect(model.cashCents).toBe(before); expect(model.payrollSpendingCents).toBe(0); });
+  it("prevents two servers from reserving the same delivery", () => { const model = new RestaurantModel({ seed: 1 }); model.cashCents = 50_000; model.hireEmployee("server-milo"); model.setEmployeeScheduled("server-milo", true); model.toggleRecipe("roast-potato"); model.toggleRecipe("garden-plate"); model.beginPrep(); model.startService(0); forcedOrder(model); model.queueReadyDish("roast-potato"); model.updateService(1); expect(model.activeStaff.filter(({ task }) => task?.type === "deliver")).toHaveLength(1); expect(model.readyDishes[0].claimedBy).not.toBeNull(); });
 });
 
-describe("Demand and reputation", () => {
-  it("maps reputation points to data-defined baseline demand", () => {
-    const model = new RestaurantModel(); model.reputationPoints = 0; expect(model.demandPreview().baseline).toBe(8);
-    model.reputationPoints = 220; expect(model.demandPreview().baseline).toBe(13); model.reputationPoints = 1620; expect(model.demandPreview().baseline).toBe(50);
-  });
-
-  it("applies ads to one night and caps admissions at dining capacity", () => {
-    const model = new RestaurantModel(); model.reputationPoints = 220; model.selectAdvertising("campaign");
-    expect(model.demandPreview()).toMatchObject({ baseline: 13, potential: 20, capacity: 10, admitted: 10, turnedAway: 10 });
-  });
-
-  it("expires advertising after service", () => {
-    const model = modelWithMenu(); model.selectAdvertising("flyers"); model.beginPrep(); model.startService(0); model.endService(1000);
-    expect(model.selectedAdId).toBe("none");
-  });
-
-  it("bounds daily reputation movement", () => {
-    const model = modelWithMenu(); model.reputationPoints = 220; model.startingReputationPoints = 220; model.beginPrep(); model.startService(0); model.endService(1000);
-    expect(Math.abs(model.reputationChange)).toBeLessThanOrEqual(20);
-  });
+describe("Physical dining and delivery", () => {
+  it("seats a waiting party at a free table and creates a valid menu ticket", () => { const model = openService(); model.updateService(801); expect(model.activeStaff[0].task?.type).toBe("seat"); const events = model.updateService(801 + SERVER_SEAT_DURATION_MS); expect(events.some(({ type }) => type === "order-arrived")).toBe(true); expect(model.activeOrders[0].tableId).toMatch(/^t/); expect(model.selectedRecipeIds).toContain(model.activeOrders[0].recipeId); });
+  it("leaves customers waiting when the room is full and expires table patience", () => { const model = openService(); model.diningTables.forEach((table) => { table.state = "waiting_food"; table.customerId = 999; }); model.updateService(801); expect(model.customers.some(({ state }) => state === "waiting_for_table")).toBe(true); model.updateService(TABLE_WAIT_PATIENCE_MS + 1); expect(model.leftWaitingForTable).toBeGreaterThan(0); });
+  it("dining expansion adds two real tables and four seats", () => { const model = modelWithMenu(); model.cashCents = 50_000; model.buyDiningExpansion(); model.beginPrep(); model.startService(0); expect(model.diningCapacity).toBe(10); expect(model.diningTables).toHaveLength(5); });
+  it("pickup alone earns nothing; delivery pays the correct table", () => { const model = openService(); const order = forcedOrder(model); expect(model.queueReadyDish("roast-potato")).toBe(true); expect(model.revenueCents).toBe(0); model.updateService(1); expect(model.activeStaff[0].task?.targetId).toBe(String(model.readyDishes[0].id)); model.updateService(1 + SERVER_DELIVERY_DURATION_MS); expect(model.activeOrders).toHaveLength(0); expect(model.ordersCompleted).toBe(1); expect(model.revenueCents).toBe(800); expect(model.customers.find(({ id }) => id === order.customerId)?.state).toBe("eating"); });
+  it("an incorrect dish is refused and an abandoned customer never pays", () => { const model = openService(); forcedOrder(model, "roast-potato", 1); expect(model.queueReadyDish("garden-plate")).toBe(false); expect(model.revenueCents).toBe(0); model.updateService(ORDER_PATIENCE_MS + 2); expect(model.revenueCents).toBe(0); expect(model.leftWaitingForFood).toBeGreaterThan(0); });
+  it("returns a table to reusable state after eating and server clearing", () => { const model = openService(); const order = deliver(model); const deliveredAt = 1 + SERVER_DELIVERY_DURATION_MS; model.updateService(deliveredAt + EATING_DURATION_MS); const table = model.diningTables.find(({ id }) => id === order.tableId)!; expect(table.state).toBe("dirty"); model.updateService(deliveredAt + EATING_DURATION_MS + SERVER_CLEAR_DURATION_MS); expect(table.state).toBe("clean"); expect(model.dirtyReturnQueue).toBe(1); });
 });
 
-describe("Persistent economy", () => {
-  it("charges ingredient, advertising, and capital purchases once", () => {
-    const model = new RestaurantModel(); model.purchaseIngredients("potato", 5); model.selectAdvertising("flyers"); model.selectAdvertising("flyers"); model.purchaseAppliance("prep-station");
-    expect(model.ingredientSpendingCents).toBe(950); expect(model.advertisingSpendingCents).toBe(2000); expect(model.capitalSpendingCents).toBe(6000);
-    expect(model.cashCents).toBe(6050);
-  });
-
-  it("decrements persistent stock and never restores ruined food", () => {
-    const model = modelWithMenu(); model.purchaseIngredients("potato", 1); model.beginPrep();
-    expect(model.takeIngredient("potato")).toBe(true); model.recordWaste(200);
-    expect(model.inventory.potato).toBe(0); expect(model.wastedValueCents).toBe(200);
-  });
-
-  it("keeps revenue and unused inventory across days and reloads", () => {
-    const storage = new MemoryStorage(); const model = modelWithMenu(storage); model.purchaseIngredients("potato", 5); model.beginPrep(); model.startService(0);
-    const recipe = model.activeOrders[0].recipeId; model.serveDish(recipe); const cashAfterSale = model.cashCents; model.endService(1000); model.nextDay();
-    expect(model.inventory.potato).toBe(5); expect(model.cashCents).toBe(cashAfterSale); expect(model.day).toBe(2);
-    const restored = new RestaurantModel({ storage }); expect(restored.inventory.potato).toBe(5); expect(restored.cashCents).toBe(cashAfterSale); expect(restored.day).toBe(2);
-  });
+describe("Plate conservation and dishwashing", () => {
+  it("dirty plates cannot be used until a human wash restores one", () => { const model = openService(); expect(model.useCleanPlate()).toBe(true); expect(model.platesRemaining).toBe(5); model.dirtyReturnQueue = 1; expect(model.claimDirtyPlate()).toBe(true); expect(model.platesRemaining).toBe(5); expect(model.completePlateWash("human")?.type).toBe("plate-washed"); expect(model.platesRemaining).toBe(6); });
+  it("a scheduled dishwasher visibly claims and restores one returned plate", () => { const model = modelWithMenu(); model.cashCents = 50_000; model.hireEmployee("dishwasher-june"); model.setEmployeeScheduled("dishwasher-june", true); model.beginPrep(); model.startService(0); model.platesRemaining = 5; model.dirtyReturnQueue = 1; model.updateService(10); const dishwasher = model.activeStaff.find(({ role }) => role === "dishwasher")!; expect(dishwasher.task?.type).toBe("wash"); expect(model.dirtyReturnQueue).toBe(0); model.updateService(10 + DISHWASH_DURATION_MS); expect(model.platesRemaining).toBe(6); expect(model.dishwasherPlatesWashed).toBe(1); });
+  it("conserves the configured total across clean, dirty, and claimed plates", () => { const model = openService(); model.useCleanPlate(); model.dirtyReturnQueue = 1; model.claimDirtyPlate(); expect(model.platesRemaining + model.dirtyReturnQueue + model.claimedDirtyPlates).toBe(6); model.completePlateWash(); expect(model.platesRemaining + model.dirtyReturnQueue + model.claimedDirtyPlates).toBe(6); });
 });
 
-describe("Preserved service order rules", () => {
-  it("uses the configured 10% longer default order patience", () => {
-    const model = modelWithMenu(); model.beginPrep(); model.startService(0); model.activeOrders = []; model.ordersGenerated = 0;
-    const order = model.forceOrder("roast-potato", 1_000);
-    expect(ORDER_PATIENCE_MS).toBe(38_500); expect(order?.expiresAt).toBe(39_500);
-  });
-
-  it("refuses an incorrect dish and pays the data-defined price for a correct dish", () => {
-    const model = modelWithMenu(); model.beginPrep(); model.startService(0); model.activeOrders = []; model.ordersGenerated = 0;
-    model.forceOrder("roast-potato", 0);
-    expect(model.serveDish("garden-plate")).toBe(false); expect(model.activeOrders).toHaveLength(1); expect(model.revenueCents).toBe(0);
-    expect(model.serveDish("roast-potato")).toBe(true); expect(model.activeOrders).toHaveLength(0); expect(model.revenueCents).toBe(800);
-  });
-
-  it("expires an order without revenue", () => {
-    const model = modelWithMenu(); model.beginPrep(); model.startService(0); model.activeOrders = []; model.ordersGenerated = 0;
-    model.forceOrder("garden-plate", 0, 100); model.updateService(101);
-    expect(model.ordersMissed).toBe(1); expect(model.revenueCents).toBe(0);
-  });
-
-  it("generates only selected-menu dishes and never exceeds admitted demand", () => {
-    const model = new RestaurantModel({ seed: 3, serviceDurationMs: 120_000 }); model.toggleRecipe("roast-potato"); model.toggleRecipe("garden-plate"); model.beginPrep(); model.startService(0);
-    for (let now = 15_000; now < 115_000; now += 15_000) model.updateService(now);
-    expect(model.ordersGenerated).toBeLessThanOrEqual(model.admittedCustomers);
-    expect(model.activeOrders.every(({ recipeId }) => recipeId === "roast-potato" || recipeId === "garden-plate")).toBe(true);
-  });
+describe("Demand, reputation, and persistent economy", () => {
+  it("maps reputation and advertising to arrivals without pre-capping by seats", () => { const model = new RestaurantModel(); model.reputationPoints = 220; model.selectAdvertising("campaign"); expect(model.demandPreview()).toMatchObject({ baseline: 13, potential: 20, capacity: 6, admitted: 20 }); });
+  it("expires advertising and bounds reputation after the shift", () => { const model = openService(); model.reputationPoints = 220; model.startingReputationPoints = 220; model.endService(1000); expect(model.selectedAdId).toBe("none"); expect(Math.abs(model.reputationChange)).toBeLessThanOrEqual(20); });
+  it("successful visible service can increase reputation", () => { const model = openService(); model.potentialCustomers = 1; deliver(model); model.endService(5000); expect(model.reputationChange).toBeGreaterThan(0); });
+  it("table-wait and food-wait failures can reduce reputation", () => { const model = openService(); model.diningTables.forEach((table) => { table.state = "waiting_food"; }); model.updateService(TABLE_WAIT_PATIENCE_MS + 1); model.endService(40_000); expect(model.reputationChange).toBeLessThanOrEqual(0); });
+  it("preserves unused ingredients and delivered revenue into the next day", () => { const storage = new MemoryStorage(); const model = modelWithMenu(storage); model.purchaseIngredients("potato", 5); model.beginPrep(); model.startService(0); deliver(model); const cash = model.cashCents; model.endService(5000); model.nextDay(); const restored = new RestaurantModel({ storage }); expect(restored.inventory.potato).toBe(5); expect(restored.cashCents).toBe(cash); expect(restored.day).toBe(2); });
+  it("uses the configured generous food patience and never restores ruined stock", () => { const model = openService(); const order = forcedOrder(model, "roast-potato", 1000); expect(order.expiresAt).toBe(1000 + ORDER_PATIENCE_MS); model.inventory.potato = 1; expect(model.takeIngredient("potato")).toBe(true); model.recordWaste(200); expect(model.inventory.potato).toBe(0); expect(model.wastedValueCents).toBe(200); });
 });

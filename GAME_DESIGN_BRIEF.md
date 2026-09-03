@@ -1,6 +1,6 @@
 # Thrown Together — Game Design Brief
 
-Working title. This repository copy is the current design reference through Milestone 3.
+Working title. This repository copy is the current design reference through Milestone 4.
 
 ## Project goal
 
@@ -12,19 +12,20 @@ The core design pillars are:
 2. Ingredients are purchased persistent inventory; waste is a real financial loss.
 3. Throwing loose ingredients is fast while the central shared counter is safe.
 4. The kitchen itself—owned equipment, installed capacity, and workspace—is progression.
-5. Chaos should come from player decisions, coordination, limited capacity, and service pressure rather than environmental gimmicks.
+5. Human chefs stay at the center while deterministic role-specific staff turn money into focused automation.
+6. Chaos should come from player decisions, coordination, limited capacity, and service pressure rather than environmental gimmicks.
 
 ## Endless restaurant
 
 Endless Mode is one persistent restaurant across an unlimited sequence of days:
 
-1. Review cash, reputation, pantry, kitchen, and dining capacity.
+1. Review cash, reputation, pantry, kitchen, physical dining room, and staff roster.
 2. Buy bulk ingredients and capital equipment.
 3. Store, install, move, or swap owned appliances in finite authored slots.
 4. Choose two dishes from recipes enabled by installed equipment.
-5. Optionally advertise to increase this night's demand.
-6. Begin locked Planning, enter untimed Prep, and open for timed Service.
-7. Complete or miss paced customer tickets.
+5. Hire employees, schedule a shift, and optionally advertise to increase this night's demand.
+6. Pay scheduled payroll once, enter untimed Prep, and open for timed Service.
+7. Cook table-linked tickets while servers seat, deliver, clear, and turn tables.
 8. Review operations, finances, inventory, and reputation.
 9. Persist the restaurant and begin the next day.
 
@@ -39,6 +40,7 @@ Use a versioned browser local-storage record. Persist at minimum:
 - Appliance ownership and installed authored slots
 - Kitchen and dining expansion levels
 - Reputation points and visible level
+- Persistent employee IDs, names, roles, visual variation, and schedule choice
 - In-progress nightly planning selections and accounting where needed to prevent double charging
 
 Autosave meaningful planning changes and completed nights. Provide New Restaurant, Continue Restaurant, and a confirmed Reset Endless Save action.
@@ -50,7 +52,8 @@ Prototype starting restaurant:
 - Empty pantry
 - Reputation Level 1
 - Kitchen Level 1 with four core workstations installed
-- Dining Level 1 with capacity for 10 customers
+- Dining Level 1 with three two-seat tables
+- One basic server, Ada, already hired and scheduled; her normal $30 wage applies
 
 ## Planning Hub
 
@@ -61,6 +64,7 @@ Planning is a controller-friendly hub rather than a rigid wizard. Players may re
 - Supplier
 - Kitchen
 - Menu
+- Staff
 - Marketing
 
 Begin Prep intentionally locks purchasing, advertising, menu changes, and kitchen configuration until the following day.
@@ -80,7 +84,7 @@ Bulk ingredient discounts are data-driven:
 
 The Supplier shows chosen quantity, total, effective per-unit price, discount tier, current cash, and owned quantity. Players may intentionally overbuy or underbuy; do not recommend an optimum. Leftovers carry forward without decay.
 
-Completed dishes add their recipe sale price to persistent cash. Ingredient waste is reported but receives no duplicate fine.
+Meals add their recipe sale price only when an AI server successfully delivers them to the associated customer/table. Ingredient waste is reported but receives no duplicate fine.
 
 ## Kitchen ownership and capacity
 
@@ -126,11 +130,11 @@ Persistent reputation points map to visible Levels 1–10 and baseline nightly c
 | 9 | 42 |
 | 10 | 50 |
 
-Reputation changes gradually from customer-facing service performance and is bounded per night. Invisible kitchen mistakes only affect reputation when they reduce completed service.
+Reputation changes gradually from customer-visible outcomes: successful deliveries, table-wait departures, food-wait departures, and completion rate. Daily change remains bounded. Kitchen waste, payroll, and unused stock have no direct reputation effect.
 
-Dining Level 1 admits up to 10 customers per night. Dining Expansion I costs $300 and permanently increases abstract capacity to 16. No tables, servers, or physical dining room are simulated yet.
+Dining Level 1 has three authored two-seat tables. Dining Expansion I costs $300 and permanently adds two more two-seat tables, increasing simultaneous seating from 6 to 10. Seating is physical rather than a nightly admission cap: customers arrive across service, wait when every table is occupied, and may leave when table patience expires. Turnover allows more guests than the simultaneous seat count to be served.
 
-Potential demand equals reputation baseline adjusted by the selected temporary advertising. Admitted demand is capped by dining capacity; excess customers are tracked as turned away. Players may knowingly advertise beyond comfortable kitchen or dining capacity.
+Potential arrivals equal reputation baseline adjusted by temporary advertising. Players may knowingly advertise beyond comfortable kitchen, staff, or dining throughput.
 
 | Advertising | Cost | Upcoming-night demand |
 |---|---:|---:|
@@ -146,24 +150,38 @@ Players remain restricted to their own sides of the divider. Throwable ingredien
 
 Prep is untimed. Ingredients may be retrieved, moved, thrown, chopped, assembled, and staged. Ovens and fryers do not complete cooking before Service.
 
-Service lasts two minutes for rapid prototype iteration. No more orders are generated than admitted demand. Up to three tickets remain visible and arrivals are paced. Correct plated dishes satisfy the oldest compatible ticket and earn revenue. Wrong dishes are refused. Expired tickets earn $0 and do not end the night.
+Service lasts two minutes for rapid prototype iteration. Customers arrive in solo or two-person parties and follow readable arriving, table-wait, seating, food-wait, eating, leaving, and failed states. A seated party creates one table-linked prototype order. Up to three tickets remain visible. Correct plated food enters one of three pickup slots; pickup itself earns nothing. Wrong dishes are refused. An available server reserves and delivers the correct dish, and revenue is credited on delivery. Expired food waits earn $0 and do not end the night.
+
+Tables progress through clean, reserved, waiting for food, eating, dirty, and reusable states. After eating, a server clears the dirty plate to the kitchen return. The restaurant owns six finite plates. Either chef may wash a returned plate for 2.5 seconds at the sink, or a scheduled dishwasher performs the same visible one-at-a-time job. A dirty or in-use plate cannot be used for plating.
+
+## Staff and deterministic AI
+
+Hires persist in the restaurant roster. Each employee has a stable ID, first name, role, and simple visual variation. Planning marks each hire Working or Off; only working employees appear and only they cost a wage. Payroll is checked and charged exactly once when Prep begins. Insufficient payroll blocks Prep with an explanation.
+
+| Role | Hire | Wage per shift | Work |
+|---|---:|---:|---|
+| Server | $100 | $30 | Deliver ready food, seat waiting parties, clear dirty tables |
+| Dishwasher | $120 | $35 | Wash returned plates one at a time at the sink |
+
+Server tasks use an explicit deterministic priority order and reservation: ready-food delivery, seating, dirty-table clearing, then idle. Authored destinations keep staff and customers out of kitchen walls, counters, and tables; if a target disappears, the task safely returns to idle. Two servers can operate simultaneously without claiming the same dish, customer, or table. Staff are not LLM agents and never decide what chefs should cook.
 
 The Night Summary reports operations, all categories of spending, revenue, waste, ending cash, remaining pantry quantities/value, and reputation movement. Next Day returns to Planning with persistent state.
 
 ## Future direction
 
-Future AI staff may include servers, dishwashers, prep cooks, station cooks, and more capable sous-chefs. Staff would be paid per shift and operate physical systems. This is context only; Milestone 3 contains no AI staff.
+Future role-specific staff may include prep cooks, station cooks, and a more capable sous-chef. They should operate physical systems with legible jobs rather than become a general AI that plays the kitchen. Milestone 4 implements only Server and Dishwasher.
 
 Campaign Mode may later provide authored kitchens and three-star objectives, but it is not part of Endless Mode foundation work.
 
-## Explicitly out of scope through Milestone 3
+## Explicitly out of scope through Milestone 4
 
 - Campaign and three-star levels
-- AI staff, AI partner, staff wages, or staff pathfinding
-- Physical dining rooms, customers, tables, or waiters
+- General-purpose AI chefs, sous-chef, prep/station cooks, or AI partner
+- Staff traits, levels, morale, complex scheduling, tips, hosts, bartenders, or reservations
+- Groups larger than two, customer personalities, physical table editing, takeout, or delivery
 - Spoilage, freshness, stock decay, repairs, degradation, or breakdowns
-- Full dishwashing loop or appliance upgrade tree
+- Appliance upgrade tree
 - Decorations, large content catalogues, procedural kitchens, or environmental hazards
 - Online multiplayer, final art/music, or Steam integration
 
-Do not begin AI staff or Campaign Mode without a new milestone instruction.
+Do not begin general kitchen AI or Campaign Mode without a new milestone instruction.

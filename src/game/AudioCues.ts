@@ -1,4 +1,4 @@
-export type Cue = "pickup" | "throw" | "incoming" | "catch" | "miss" | "process" | "complete" | "purchase" | "order" | "orderComplete" | "expire" | "serviceStart" | "serviceEnd";
+export type Cue = "pickup" | "throw" | "incoming" | "catch" | "miss" | "process" | "complete" | "purchase" | "order" | "orderComplete" | "expire" | "serviceStart" | "serviceEnd" | "customerArrival" | "seating" | "serverPickup" | "delivery" | "satisfied" | "unhappy" | "dirtyReturn" | "plateWashed";
 
 const CUES: Record<Cue, [number, number, OscillatorType]> = {
   pickup: [520, 0.07, "sine"],
@@ -14,6 +14,14 @@ const CUES: Record<Cue, [number, number, OscillatorType]> = {
   expire: [150, 0.24, "sawtooth"],
   serviceStart: [520, 0.28, "triangle"],
   serviceEnd: [260, 0.32, "sine"],
+  customerArrival: [440, 0.12, "triangle"],
+  seating: [590, 0.09, "sine"],
+  serverPickup: [700, 0.08, "triangle"],
+  delivery: [920, 0.18, "sine"],
+  satisfied: [1040, 0.2, "triangle"],
+  unhappy: [130, 0.22, "sawtooth"],
+  dirtyReturn: [210, 0.1, "square"],
+  plateWashed: [1180, 0.14, "sine"],
 };
 
 export class AudioCues {
