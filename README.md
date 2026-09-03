@@ -83,7 +83,7 @@ The open kitchen begins with four active authored appliance positions on its out
 
 ## Save management
 
-Endless state is autosaved in versioned browser local storage after purchases, menu/marketing/staff decisions, kitchen configuration, expansions, and completed nights. Save v2 persists employee identity and scheduling and migrates Milestone 3 v1 saves by adding the starting server without discarding restaurant progress. The landing screen provides **New Restaurant**, **Continue Restaurant**, and **Reset Endless Save**. Destructive actions use an in-game confirmation panel navigable by controller, keyboard, or touch rather than a browser dialog. Saves remain in the browser/profile where they were created.
+Endless state is autosaved in versioned browser local storage after purchases, menu/marketing/staff decisions, kitchen configuration, expansions, and completed nights. Save v2 persists employee identity and scheduling and migrates Milestone 3 v1 saves by adding the starting server without discarding restaurant progress. The landing screen provides **New Restaurant**, **Continue Restaurant**, and **Reset Endless Save**. Destructive actions use an in-game confirmation panel navigable by controller, keyboard, or touch rather than a browser dialog. Controller focus begins visibly on Cancel; D-pad/stick or either trigger chooses an action, A confirms, and B cancels. Saves remain in the browser/profile where they were created.
 
 ## Staff and plates
 

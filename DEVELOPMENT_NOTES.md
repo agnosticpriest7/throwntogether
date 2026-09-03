@@ -31,7 +31,7 @@
 - Both keyboard schemes remain enabled for debugging and simultaneous-input testing.
 - Touch controls use independent Pointer Events state for each active player, including multi-touch D-pad holds and latched Use/Throw presses. Solo hides P2's duplicated panel; co-op restores both. They do not synthesize keyboard events.
 - Planning buttons are native keyboard/touch controls. A lightweight management poll lets either connected gamepad navigate focus with the stick/D-pad and select with the south face button.
-- New Restaurant overwrite and Reset Save use a modal in-game confirmation with initial Cancel focus. While it is open, controller focus navigation is scoped to Cancel/Confirm and the landing controls are inert; native browser dialogs are intentionally avoided for TV/controller compatibility.
+- New Restaurant overwrite and Reset Save use a modal in-game confirmation with visibly highlighted initial Cancel focus. While it is open, D-pad/stick or either trigger changes the choice, A confirms, and B cancels. Controller focus stays scoped to Cancel/Confirm and the landing controls are inert; native browser dialogs are intentionally avoided for TV/controller compatibility.
 - Development builds expose an explicit `?test` scenario harness for repeatable browser checks; it is excluded from production by Vite's development flag.
 
 ## Throw and catch

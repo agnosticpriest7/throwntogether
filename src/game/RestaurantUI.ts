@@ -17,6 +17,7 @@ export function confirmationMarkup(kind: ConfirmationKind): string {
   return `<section class="in-game-confirmation" role="alertdialog" aria-modal="true" aria-labelledby="confirmation-title" aria-describedby="confirmation-description">
     <div class="confirmation-card"><span class="flow-kicker">CONFIRM ACTION</span><h3 id="confirmation-title">${resetting ? "Reset Endless save?" : "Start a new restaurant?"}</h3>
     <p id="confirmation-description">${resetting ? "This permanently removes the saved restaurant and all progression." : "This overwrites the current Endless restaurant with a fresh Day 1 save."}</p>
+    <p class="confirmation-controls">CONTROLLER: ← → CHOOSE · A CONFIRM · B CANCEL</p>
     <div class="confirmation-actions"><button id="confirmation-cancel">CANCEL</button><button class="danger-action" id="confirmation-accept">${resetting ? "RESET SAVE" : "START NEW"}</button></div></div></section>`;
 }
 
@@ -46,6 +47,7 @@ export class RestaurantUI {
   private readonly supplierQuantities: Record<IngredientId, number> = { potato: 1, tomato: 1, onion: 1, cheese: 1 };
   private gamepadNavReadyAt = 0;
   private gamepadConfirmHeld = false;
+  private gamepadCancelHeld = false;
   private gamepadTabDirection = 0;
   private gamepadNavigationActive = false;
   private planningFocusKey: string | null = null;
@@ -91,7 +93,7 @@ export class RestaurantUI {
     });
     this.overlay.querySelector<HTMLButtonElement>("#continue-restaurant")?.addEventListener("click", () => { if (this.model.continueRestaurant()) this.render(); });
     this.overlay.querySelector<HTMLButtonElement>("#reset-save")?.addEventListener("click", () => this.openConfirmation("reset-save"));
-    this.overlay.querySelector<HTMLButtonElement>("#confirmation-cancel")?.addEventListener("click", () => { this.pendingConfirmation = null; this.renderLanding(); });
+    this.overlay.querySelector<HTMLButtonElement>("#confirmation-cancel")?.addEventListener("click", () => this.cancelConfirmation());
     this.overlay.querySelector<HTMLButtonElement>("#confirmation-accept")?.addEventListener("click", () => this.acceptConfirmation());
   }
 
@@ -243,8 +245,10 @@ export class RestaurantUI {
   private restartNight(): void { if (this.model.restartNight()) { this.recipeGuideOpen = false; this.planningSection = "overview"; this.phaseChanged(); this.render(); } }
   private openConfirmation(kind: ConfirmationKind): void {
     this.pendingConfirmation = kind; this.renderLanding();
-    this.overlay.querySelector<HTMLButtonElement>("#confirmation-cancel")?.focus();
+    const cancel = this.overlay.querySelector<HTMLButtonElement>("#confirmation-cancel");
+    if (cancel) { this.gamepadNavigationActive = true; this.focusButton(cancel); }
   }
+  private cancelConfirmation(): void { this.pendingConfirmation = null; this.renderLanding(); }
   private acceptConfirmation(): void {
     const kind = this.pendingConfirmation; this.pendingConfirmation = null;
     if (kind === "new-restaurant") { this.model.newRestaurant(); this.planningSection = "overview"; this.render(); return; }
@@ -265,6 +269,8 @@ export class RestaurantUI {
     return [...scope.querySelectorAll<HTMLButtonElement>("button:not(:disabled)")].filter((button) => button.offsetParent !== null);
   }
   private focusButton(button: HTMLButtonElement): void {
+    this.overlay.querySelectorAll(".controller-focused").forEach((element) => element.classList.remove("controller-focused"));
+    button.classList.add("controller-focused");
     button.focus();
     if (this.model.phase === "planning") this.planningFocusKey = this.navigationKey(button);
     button.scrollIntoView({ block: "nearest", inline: "nearest" });
@@ -303,8 +309,10 @@ export class RestaurantUI {
           const vertical = (pad.axes[1] ?? 0) < -0.6 || pad.buttons[12]?.pressed ? "up" : (pad.axes[1] ?? 0) > 0.6 || pad.buttons[13]?.pressed ? "down" : null;
           const horizontal = (pad.axes[0] ?? 0) < -0.6 || pad.buttons[14]?.pressed ? "left" : (pad.axes[0] ?? 0) > 0.6 || pad.buttons[15]?.pressed ? "right" : null;
           const tabDirection = (pad.buttons[6]?.pressed || (pad.buttons[6]?.value ?? 0) > 0.5) ? -1 : (pad.buttons[7]?.pressed || (pad.buttons[7]?.value ?? 0) > 0.5) ? 1 : 0;
-          if (this.model.phase === "planning" && tabDirection && !this.gamepadTabDirection) {
-            this.gamepadNavigationActive = true; this.switchPlanningSection(tabDirection);
+          if (tabDirection && !this.gamepadTabDirection) {
+            this.gamepadNavigationActive = true;
+            if (this.pendingConfirmation) this.moveManagementFocus(tabDirection < 0 ? "left" : "right");
+            else if (this.model.phase === "planning") this.switchPlanningSection(tabDirection);
           }
           this.gamepadTabDirection = tabDirection;
           const direction = vertical ?? horizontal;
@@ -317,7 +325,10 @@ export class RestaurantUI {
             if (focused?.tagName === "BUTTON") { this.gamepadNavigationActive = true; this.planningFocusKey = this.navigationKey(focused); focused.click(); }
           }
           this.gamepadConfirmHeld = confirm;
-        } else { this.gamepadConfirmHeld = false; this.gamepadTabDirection = 0; }
+          const cancel = Boolean(pad.buttons[1]?.pressed);
+          if (cancel && !this.gamepadCancelHeld && this.pendingConfirmation) this.cancelConfirmation();
+          this.gamepadCancelHeld = cancel;
+        } else { this.gamepadConfirmHeld = false; this.gamepadCancelHeld = false; this.gamepadTabDirection = 0; }
       }
       requestAnimationFrame(tick);
     };

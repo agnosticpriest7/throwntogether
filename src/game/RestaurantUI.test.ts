@@ -29,6 +29,7 @@ describe("controller-friendly confirmations", () => {
     expect(markup).toContain('role="alertdialog"');
     expect(markup).toContain('id="confirmation-cancel"');
     expect(markup).toContain('id="confirmation-accept"');
+    expect(markup).toContain("A CONFIRM · B CANCEL");
     expect(markup).not.toContain("window.confirm");
   });
 
