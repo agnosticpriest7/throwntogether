@@ -1,6 +1,6 @@
 # Thrown Together
 
-A browser-based, fixed-screen local co-op cooking prototype. Milestone 4 adds a living dining room, table-linked orders, deterministic AI servers, persistent staff and shift wages, finite dirty dishes, human washing, and an optional AI dishwasher to the persistent Endless restaurant.
+A browser-based, fixed-screen local co-op cooking prototype. Milestone 4 adds a living dining room, table-linked orders, deterministic AI servers, persistent staff and shift wages, finite dirty dishes, human washing, and an optional AI dishwasher to the persistent Endless restaurant. The first production-direction art pass replaces greybox geometry with a cohesive warm cartoon restaurant while preserving the exact game layout.
 
 ## Play online
 
@@ -14,6 +14,10 @@ The latest successful build from `main` is available at:
 - npm
 - A modern desktop browser
 - Two standard-mapped gamepads recommended for co-op playtesting
+
+## Visual direction
+
+The game uses a reusable Phaser vector art system: blue/coral tiled kitchens, warm wood dining, cream paper UI, chunky cocoa outlines, compact human-like chefs/customers/staff, illustrated appliances, and recipe-specific food states. Runtime art remains local and lightweight with no external asset requests. See [ART_DIRECTION.md](ART_DIRECTION.md) for palette, proportions, environment, UI, and technical asset rules.
 
 ## Run locally
 

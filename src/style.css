@@ -295,3 +295,73 @@ kbd { font: 500 10px "DM Mono", monospace; border: 1px solid #566174; border-bot
   .touch-button { width: 32px; height: 32px; border-radius: 8px; font-size: 9px; }
   .touch-action { width: 42px; height: 42px; font-size: 7px; }
 }
+
+/* Production-direction cartoon art pass */
+:root { background: #4d352d; color: #49352d; }
+body { background: radial-gradient(circle at 50% 8%, #fff1cf 0, #e5b979 48%, #7a4d38 100%); }
+header { color: #49352d; }
+.eyebrow, .flow-kicker, .section-heading .flow-kicker, .subheading { color: #a25138; }
+button { border: 3px solid #49352d; color: #49352d; background: #ffe9bd; box-shadow: 0 4px 0 #49352d; }
+button:hover { background: #fff4d5; }
+button:focus-visible { outline: 5px solid #ffcc3f; outline-offset: 2px; }
+#game { border: 5px solid #49352d; border-radius: 22px; background: #fff1cf; box-shadow: 0 15px 0 #49352d44, 0 24px 50px #3f261d66; }
+#restaurant-overlay { inset: 5px; border-radius: 17px; color: #49352d; background: linear-gradient(145deg, #fff1cff8, #f7d9a8f8); }
+.flow-panel > p, .section-heading p, .overview-grid p, .hub-callout span, .planning-footer, .planning-recipe-card > span, .planning-recipe-card > small, .ad-card span, .staff-card span, .staff-card small { color: #725449; }
+.primary-action, .open-action { border-color: #49352d; color: #fff8e6; background: #d97842; box-shadow: 0 4px 0 #49352d; }
+.danger-action { border-color: #62372f; color: #fff1df; background: #b75d4f; }
+.planning-top, .planning-hub { color: #49352d; }
+.planning-stats span, .planning-tabs, .payroll-total { border-color: #a76d48; color: #725449; background: #fff5dc; }
+.planning-stats b, .planning-stats span:first-child b { color: #49352d; }
+.planning-tabs button { border-width: 2px; background: #f2c98f; box-shadow: 0 2px 0 #70452f; }
+.planning-tabs button.is-active { border-color: #49352d; color: #49352d; background: #ffd45f; }
+.planning-footer { border-color: #a76d48; }
+.overview-grid article, .pantry-grid article, .supplier-card, .slot-card, .shop-grid article, .planning-recipe-card, .ad-card, .staff-card, .summary-columns section { border: 3px solid #8e654e; color: #49352d; background: #fff6df; box-shadow: 0 4px 0 #8e654e44; }
+.overview-grid article > span { color: #a25138; }
+.overview-grid i, .supplier-card dl div, .stored-row span, .demand-preview div, .summary-inventory span { background: #efd3a7; }
+.overview-grid em { background: #6fa447; }
+.hub-callout { border-color: #4c8cb5; color: #49352d; background: #dbeaf0; }
+.pantry-grid span, .supplier-title span, .supplier-card dt, .slot-card > span, .stored-row span, .demand-preview span, .summary-columns dl div, .summary-columns section p { color: #725449; }
+.pantry-grid article > b, .supplier-card dd, .demand-preview b, .subheading, .payroll-total b { color: #a25138; }
+.buy-action { border-color: #49352d; color: #f8fff5; background: #6fa447; }
+.slot-card.is-empty { color: #86695b; background: #f3dec1; }
+.stored-row b, .summary-columns dd { color: #49352d; }
+.planning-recipe-card.is-selected, .ad-card.is-selected, .staff-card.is-scheduled { border-color: #49352d; background: #fff0a8; box-shadow: 0 5px 0 #49352d55; }
+.planning-recipe-card.is-locked { border-color: #a65349; background: #ead0bd; }
+.payroll-total small { color: #725449; }
+.summary-columns h3 { color: #a25138; }
+.summary-columns .positive, .summary-panel .positive { color: #397649; }
+.summary-columns .negative { color: #ac4439; }
+.summary-columns .summary-final { border-color: #a25138; }
+.hud-bar { color: #49352d; background: #fff1cff2; border-bottom: 3px solid #49352d; }
+.phase-pill.prep { color: #754b26; background: #f3c763; }
+.phase-pill.service { color: #1f5d42; background: #9bd2a0; }
+.hud-day, .hud-menu, .hud-cash b, .hud-time { color: #49352d; }
+.hud-recipes-button { border-color: #49352d; color: #49352d; background: #8bc0dc; }
+.hud-stock { border-bottom: 2px solid #49352d; color: #49352d; background: #fff7e5ed; }
+.ticket { border: 3px solid #70452f; color: #49352d; background: #fff8e7f5; box-shadow: 0 4px 0 #70452f55; }
+.ticket b { color: #a25138; font-size: 14px; }
+.ticket span { color: #49352d; }
+.ticket > i { background: #e5b7a6; }
+.ticket em { background: #61a549; }
+.tickets-empty, .hud-feedback { color: #49352d; background: #fff1cfe8; border: 2px solid #70452f; }
+.recipe-guide { border: 4px solid #49352d; color: #49352d; background: #fff1cff9; box-shadow: 0 12px 0 #49352d55; }
+.recipe-guide__header span, .recipe-guide__ingredients b { color: #a25138; }
+.recipe-guide__card { border: 3px solid #8e654e; background: #fff8e7; }
+.recipe-guide__ingredients > strong, .recipe-guide__card p { color: #725449; }
+.recipe-guide__card ol span { color: #fff8e7; background: #6fa447; }
+.recipe-guide__card ol li { color: #49352d; }
+#touch-controls { color: #49352d; }
+.touch-player { border: 4px solid #49352d; background: #fff1cfe8; box-shadow: 0 6px 0 #49352d55; }
+.touch-player--one { box-shadow: inset 5px 0 #4595c6, 0 6px 0 #49352d55; }
+.touch-player--two { box-shadow: inset -5px 0 #dc625b, 0 6px 0 #49352d55; }
+.touch-player--one .touch-player__heading strong { color: #2c6f9d; }
+.touch-player--two .touch-player__heading strong { color: #a33f3a; }
+.touch-player__heading span { color: #725449; }
+.touch-dpad__center { background: #ddb982; }
+.touch-action--use { border-color: #49352d; color: #2d6e46; background: #a9d7a3; }
+.touch-action--throw { border-color: #49352d; color: #8c4d28; background: #f1bc68; }
+footer { color: #49352d; }
+footer strong { color: #49352d; }
+kbd { border-color: #70452f; color: #49352d; background: #fff1cf; }
+#test-harness { border-color: #70452f; background: #fff1cfaa; }
+#test-harness::before { color: #a25138; }

@@ -10,6 +10,7 @@
 - The Phaser kitchen rebuilds its appliance stations from the saved authored slot configuration at Prep. Divider, shared counter, storage, staging, and serving structures do not consume slots.
 - Ingredient and dish state uses the typed states `raw`, `chopped`, `assembled`, `cooked`, and `ruined`. Fries uses the same data-driven cooking path with a fryer station.
 - Pure side-clamping, landing, and catch rules live in `rules.ts` and have automated unit coverage.
+- `ArtFactory.ts` owns reusable character construction, customer/staff variants, palette constants, and ingredient/dish illustration. `TransferScene` composes those parts with station-specific appliance/environment vectors; gameplay coordinates are unchanged.
 
 ## Dining, staff, and plate architecture
 

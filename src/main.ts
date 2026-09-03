@@ -11,7 +11,7 @@ const scene = new TransferScene(restaurant);
 
 new Phaser.Game({
   type: Phaser.AUTO, parent: "game", width: GAME_WIDTH, height: GAME_HEIGHT,
-  backgroundColor: "#202733", scene, render: { antialias: true, pixelArt: false },
+  backgroundColor: "#fff1cf", scene, render: { antialias: true, pixelArt: false },
   scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH }, input: { gamepad: true },
 });
 

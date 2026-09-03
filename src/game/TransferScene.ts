@@ -1,5 +1,6 @@
 import Phaser from "phaser";
 import { AudioCues } from "./AudioCues";
+import { ART_PALETTE, characterParts, drawMiniCharacter, populateFoodArt } from "./ArtFactory";
 import { InputManager } from "./InputManager";
 import { RestaurantModel, type ServiceEvent } from "./RestaurantModel";
 import type { RestaurantUI } from "./RestaurantUI";
@@ -104,7 +105,7 @@ export class TransferScene extends Phaser.Scene {
     });
   }
 
-  update(_time: number, delta: number): void {
+  update(time: number, delta: number): void {
     if (this.restaurant.phase !== this.lastPhase) { this.lastPhase = this.restaurant.phase; this.handlePhaseChange([]); }
     const kitchenActive = this.restaurant.phase === "prep" || this.restaurant.phase === "service";
     const inputs = [this.inputManager.read(0), this.inputManager.read(1)] as const;
@@ -122,6 +123,7 @@ export class TransferScene extends Phaser.Scene {
         y: player.position.y + input.y / Math.max(1, length) * PLAYER_SPEED * delta / 1000,
       }, player.side);
       player.body.setPosition(player.position.x, player.position.y);
+      player.body.setAngle(Math.abs(input.x) + Math.abs(input.y) > 0.15 ? Math.sin(time / 95 + index * Math.PI) * 2.5 : 0);
       if (input.interactPressed) this.interact(index as 0 | 1);
       if (input.throwPressed) this.throwItem(index as 0 | 1);
     });
@@ -269,6 +271,7 @@ export class TransferScene extends Phaser.Scene {
     const shadow = this.add.ellipse(player.position.x, player.position.y + 8, 34, 13, 0x11151c, 0.35).setDepth(18);
     const visual = this.makeItemVisual(player.position.x, player.position.y, item).setDepth(25);
     this.flight = { item, from: { ...player.position }, to, elapsed: 0, visual, shadow, indicator, receiver };
+    this.tweens.add({ targets: player.body, scaleX: 1.08, scaleY: 0.94, duration: 100, yoyo: true });
     this.tweens.add({ targets: indicator, scale: 1.15, alpha: 0.45, duration: 260, yoyo: true, repeat: 1 });
     this.audioCues.play("throw"); this.time.delayedCall(80, () => this.audioCues.play("incoming")); this.callout("INCOMING!", "#ffdc74");
   }
@@ -282,7 +285,7 @@ export class TransferScene extends Phaser.Scene {
     if (t < 1) return;
     const receiver = this.players[flight.receiver]; const caught = canAutoCatch(receiver.position, flight.to, receiver.held === null);
     flight.visual.destroy(); flight.shadow.destroy(); flight.indicator.destroy(); this.flight = null;
-    if (caught) { receiver.held = flight.item; this.updateHeld(receiver); this.audioCues.play("catch"); this.callout(`P${flight.receiver + 1} CAUGHT IT!`, "#7ed8ba"); }
+    if (caught) { receiver.held = flight.item; this.updateHeld(receiver); this.tweens.add({ targets: receiver.body, scaleX: 1.1, scaleY: 0.93, duration: 90, yoyo: true }); this.audioCues.play("catch"); this.callout(`P${flight.receiver + 1} CAUGHT IT!`, "#7ed8ba"); }
     else {
       this.createRuinedItem(flight.to, flight.item); this.restaurant.recordWaste(flight.item.valueCents); this.audioCues.play("miss");
       this.callout(receiver.held ? `HANDS FULL · ${formatMoney(flight.item.valueCents)} WASTED` : `MISSED · ${formatMoney(flight.item.valueCents)} WASTED`, "#ff7e70");
@@ -322,18 +325,23 @@ export class TransferScene extends Phaser.Scene {
 
   private drawKitchen(): void {
     const g = this.add.graphics();
-    g.fillStyle(0x2d3745).fillRoundedRect(24, 22, GAME_WIDTH - 48, GAME_HEIGHT - 44, 16);
-    g.fillStyle(0x343f4e).fillRect(36, 84, 408, 452); g.fillStyle(0x303a48).fillRect(516, 84, 408, 452);
-    g.lineStyle(1, 0x455264, 0.38);
-    for (let x = 36; x <= 924; x += 32) g.lineBetween(x, 84, x, 536);
-    for (let y = 84; y <= 536; y += 32) g.lineBetween(36, y, 924, y);
-    g.fillStyle(0x171c24).fillRoundedRect(444, 84, 72, 452, 6);
-    g.fillStyle(0x687488).fillRoundedRect(438, 94, 84, 156, 8).fillRoundedRect(438, 360, 84, 158, 8);
-    this.add.text(62, 55, "PLAYER 1 · LEFT KITCHEN", { fontFamily: "DM Mono, monospace", fontSize: "10px", color: "#f6b75e" });
-    this.add.text(898, 55, "PLAYER 2 · RIGHT KITCHEN", { fontFamily: "DM Mono, monospace", fontSize: "10px", color: "#76c8df" }).setOrigin(1, 0);
-    g.fillStyle(0x263841).fillRoundedRect(944, 84, 300, 452, 8);
-    g.lineStyle(4, 0x7d8b96, 0.9).lineBetween(936, 84, 936, 536);
-    this.add.text(1094, 55, "DINING ROOM · AI STAFF", { fontFamily: "DM Mono, monospace", fontSize: "10px", color: "#9de0ca" }).setOrigin(0.5, 0);
+    g.fillStyle(ART_PALETTE.ink).fillRoundedRect(18, 18, GAME_WIDTH - 36, GAME_HEIGHT - 36, 22);
+    g.fillStyle(ART_PALETTE.cream).fillRoundedRect(25, 25, GAME_WIDTH - 50, GAME_HEIGHT - 50, 17);
+    g.fillStyle(ART_PALETTE.blueFloor).fillRect(36, 84, 408, 452); g.fillStyle(ART_PALETTE.coralFloor).fillRect(516, 84, 408, 452);
+    g.lineStyle(1, 0xffffff, 0.22);
+    for (let x = 36; x <= 924; x += 40) g.lineBetween(x, 84, x, 536);
+    for (let y = 84; y <= 536; y += 40) g.lineBetween(36, y, 924, y);
+    g.fillStyle(ART_PALETTE.woodDark).fillRoundedRect(444, 84, 72, 452, 8);
+    g.fillStyle(ART_PALETTE.wood).fillRoundedRect(438, 94, 84, 156, 10).fillRoundedRect(438, 360, 84, 158, 10);
+    g.lineStyle(3, ART_PALETTE.ink, 1).strokeRoundedRect(438, 94, 84, 156, 10).strokeRoundedRect(438, 360, 84, 158, 10);
+    this.add.text(62, 55, "PLAYER 1 · BLUE KITCHEN", { fontFamily: "DM Mono, monospace", fontSize: "10px", color: "#35556b", fontStyle: "bold" });
+    this.add.text(898, 55, "PLAYER 2 · CORAL KITCHEN", { fontFamily: "DM Mono, monospace", fontSize: "10px", color: "#8a403e", fontStyle: "bold" }).setOrigin(1, 0);
+    g.fillStyle(ART_PALETTE.wood).fillRoundedRect(944, 84, 300, 452, 8);
+    g.lineStyle(2, ART_PALETTE.woodLight, 0.7);
+    for (let x = 956; x < 1240; x += 48) g.lineBetween(x, 84, x, 536);
+    for (let y = 112; y < 536; y += 56) g.lineBetween(944, y, 1244, y);
+    g.lineStyle(6, ART_PALETTE.ink, 1).lineBetween(936, 84, 936, 536);
+    this.add.text(1094, 55, "DINING ROOM · AI STAFF", { fontFamily: "DM Mono, monospace", fontSize: "10px", color: "#68412d", fontStyle: "bold" }).setOrigin(0.5, 0);
     this.sources = SOURCE_LAYOUT.map(({ id, position }) => this.drawSource(id, position));
     this.stations = [
       this.drawStation("shared", "counter", SHARED_POS, "SHARED", "⇄", 0xa7b2c2, 112),
@@ -350,22 +358,32 @@ export class TransferScene extends Phaser.Scene {
 
   private drawSource(id: IngredientId, position: Vec2): Source {
     const ingredient = INGREDIENTS[id];
-    this.add.rectangle(position.x, position.y, 94, 92, 0x222a35).setStrokeStyle(3, ingredient.color, 0.85).setDepth(4);
-    this.add.text(position.x, position.y - 16, ingredient.icon, { fontFamily: "Nunito, sans-serif", fontSize: "24px", fontStyle: "bold", color: `#${ingredient.color.toString(16).padStart(6, "0")}` }).setOrigin(0.5).setDepth(5);
-    this.add.text(position.x, position.y + 13, ingredient.displayName.toUpperCase(), { fontFamily: "DM Mono, monospace", fontSize: "8px", color: "#d7dde7" }).setOrigin(0.5).setDepth(5);
-    const countText = this.add.text(position.x, position.y + 31, "STOCK 0", { fontFamily: "DM Mono, monospace", fontSize: "9px", color: "#f5c85b" }).setOrigin(0.5).setDepth(5);
+    this.add.rectangle(position.x, position.y + 7, 94, 82, ART_PALETTE.shadow, 0.18).setDepth(3);
+    this.add.rectangle(position.x, position.y, 94, 82, 0xffe7ba).setStrokeStyle(4, ART_PALETTE.ink, 1).setDepth(4);
+    const food = this.add.container(position.x, position.y - 12).setDepth(6); populateFoodArt(this, food, ingredientItem(id)); food.setScale(1.25);
+    this.add.text(position.x, position.y + 15, ingredient.displayName.toUpperCase(), { fontFamily: "DM Mono, monospace", fontSize: "8px", fontStyle: "bold", color: "#49352d" }).setOrigin(0.5).setDepth(6);
+    const countText = this.add.text(position.x, position.y + 31, "STOCK 0", { fontFamily: "DM Mono, monospace", fontSize: "9px", fontStyle: "bold", color: "#79452f" }).setOrigin(0.5).setDepth(6);
     return { id, position, countText };
   }
 
   private drawStation(id: string, type: StationType, position: Vec2, label: string, icon: string, color: number, width = 108): Station {
-    const background = this.add.rectangle(position.x, position.y, width, 92, 0x222a35).setStrokeStyle(3, color, 0.82).setDepth(4);
-    const iconText = this.add.text(position.x, position.y - 20, icon, { fontFamily: "Nunito, sans-serif", fontSize: "24px", fontStyle: "bold", color: `#${color.toString(16).padStart(6, "0")}` }).setOrigin(0.5).setDepth(5);
-    const labelText = this.add.text(position.x, position.y + 18, label, { fontFamily: "DM Mono, monospace", fontSize: "9px", color: "#d7dde7" }).setOrigin(0.5).setDepth(5);
-    const statusText = this.add.text(position.x, position.y + 34, "", { fontFamily: "DM Mono, monospace", fontSize: "7px", color: "#f5c85b" }).setOrigin(0.5).setDepth(6);
+    const background = this.add.rectangle(position.x, position.y + 5, width, 82, 0xf2d7aa).setStrokeStyle(4, ART_PALETTE.ink, 1).setDepth(4);
+    const decor = this.add.graphics().setDepth(5); decor.fillStyle(ART_PALETTE.shadow, 0.18).fillRoundedRect(position.x - width / 2 + 5, position.y + 40, width - 10, 10, 4);
+    if (type === "oven") { decor.fillStyle(0xc95e49).fillRoundedRect(position.x - 30, position.y - 28, 60, 53, 8); decor.lineStyle(3, ART_PALETTE.ink).strokeRoundedRect(position.x - 30, position.y - 28, 60, 53, 8); decor.fillStyle(0x492f2a).fillRoundedRect(position.x - 21, position.y - 13, 42, 27, 4); decor.fillStyle(0xf3a24f, 0.55).fillRoundedRect(position.x - 17, position.y - 9, 34, 19, 3); }
+    else if (type === "fryer") { decor.fillStyle(ART_PALETTE.steel).fillRoundedRect(position.x - 29, position.y - 25, 58, 48, 7); decor.lineStyle(3, ART_PALETTE.ink).strokeRoundedRect(position.x - 29, position.y - 25, 58, 48, 7); decor.fillStyle(0xd99735).fillRoundedRect(position.x - 19, position.y - 15, 38, 24, 4); decor.lineStyle(2, 0xffe080).strokeCircle(position.x - 8, position.y - 4, 3).strokeCircle(position.x + 7, position.y - 8, 4); }
+    else if (type === "sink") { decor.fillStyle(ART_PALETTE.steel).fillRoundedRect(position.x - 31, position.y - 27, 62, 48, 8); decor.lineStyle(3, ART_PALETTE.ink).strokeRoundedRect(position.x - 31, position.y - 27, 62, 48, 8); decor.fillStyle(0x72b7da).fillRoundedRect(position.x - 22, position.y - 17, 44, 27, 7); decor.lineStyle(4, ART_PALETTE.steelDark).arc(position.x, position.y - 19, 12, Math.PI, Math.PI * 2).lineBetween(position.x + 12, position.y - 19, position.x + 12, position.y - 7); }
+    else if (type === "chop") { decor.fillStyle(0xbb7544).fillRoundedRect(position.x - 30, position.y - 23, 60, 45, 7); decor.lineStyle(3, ART_PALETTE.ink).strokeRoundedRect(position.x - 30, position.y - 23, 60, 45, 7); decor.lineStyle(5, 0xe6e9e4).lineBetween(position.x - 14, position.y + 10, position.x + 14, position.y - 12); }
+    else if (type === "plate") { [0, 5, 10].forEach((offset) => { decor.fillStyle(0xfaf7e9).fillEllipse(position.x, position.y - 8 + offset, 46, 15); decor.lineStyle(2, ART_PALETTE.steelDark).strokeEllipse(position.x, position.y - 8 + offset, 46, 15); }); }
+    else if (type === "assembly") { decor.fillStyle(0xfaf7e9).fillEllipse(position.x, position.y - 2, 52, 35); decor.lineStyle(3, ART_PALETTE.ink).strokeEllipse(position.x, position.y - 2, 52, 35); decor.fillStyle(0xe2a94c).fillCircle(position.x, position.y, 10); }
+    else if (type === "trash") { decor.fillStyle(0x74564c).fillRoundedRect(position.x - 20, position.y - 23, 40, 48, 5); decor.lineStyle(3, ART_PALETTE.ink).strokeRoundedRect(position.x - 20, position.y - 23, 40, 48, 5).lineBetween(position.x - 25, position.y - 23, position.x + 25, position.y - 23); }
+    else { decor.fillStyle(type === "pickup" ? 0xffefd0 : ART_PALETTE.woodLight).fillRoundedRect(position.x - 32, position.y - 20, 64, 40, 7); decor.lineStyle(3, ART_PALETTE.ink).strokeRoundedRect(position.x - 32, position.y - 20, 64, 40, 7); if (type === "pickup") decor.lineStyle(4, 0x6fa447).lineBetween(position.x, position.y + 9, position.x, position.y - 10).lineBetween(position.x, position.y - 10, position.x - 7, position.y - 2).lineBetween(position.x, position.y - 10, position.x + 7, position.y - 2); }
+    const iconText = this.add.text(position.x, position.y - 20, type === "counter" ? icon : "", { fontFamily: "Nunito, sans-serif", fontSize: "20px", fontStyle: "bold", color: `#${ART_PALETTE.ink.toString(16)}` }).setOrigin(0.5).setDepth(5);
+    const labelText = this.add.text(position.x, position.y + 24, label, { fontFamily: "DM Mono, monospace", fontSize: "8px", fontStyle: "bold", color: "#49352d" }).setOrigin(0.5).setDepth(6);
+    const statusText = this.add.text(position.x, position.y + 36, "", { fontFamily: "DM Mono, monospace", fontSize: "7px", color: "#713c2d", fontStyle: "bold" }).setOrigin(0.5).setDepth(6);
     const itemVisual = this.add.container(position.x, position.y - 4).setDepth(14);
     const progressBg = this.add.rectangle(position.x - width / 2 + 7, position.y + 40, width - 14, 5, 0x11151c).setOrigin(0, 0.5).setDepth(15).setVisible(false);
     const progressFill = this.add.rectangle(position.x - width / 2 + 7, position.y + 40, width - 14, 5, 0x7ed8ba).setOrigin(0, 0.5).setDepth(16).setVisible(false);
-    return { id, type, position, item: null, itemVisual, statusText, progressBg, progressFill, processStartedAt: 0, processDuration: 0, background, baseColor: color, highlighted: false, visuals: [background, iconText, labelText, statusText, itemVisual, progressBg, progressFill] };
+    return { id, type, position, item: null, itemVisual, statusText, progressBg, progressFill, processStartedAt: 0, processDuration: 0, background, baseColor: color, highlighted: false, visuals: [background, decor, iconText, labelText, statusText, itemVisual, progressBg, progressFill] };
   }
 
   private configureApplianceStations(): void {
@@ -382,17 +400,17 @@ export class TransferScene extends Phaser.Scene {
   }
 
   private drawSlotMarker(position: Vec2, label: string, color: number): void {
-    const box = this.add.rectangle(position.x, position.y, 108, 92, 0x1a2029, 0.6).setStrokeStyle(2, color, 0.7).setDepth(3);
-    const text = this.add.text(position.x, position.y, label, { fontFamily: "DM Mono, monospace", fontSize: "8px", color: `#${color.toString(16).padStart(6, "0")}`, align: "center" }).setOrigin(0.5).setDepth(4);
+    const box = this.add.rectangle(position.x, position.y, 108, 82, 0xffe7ba, 0.35).setStrokeStyle(3, ART_PALETTE.ink, 0.35).setDepth(3);
+    const text = this.add.text(position.x, position.y, label, { fontFamily: "DM Mono, monospace", fontSize: "8px", fontStyle: "bold", color: `#${color.toString(16).padStart(6, "0")}`, align: "center" }).setOrigin(0.5).setDepth(4);
     this.slotMarkers.push(box, text);
   }
 
   private makePlayer(index: 0 | 1, side: Side): Player {
-    const color = index === 0 ? 0xf2a94f : 0x62bed7; const heldVisual = this.add.container(0, -31).setVisible(false);
-    const body = this.add.container(PLAYER_STARTS[side].x, PLAYER_STARTS[side].y, [this.add.ellipse(0, 14, 54, 22, 0x10141a, 0.35)]);
-    body.add([this.add.circle(0, 0, 25, 0x202733).setStrokeStyle(5, color), this.add.circle(0, -3, 14, color), this.add.rectangle(0, 12, 25, 14, 0xf2eee4), heldVisual]); body.setDepth(20);
-    body.add(this.add.text(0, 38, `P${index + 1}`, { fontFamily: "Nunito, sans-serif", fontSize: "12px", fontStyle: "bold", color: "#fff" }).setOrigin(0.5));
-    const inputBadge = this.add.text(0, 54, "TOUCH / KEYS", { fontFamily: "DM Mono, monospace", fontSize: "7px", color: index === 0 ? "#f6b75e" : "#76c8df", backgroundColor: "#18202dcc", padding: { x: 4, y: 2 } }).setOrigin(0.5); body.add(inputBadge);
+    const color = index === 0 ? 0x4595c6 : 0xdc625b; const heldVisual = this.add.container(0, -49).setVisible(false);
+    const body = this.add.container(PLAYER_STARTS[side].x, PLAYER_STARTS[side].y, characterParts(this, color, "chef"));
+    body.add(heldVisual); body.setDepth(20);
+    body.add(this.add.text(0, 40, `P${index + 1}`, { fontFamily: "Nunito, sans-serif", fontSize: "11px", fontStyle: "bold", color: "#49352d", backgroundColor: "#fff1cfdd", padding: { x: 5, y: 2 } }).setOrigin(0.5));
+    const inputBadge = this.add.text(0, 55, "TOUCH / KEYS", { fontFamily: "DM Mono, monospace", fontSize: "6px", color: "#49352d", backgroundColor: "#fff1cfcc", padding: { x: 4, y: 2 } }).setOrigin(0.5); body.add(inputBadge);
     return { side, position: { ...PLAYER_STARTS[side] }, held: null, body, heldVisual, inputBadge };
   }
 
@@ -403,17 +421,7 @@ export class TransferScene extends Phaser.Scene {
   private makeItemVisual(x: number, y: number, item: KitchenItem): Phaser.GameObjects.Container { const container = this.add.container(x, y); this.populateItemVisual(container, item); return container.setDepth(14); }
 
   private populateItemVisual(container: Phaser.GameObjects.Container, item: KitchenItem): void {
-    if (item.kind === "ingredient") {
-      const definition = INGREDIENTS[item.ingredientId]; const color = item.state === "ruined" ? 0x655c54 : definition.color;
-      container.add(this.add.ellipse(0, 0, 30, 24, color).setStrokeStyle(2, 0x332b25));
-      container.add(this.add.text(0, 0, item.state === "ruined" ? "×" : definition.icon, { fontFamily: "Nunito, sans-serif", fontSize: "12px", fontStyle: "bold", color: item.state === "ruined" ? "#ff7e70" : "#fff" }).setOrigin(0.5));
-      if (item.state === "chopped") { container.add(this.add.line(0, 0, -11, -8, 11, 8, 0xffffff, 0.8).setLineWidth(2)); container.add(this.add.line(0, 0, -11, 8, 11, -8, 0xffffff, 0.8).setLineWidth(2)); }
-      return;
-    }
-    const recipe = RECIPES[item.recipeId]; if (item.state === "plated") container.add(this.add.circle(0, 2, 21, 0xf1eee7).setStrokeStyle(2, 0xaeb8c7));
-    const foodColor = item.state === "cooked" ? Phaser.Display.Color.ValueToColor(recipe.color).darken(22).color : recipe.color;
-    container.add(this.add.circle(0, item.state === "plated" ? 0 : 2, item.state === "assembled" ? 15 : 13, foodColor));
-    container.add(this.add.text(0, 0, item.state === "ruined" ? "×" : recipe.icon, { fontFamily: "DM Mono, monospace", fontSize: "9px", fontStyle: "bold", color: item.state === "ruined" ? "#ff7e70" : "#17202a" }).setOrigin(0.5));
+    populateFoodArt(this, container, item);
   }
 
   private updateHeld(player: Player): void { player.heldVisual.removeAll(true); if (!player.held) { player.heldVisual.setVisible(false); return; } this.populateItemVisual(player.heldVisual, player.held); player.heldVisual.setVisible(true).setDepth(30); }
@@ -423,7 +431,7 @@ export class TransferScene extends Phaser.Scene {
     this.stations.forEach((station) => {
       const highlighted = active.has(station); if (station.highlighted === highlighted) return;
       station.highlighted = highlighted;
-      station.background.setFillStyle(highlighted ? 0x3b4656 : 0x222a35, 1).setStrokeStyle(highlighted ? 6 : 3, highlighted ? 0xffe38a : station.baseColor, highlighted ? 1 : 0.82);
+      station.background.setFillStyle(highlighted ? 0xfff4bd : 0xf2d7aa, 1).setStrokeStyle(highlighted ? 7 : 4, highlighted ? 0xffd33d : ART_PALETTE.ink, 1);
     });
   }
   private nearestStation(position: Vec2): Station | null { return this.stations.map((station) => ({ station, range: distance(position, station.position) })).filter(({ range }) => range <= INTERACT_DISTANCE).sort((a, b) => a.range - b.range)[0]?.station ?? null; }
@@ -461,19 +469,21 @@ export class TransferScene extends Phaser.Scene {
     const sink = this.stations.find(({ type }) => type === "sink"); if (sink && sink.processStartedAt === 0) sink.statusText.setText(`DIRTY ${this.restaurant.dirtyReturnQueue}`);
     this.diningGraphics.clear(); this.diningLabels.forEach((object) => object.destroy()); this.diningLabels = [];
     const graphics = this.diningGraphics; const now = performance.now();
-    graphics.fillStyle(0x1b252d, 0.75).fillRoundedRect(958, 92, 272, 432, 8);
-    graphics.fillStyle(0x6c7b88).fillRect(1222, 250, 10, 86);
-    this.diningLabels.push(this.add.text(1217, 293, "ENTRANCE", { fontFamily: "DM Mono, monospace", fontSize: "7px", color: "#d7dde7" }).setOrigin(0.5).setAngle(-90).setDepth(12));
-    graphics.fillStyle(0x394c55).fillRoundedRect(948, 418, 38, 72, 5);
-    this.diningLabels.push(this.add.text(967, 454, `DIRTY\n${this.restaurant.dirtyReturnQueue}`, { fontFamily: "DM Mono, monospace", fontSize: "7px", align: "center", color: "#f0b78a" }).setOrigin(0.5).setDepth(12));
+    graphics.fillStyle(ART_PALETTE.wood, 0.08).fillRoundedRect(958, 92, 272, 432, 8);
+    graphics.fillStyle(ART_PALETTE.ink).fillRect(1221, 250, 11, 86); graphics.fillStyle(0x74a9cb).fillRoundedRect(1223, 258, 7, 69, 3);
+    this.diningLabels.push(this.add.text(1216, 293, "ENTRANCE", { fontFamily: "DM Mono, monospace", fontSize: "7px", fontStyle: "bold", color: "#49352d" }).setOrigin(0.5).setAngle(-90).setDepth(12));
+    graphics.fillStyle(ART_PALETTE.woodDark).fillRoundedRect(946, 418, 42, 72, 7); graphics.lineStyle(3, ART_PALETTE.ink).strokeRoundedRect(946, 418, 42, 72, 7);
+    this.diningLabels.push(this.add.text(967, 454, `DIRTY\n${this.restaurant.dirtyReturnQueue}`, { fontFamily: "DM Mono, monospace", fontSize: "7px", fontStyle: "bold", align: "center", color: "#fff1cf" }).setOrigin(0.5).setDepth(12));
+    [[980, 105], [1210, 505]].forEach(([x, y]) => { graphics.fillStyle(0x8a5536).fillRoundedRect(x - 12, y, 24, 20, 5); graphics.fillStyle(0x5c963e).fillCircle(x - 8, y, 11).fillCircle(x + 8, y - 3, 12).fillCircle(x, y - 10, 13); graphics.lineStyle(2, ART_PALETTE.ink).strokeRoundedRect(x - 12, y, 24, 20, 5); });
     this.restaurant.diningTables.forEach((table) => {
-      const colors: Record<string, number> = { clean: 0x527b68, reserved: 0x756743, waiting_food: 0x8a6640, eating: 0x3f6f7c, dirty: 0x744d47 };
+      const colors: Record<string, number> = { clean: ART_PALETTE.woodLight, reserved: 0xd9a24c, waiting_food: 0xe29a56, eating: 0xa87144, dirty: 0x9b5b4d };
       graphics.fillStyle(0x12171c, 0.35).fillEllipse(table.x, table.y + 12, 82, 30);
       graphics.fillStyle(colors[table.state] ?? 0x5b6672).fillRoundedRect(table.x - 34, table.y - 22, 68, 44, 8);
-      graphics.lineStyle(2, 0xd1dae2, 0.55).strokeRoundedRect(table.x - 34, table.y - 22, 68, 44, 8);
-      graphics.fillStyle(0x8995a5).fillCircle(table.x - 47, table.y, 10).fillCircle(table.x + 47, table.y, 10);
-      if (table.state === "dirty") { graphics.lineStyle(3, 0xe8e5dc).strokeCircle(table.x, table.y, 9); graphics.lineStyle(2, 0xaa665d).lineBetween(table.x - 5, table.y - 5, table.x + 5, table.y + 5); }
-      this.diningLabels.push(this.add.text(table.x, table.y + 31, `${table.id.toUpperCase()} · ${table.state.replaceAll("_", " ").toUpperCase()}`, { fontFamily: "DM Mono, monospace", fontSize: "6px", color: "#d7dde7" }).setOrigin(0.5).setDepth(12));
+      graphics.lineStyle(3, ART_PALETTE.ink, 0.9).strokeRoundedRect(table.x - 34, table.y - 22, 68, 44, 8);
+      graphics.fillStyle(ART_PALETTE.woodDark).fillRoundedRect(table.x - 57, table.y - 14, 20, 28, 7).fillRoundedRect(table.x + 37, table.y - 14, 20, 28, 7);
+      graphics.lineStyle(2, ART_PALETTE.ink).strokeRoundedRect(table.x - 57, table.y - 14, 20, 28, 7).strokeRoundedRect(table.x + 37, table.y - 14, 20, 28, 7);
+      if (table.state === "dirty") { graphics.fillStyle(0xfaf7e9).fillCircle(table.x, table.y, 10); graphics.lineStyle(2, ART_PALETTE.ink).strokeCircle(table.x, table.y, 10); graphics.fillStyle(0xb65e45).fillCircle(table.x - 2, table.y, 3).fillCircle(table.x + 5, table.y - 3, 2); }
+      this.diningLabels.push(this.add.text(table.x, table.y + 31, `${table.id.toUpperCase()} · ${table.state.replaceAll("_", " ").toUpperCase()}`, { fontFamily: "DM Mono, monospace", fontSize: "6px", fontStyle: "bold", color: "#49352d", backgroundColor: "#fff1cfbb", padding: { x: 3, y: 1 } }).setOrigin(0.5).setDepth(12));
     });
     this.restaurant.customers.filter(({ state }) => state !== "failed").forEach((customer) => {
       const table = this.restaurant.diningTables.find(({ id }) => id === customer.tableId);
@@ -482,8 +492,8 @@ export class TransferScene extends Phaser.Scene {
       const walkProgress = seatingTask ? Phaser.Math.Clamp((now - seatingTask.startedAt) / (seatingTask.endsAt - seatingTask.startedAt), 0, 1) : 1;
       const x = table ? Phaser.Math.Linear(customer.state === "walking_to_table" ? 1202 : table.x, table.x, walkProgress) : 1202 - (waitingIndex % 2) * 24;
       const y = table ? Phaser.Math.Linear(customer.state === "walking_to_table" ? 305 : table.y - 8, table.y - 8, walkProgress) : 365 + Math.floor(Math.max(0, waitingIndex) / 2) * 30;
-      for (let member = 0; member < customer.size; member++) { const offset = customer.size === 2 ? (member ? 13 : -13) : 0; graphics.fillStyle(customer.failureReason ? 0xb95851 : 0xd6c583).fillCircle(x + offset, y, 9); graphics.fillStyle(0x28323d).fillCircle(x + offset, y - 2, 3); }
-      this.diningLabels.push(this.add.text(x, y + 12, customer.state === "waiting_for_food" ? RECIPES[customer.recipeId].icon : customer.state.replaceAll("_", " "), { fontFamily: "DM Mono, monospace", fontSize: "6px", color: "#fff" }).setOrigin(0.5).setDepth(12));
+      for (let member = 0; member < customer.size; member++) { const offset = customer.size === 2 ? (member ? 16 : -16) : 0; const mood = customer.failureReason ? "unhappy" : customer.state === "leaving" ? "happy" : "neutral"; drawMiniCharacter(graphics, x + offset, y, [0x71a7c7, 0xe18379, 0xe2b64c, 0x75a65a][(customer.id + member) % 4], "customer", customer.id + member, mood); }
+      this.diningLabels.push(this.add.text(x, y + 24, customer.state === "waiting_for_food" ? RECIPES[customer.recipeId].icon : customer.state.replaceAll("_", " "), { fontFamily: "DM Mono, monospace", fontSize: "6px", fontStyle: "bold", color: "#49352d", backgroundColor: "#fff1cfcc", padding: { x: 2, y: 1 } }).setOrigin(0.5).setDepth(12));
     });
     this.restaurant.activeStaff.forEach((staff, index) => {
       let x = staff.role === "dishwasher" ? 840 : 992 + index * 22; let y = staff.role === "dishwasher" ? 440 : 510;
@@ -496,8 +506,8 @@ export class TransferScene extends Phaser.Scene {
         const dirtyTable = this.restaurant.diningTables.find(({ id }) => id === staff.task?.targetId); const progress = Phaser.Math.Clamp((now - staff.task.startedAt) / (staff.task.endsAt - staff.task.startedAt), 0, 1);
         if (dirtyTable) { x = Phaser.Math.Linear(dirtyTable.x, 967, progress); y = Phaser.Math.Linear(dirtyTable.y + 38, 454, progress); }
       }
-      graphics.fillStyle(staff.role === "server" ? 0x8e79d3 : 0x62aeca).fillCircle(x, y, 12); graphics.fillStyle(0xf2eee4).fillRect(x - 7, y + 8, 14, 10);
-      this.diningLabels.push(this.add.text(x, y + 21, `${staff.name} · ${staff.state}`, { fontFamily: "DM Mono, monospace", fontSize: "6px", color: "#dcd4ff" }).setOrigin(0.5).setDepth(12));
+      drawMiniCharacter(graphics, x, y, staff.role === "server" ? 0x7f6bb3 : 0x4f9eb5, staff.role, index + 1);
+      this.diningLabels.push(this.add.text(x, y + 25, `${staff.name} · ${staff.state}`, { fontFamily: "DM Mono, monospace", fontSize: "6px", fontStyle: "bold", color: "#49352d", backgroundColor: "#fff1cfcc", padding: { x: 2, y: 1 } }).setOrigin(0.5).setDepth(12));
     });
     if (this.aiDebug) this.debugText.setText(this.restaurant.activeStaff.map((staff) => `${staff.name}: ${staff.state}\n task=${staff.task?.type ?? "none"} target=${staff.task?.targetId ?? "-"}\n dest=${staff.task?.destination ?? "idle"}`).join("\n"));
   }
