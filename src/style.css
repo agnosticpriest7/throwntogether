@@ -360,6 +360,22 @@ button:focus-visible { outline: 5px solid #ffcc3f; outline-offset: 2px; }
 .touch-dpad__center { background: #ddb982; }
 .touch-action--use { border-color: #49352d; color: #2d6e46; background: #a9d7a3; }
 .touch-action--throw { border-color: #49352d; color: #8c4d28; background: #f1bc68; }
+
+body[data-player-mode="solo"] #touch-controls { grid-template-columns: minmax(280px, 620px); justify-content: center; }
+body[data-player-mode="solo"] .touch-player--two,
+body[data-player-mode="solo"] .player-two-legend { display: none; }
+.mode-choice { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; width: min(680px, 100%); margin: 20px auto; }
+.mode-choice button { display: grid; gap: 4px; min-height: 86px; text-align: left; background: #fff8e4; }
+.mode-choice button strong { font: 900 15px "Nunito", sans-serif; }
+.mode-choice button span { color: #725449; font-size: 11px; }
+.mode-choice button.is-selected { background: #ffd45f; transform: translateY(-2px); box-shadow: 0 7px 0 #49352d; }
+.player-mode-toggle { padding: 7px 9px; font-size: 8px; background: #a9d7a3; }
+.hud-player-mode { border: 2px solid #49352d; border-radius: 999px; padding: 3px 7px; color: #49352d; background: #a9d7a3; font: 800 8px "DM Mono", monospace; }
+.hud-join-button { padding: 5px 7px; min-width: 0; font-size: 7px; background: #ffd45f; pointer-events: auto; }
+
+@media (max-width: 620px) {
+  .mode-choice { grid-template-columns: 1fr; }
+}
 footer { color: #49352d; }
 footer strong { color: #49352d; }
 kbd { border-color: #70452f; color: #49352d; background: #fff1cf; }

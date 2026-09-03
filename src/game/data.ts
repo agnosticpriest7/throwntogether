@@ -23,7 +23,7 @@ export interface ApplianceDefinition {
 export interface BulkTier { minQuantity: number; discountBps: number; label: string }
 export interface AdvertisingDefinition { id: AdId; displayName: string; costCents: number; demandBonusBps: number; description: string }
 export interface ReputationLevel { level: number; minimumPoints: number; baselineDemand: number }
-export interface KitchenSlotDefinition { index: number; x: number; y: number; side: "left" | "right"; requiredKitchenLevel: number }
+export interface KitchenSlotDefinition { index: number; x: number; y: number; zone: "north" | "south"; requiredKitchenLevel: number }
 export interface StaffRoleDefinition { id: StaffRoleId; displayName: string; hireCostCents: number; wageCents: number; color: number; taskPriority: string[] }
 export interface StaffCandidateDefinition { id: string; name: string; role: StaffRoleId; colorVariant: number; startingHired?: boolean; startingScheduled?: boolean }
 export interface TableDefinition { id: string; x: number; y: number; seats: 2; requiredDiningLevel: number }
@@ -124,12 +124,12 @@ export const REPUTATION_LEVELS: ReputationLevel[] = [
   { level: 9, minimumPoints: 1360, baselineDemand: 42 }, { level: 10, minimumPoints: 1620, baselineDemand: 50 },
 ];
 export const KITCHEN_SLOTS: KitchenSlotDefinition[] = [
-  { index: 0, x: 120, y: 150, side: "left", requiredKitchenLevel: 1 },
-  { index: 1, x: 820, y: 150, side: "right", requiredKitchenLevel: 1 },
-  { index: 2, x: 660, y: 150, side: "right", requiredKitchenLevel: 1 },
-  { index: 3, x: 660, y: 440, side: "right", requiredKitchenLevel: 1 },
-  { index: 4, x: 340, y: 155, side: "left", requiredKitchenLevel: 2 },
-  { index: 5, x: 340, y: 445, side: "left", requiredKitchenLevel: 2 },
+  { index: 0, x: 330, y: 145, zone: "north", requiredKitchenLevel: 1 },
+  { index: 1, x: 660, y: 145, zone: "north", requiredKitchenLevel: 1 },
+  { index: 2, x: 495, y: 145, zone: "north", requiredKitchenLevel: 1 },
+  { index: 3, x: 825, y: 145, zone: "north", requiredKitchenLevel: 1 },
+  { index: 4, x: 450, y: 470, zone: "south", requiredKitchenLevel: 2 },
+  { index: 5, x: 615, y: 470, zone: "south", requiredKitchenLevel: 2 },
 ];
 export const KITCHEN_EXPANSION = { id: "kitchen-expansion-1", displayName: "Kitchen Expansion I", costCents: 40_000, fromSlots: 4, toSlots: 6 } as const;
 export const DINING_EXPANSION = { id: "dining-expansion-1", displayName: "Dining Expansion I", costCents: 30_000, fromCapacity: 6, toCapacity: 10, fromTables: 3, toTables: 5 } as const;

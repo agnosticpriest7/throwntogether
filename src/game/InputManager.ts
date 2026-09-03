@@ -8,6 +8,7 @@ export interface PlayerInput {
   throwPressed: boolean;
   startPressed: boolean;
   resetPressed: boolean;
+  activity: boolean;
   gamepadLabel: string;
 }
 
@@ -100,6 +101,8 @@ export class InputManager {
       throwPressed: touchThrow || keyboardThrow || (throwDown && !this.buttonWasDown[base + 1]),
       startPressed: startDown && !this.buttonWasDown[base + 2],
       resetPressed: keyboardReset,
+      activity: Math.abs(touch.x || keyboardX || padX) + Math.abs(touch.y || keyboardY || padY) > 0.15
+        || touchInteract || touchThrow || keyboardInteract || keyboardThrow || interactDown || throwDown || startDown,
       gamepadLabel: pad ? `PAD ${pad.index + 1} · ${InputManager.shortPadName(pad.id)}` : "TOUCH / KEYS",
     };
     this.buttonWasDown[base] = interactDown;

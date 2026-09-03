@@ -4,10 +4,12 @@ import { GAME_HEIGHT, GAME_WIDTH } from "./game/config";
 import { RestaurantModel, type ServiceEvent } from "./game/RestaurantModel";
 import { RestaurantUI } from "./game/RestaurantUI";
 import { TransferScene } from "./game/TransferScene";
+import { PlayerSession } from "./game/PlayerSession";
 import type { IngredientId, KitchenItem, RecipeId } from "./game/data";
 
 const restaurant = new RestaurantModel({ storage: window.localStorage, startAtLanding: true });
-const scene = new TransferScene(restaurant);
+const playerSession = new PlayerSession();
+const scene = new TransferScene(restaurant, playerSession);
 
 new Phaser.Game({
   type: Phaser.AUTO, parent: "game", width: GAME_WIDTH, height: GAME_HEIGHT,
@@ -15,26 +17,28 @@ new Phaser.Game({
   scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH }, input: { gamepad: true },
 });
 
-const restaurantUI = new RestaurantUI(restaurant); scene.attachUI(restaurantUI);
+const restaurantUI = new RestaurantUI(restaurant, playerSession); scene.attachUI(restaurantUI);
 
 if (import.meta.env.DEV && new URLSearchParams(location.search).has("test")) {
   const harness = document.createElement("nav"); harness.id = "test-harness"; harness.setAttribute("aria-label", "Development scenario controls");
   const scenarios: Array<[string, () => void]> = [
     ["New restaurant", () => { restaurant.newRestaurant(); restaurantUI.render(); phaseChanged(); }],
+    ["Solo mode", () => playerSession.setMode("solo")], ["Co-op mode", () => playerSession.setMode("coop")],
     ["Fund restaurant", () => { restaurant.cashCents = 100_000; restaurant.save(); restaurantUI.render(); }],
     ["Setup Roast + Garden", () => quickSetup(false)], ["Setup Fries + Roast", () => quickSetup(true)],
     ["Setup with dishwasher", () => staffSetup()],
     ["Open service", () => phaseChanged(restaurant.startService(performance.now()))],
-    ["P1 take potato", () => actAt(0, 95, 305)], ["Give P1 raw potato", () => window.__THROWN_TOGETHER__?.giveIngredient(0, "potato")],
+    ["P1 take potato", () => actAt(0, 88, 145)], ["Give P1 raw potato", () => window.__THROWN_TOGETHER__?.giveIngredient(0, "potato")],
     ["Give P1 chopped potato", () => window.__THROWN_TOGETHER__?.giveIngredient(0, "potato", "chopped")],
     ["Give P2 tomato", () => window.__THROWN_TOGETHER__?.giveIngredient(1, "tomato", "chopped")], ["Give P2 onion", () => window.__THROWN_TOGETHER__?.giveIngredient(1, "onion", "chopped")],
     ["Give P2 cheese", () => window.__THROWN_TOGETHER__?.giveIngredient(1, "cheese")],
     ["Give plated Roast", () => window.__THROWN_TOGETHER__?.giveDish(1, "roast-potato", "plated")], ["Give plated Garden", () => window.__THROWN_TOGETHER__?.giveDish(1, "garden-plate", "plated")],
     ["Give plated Cheese", () => window.__THROWN_TOGETHER__?.giveDish(1, "cheese-bake", "plated")], ["Give plated Fries", () => window.__THROWN_TOGETHER__?.giveDish(1, "fries", "plated")],
-    ["P1 → slot 1", () => actAt(0, 120, 150)], ["P2 → slot 2", () => actAt(1, 820, 150)], ["P2 → slot 3", () => actAt(1, 660, 150)], ["P2 → slot 4", () => actAt(1, 660, 440)],
-    ["P2 → pickup", () => actAt(1, 880, 305)], ["P2 wash dish", () => actAt(1, 820, 440)], ["P1 → shared", () => actAt(0, 420, 305)], ["P2 → shared", () => actAt(1, 540, 305)],
-    ["P1 floor interact", () => actAt(0, 250, 530)], ["P1 → trash", () => actAt(0, 420, 440)],
-    ["Ready catch", () => window.__THROWN_TOGETHER__?.setPlayer(1, 690, 305)], ["P1 throw", () => window.__THROWN_TOGETHER__?.throw(0)], ["Land throw", () => window.__THROWN_TOGETHER__?.advanceFlight()],
+    ["P1 → slot 1", () => actAt(0, 330, 145)], ["P1 → slot 2", () => actAt(0, 660, 145)], ["P1 → slot 3", () => actAt(0, 495, 145)], ["P1 → slot 4", () => actAt(0, 825, 145)],
+    ["P1 → pickup", () => actAt(0, 875, 305)], ["P1 wash dish", () => actAt(0, 820, 470)], ["P1 → island", () => actAt(0, 355, 315)], ["P2 → island", () => actAt(1, 625, 315)],
+    ["P1 floor interact", () => actAt(0, 250, 530)], ["P1 → trash", () => actAt(0, 105, 470)],
+    ["Ready island toss", () => { playerSession.setMode("solo"); window.__THROWN_TOGETHER__?.setPlayer(0, 85, 315); }],
+    ["Ready catch", () => { playerSession.setMode("coop"); window.__THROWN_TOGETHER__?.setPlayer(0, 355, 315); window.__THROWN_TOGETHER__?.setPlayer(1, 625, 315); }], ["P1 throw", () => window.__THROWN_TOGETHER__?.throw(0)], ["Land throw", () => window.__THROWN_TOGETHER__?.advanceFlight()],
     ["Only Roast Order", () => onlyOrder("roast-potato")], ["Only Garden Order", () => onlyOrder("garden-plate")], ["Only Fries Order", () => onlyOrder("fries")],
     ["Expire soon", () => { const first = restaurant.activeOrders[0]; if (first) first.expiresAt = performance.now() - 1; }], ["End service", () => window.__THROWN_TOGETHER__?.endService()],
     ["Return dirty plate", () => { if (restaurant.platesRemaining > 0) { restaurant.platesRemaining -= 1; restaurant.dirtyReturnQueue += 1; } }],

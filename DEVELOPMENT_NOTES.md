@@ -2,14 +2,15 @@
 
 ## Architecture
 
-- Phaser owns the fixed 1280×600 shared restaurant canvas and render loop; all artwork is programmatic geometry. The 32:15 surface keeps the divided kitchen and dining room readable together and scales from available TV viewport height.
+- Phaser owns the fixed 1280×600 shared restaurant canvas and render loop; all artwork is programmatic geometry. The 32:15 surface keeps the open kitchen and dining room readable together and scales from available TV viewport height.
 - `RestaurantModel` owns the versioned Endless save, cent-based economy, persistent inventory/equipment/staff, expansions, reputation/demand, customer/table state machines, task reservations, finite plates, service clock, and multi-day summaries.
 - Recipe, ingredient, bulk tier, appliance, authored kitchen slot, authored table, staff role/candidate, timing, expansion, reputation-demand, and advertising definitions live in `data.ts`.
 - `RestaurantUI` owns phase overlays and the live HUD. `TransferScene` owns players, carried/in-flight items, stations, processing progress, and physical interactions.
 - Management sections are deliberately non-linear: Overview, Pantry, Supplier, Kitchen, Menu, Staff, and Marketing can be revisited until Begin Prep locks planning and charges scheduled payroll.
-- The Phaser kitchen rebuilds its appliance stations from the saved authored slot configuration at Prep. Divider, shared counter, storage, staging, and serving structures do not consume slots.
+- `PlayerSession` owns the current solo/co-op presentation independently of the persistent restaurant save. Solo is the safe default; P2 may be selected in management, added from the HUD, or joined by using P2 controls during kitchen play.
+- The Phaser kitchen rebuilds its appliance stations from the saved authored slot configuration at Prep. Pantry storage, the three-counter central island, trash, sink, and serving structures do not consume slots.
 - Ingredient and dish state uses the typed states `raw`, `chopped`, `assembled`, `cooked`, and `ruined`. Fries uses the same data-driven cooking path with a fryer station.
-- Pure side-clamping, landing, and catch rules live in `rules.ts` and have automated unit coverage.
+- Pure open-kitchen clamping, directional landing, and catch rules live in `rules.ts`; authored ring coordinates live in `layout.ts`. Both have automated unit coverage.
 - `ArtFactory.ts` owns reusable character construction, customer/staff variants, palette constants, and ingredient/dish illustration. `TransferScene` composes those parts with station-specific appliance/environment vectors; gameplay coordinates are unchanged.
 
 ## Dining, staff, and plate architecture
@@ -24,24 +25,38 @@
 
 ## Input
 
-- The browser Gamepad API is polled every frame. The first two connected pad indices are assigned stably to Players 1 and 2 while connected; assignments are visible beneath the characters.
+- The browser Gamepad API is polled every frame. The first two connected pad indices are assigned stably to Players 1 and 2 while connected; one pad is sufficient. P2 activity can join the optional second chef during Prep or Service.
 - Standard mapping is used: axes 0/1, button 0 for interact, button 7/right trigger for throw, and button 9/Start to begin Prep when the menu is ready or open Service during Prep. Keyboard R remains the restart shortcut.
 - In management screens, buttons 6/7 (left/right triggers) switch Planning Hub tabs, stick/D-pad input uses spatial focus navigation, and button 0 confirms. Focus is restored across Planning Hub redraws so repeated purchases and menu selections remain controller-accessible.
 - Both keyboard schemes remain enabled for debugging and simultaneous-input testing.
-- Touch controls use independent Pointer Events state for each player, including multi-touch D-pad holds and latched Use/Throw presses. They do not synthesize keyboard events.
+- Touch controls use independent Pointer Events state for each active player, including multi-touch D-pad holds and latched Use/Throw presses. Solo hides P2's duplicated panel; co-op restores both. They do not synthesize keyboard events.
 - Planning buttons are native keyboard/touch controls. A lightweight management poll lets either connected gamepad navigate focus with the stick/D-pad and select with the south face button.
 - Development builds expose an explicit `?test` scenario harness for repeatable browser checks; it is excluded from production by Vite's development flag.
 
 ## Throw and catch
 
-- Throws use a short 520 ms deterministic horizontal transfer to a landing point on the opposite side, aligned with and clamped from the thrower's Y position.
+- Throws use a short 520 ms directional transfer based on the chef's last movement and clamped to the open kitchen.
 - The apparent arc is visual rather than physics-driven. A pulsing landing circle, shadow, item arc, and distinct generated audio cues communicate the incoming item.
-- At arrival, catch succeeds only when the receiver is within 68 px and has an empty carry slot. A failure creates a ruined purchased ingredient and persistent visible mess; stock is not restored.
+- At arrival, catch succeeds only when an active teammate is within 68 px with an empty carry slot. Otherwise, an aimed toss can land on an empty central counter; a true miss creates ruined purchased food and a persistent visible mess.
 
-## Shared counter
+## Open-ring kitchen
 
-- The divider's central counter is a single shared slot. Either player can deposit or retrieve any usable kitchen item while remaining within their own movement bounds.
-- Ingredients can be thrown; assemblies and cooked dishes use the shared counter as their safe transfer route.
+- Both chefs use the same full kitchen bounds; there are no player-side barriers or mandatory handoffs.
+- Pantry fixtures are clustered upper-left, four base appliance slots line the north edge, two expansion slots occupy the south edge, and three island counters create safe staging in the middle.
+- Pickup remains beside the dining boundary and the sink sits close to dirty return, preserving server and dishwasher destinations while keeping both systems reachable by a solo chef.
+
+## Open kitchen redesign playtest checklist
+
+- Is the game clearly playable with only one human player?
+- Does the kitchen feel better as an open shared workspace?
+- Does the ring/circuit layout improve movement flow?
+- Is the pantry/storage corner intuitive?
+- Does the central counter space feel useful?
+- Is co-op still beneficial without being mandatory?
+- Is throwing still fun and relevant even though it is no longer required?
+- Does the new layout reduce frustration/body-blocking?
+- Does the service/dishwashing flow still make sense?
+- Does the restaurant feel more natural and less puzzle-boxed?
 
 ## Milestone 3 human playtest checklist
 
@@ -82,7 +97,7 @@
 
 ## Known limitations
 
-- **Two-controller feel and assignment require human playtesting with two physical gamepads.** Automated checks can verify the input architecture but cannot reproduce hardware feel, browser-specific pad IDs, trigger response, or simultaneous wireless input.
+- **Physical gamepad feel still requires human playtesting.** Automated checks can verify solo/optional-P2 architecture but cannot reproduce hardware-specific pad IDs, trigger response, or simultaneous wireless input.
 - Two-player multi-touch ergonomics should be assessed on the intended tablet/phone sizes; the responsive layout is functional in portrait and more comfortable in landscape.
 - Throw speed, landing distance, catch radius, and interaction distance are initial tuning values and should be assessed by two players side-by-side.
 - Browsers require a user input before Web Audio can start; the first pickup/throw interaction provides that gesture.
@@ -93,5 +108,5 @@
 - Appliance upgrades are represented as future data hooks only; no upgrade tree is active.
 - Desktop and TV layouts preserve the 32:15 whole-restaurant surface and scale it from available viewport height so the header, game, and control legend fit without page scrolling. Phone layouts retain their taller scrollable presentation.
 - Default order patience is 38.5 seconds (10% longer than the original 35-second prototype value).
-- Pressing interact away from a station no longer drops or ruins the held item. Intentional disposal uses the shared divider trash chute and records wasted value without creating floor mess. Missed throws still create gameplay-visible floor mess with no cleaning mechanic or movement penalty.
+- Pressing interact away from a station no longer drops or ruins the held item. Intentional disposal uses the pantry-side trash bin and records wasted value without creating floor mess. Missed throws still create gameplay-visible floor mess with no cleaning mechanic or movement penalty.
 - The nearest counter or appliance within interaction range gets a high-contrast outline and brighter fill for immediate affordance feedback.

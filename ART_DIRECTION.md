@@ -38,7 +38,7 @@ Large surfaces stay moderately saturated. Ingredients, ready food, patience bars
 ## Environment rules
 
 - The blue and coral tile fields communicate player territory. Grid lines are broad and low contrast; they must never compete with food.
-- Shared counters and the divider use cream/wood, visually distinct from either player side.
+- The central island uses cream/wood against the blue kitchen floor, with pantry and service zones distinguished by subtle floor treatments rather than player-side colors.
 - Dining uses simple warm planks, authored wooden tables, chunky chairs, and no more than one or two small plants in open corners.
 - Counters use a light cream or wood top, cocoa outline, and a short dark lower shadow/face.
 - Empty expansion positions use translucent cream with a dashed/subtle outline. They remain visible without resembling active equipment.
@@ -78,4 +78,4 @@ Large surfaces stay moderately saturated. Ingredients, ready food, patience bars
 
 ## Preservation checklist
 
-Before merging future art changes, verify that side bounds, divider, shared counter, appliance centers, pickup, sink, dirty return, table centers, entrance, AI destinations, throw arc/landing marker, touch controls, and focused management buttons still align with the existing gameplay geometry.
+Before merging future art changes, verify that the open kitchen bounds, pantry cluster, central island, appliance centers, pickup, sink, dirty return, table centers, entrance, AI destinations, throw arc/landing marker, touch controls, and focused management buttons still align with the existing gameplay geometry.

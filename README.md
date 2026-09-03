@@ -1,6 +1,6 @@
 # Thrown Together
 
-A browser-based, fixed-screen local co-op cooking prototype. Milestone 4 adds a living dining room, table-linked orders, deterministic AI servers, persistent staff and shift wages, finite dirty dishes, human washing, and an optional AI dishwasher to the persistent Endless restaurant. The first production-direction art pass replaces greybox geometry with a cohesive warm cartoon restaurant while preserving the exact game layout.
+A browser-based, fixed-screen restaurant cooking prototype for one player or optional two-player local co-op. It combines a persistent Endless restaurant, living dining room, deterministic staff, finite dishes, and a warm cartoon open-ring kitchen.
 
 ## Play online
 
@@ -13,7 +13,7 @@ The latest successful build from `main` is available at:
 - Node.js 20.19+ (Node.js 22.12+ also supported)
 - npm
 - A modern desktop browser
-- Two standard-mapped gamepads recommended for co-op playtesting
+- One standard-mapped gamepad or keyboard for solo play; a second controller is optional for co-op
 
 ## Visual direction
 
@@ -53,11 +53,17 @@ Vite's production base path is `/throwntogether/`, matching the repository-scope
 | Player 2 keyboard | Arrow keys | Shift | `/` |
 | Touch Player 1 / 2 | Left/right on-screen D-pad | On-screen Use | On-screen Throw |
 
-Touch controls are split into independent Player 1 (left) and Player 2 (right) panels and support simultaneous multi-touch input. Gamepads are assigned in browser gamepad-index order and each player's current assignment is shown under their character. Keyboard and touch controls remain active when pads are connected.
+Choose **Single Player** or **Local Co-op** on the landing screen. Solo mode shows one chef and one touch panel; **Add P2** in the kitchen or the mode control in Planning activates the second chef and second touch panel. Moving P2's assigned controls during kitchen play also joins P2. Gamepads are assigned in browser gamepad-index order, while keyboard and touch remain active.
 
 Planning uses native focusable controls for keyboard and touch. On a connected gamepad, use the left/right triggers to switch Planning Hub tabs, the stick/D-pad to move through the visible options, and the south face button to select. Moving down through a section reaches **BEGIN PREP** once two dishes are selected; **Start/Menu** also begins Prep directly when the menu is ready. During Prep, pressing **Start/Menu** again opens the restaurant. Press **R** or **Restart Night** above the game to restore the saved start-of-Prep planning state.
 
-Kitchen appliances and counters gain a bright outline when a player is close enough to use them. Pressing Use away from a workstation keeps the carried item in hand; deliberate disposal requires using the shared trash chute in the center divider. Missed throws can still ruin food on the floor.
+Kitchen appliances and counters gain a bright outline when a player is close enough to use them. Pressing Use away from a workstation keeps the carried item in hand; deliberate disposal requires the trash bin. Missed throws can still ruin food on the floor.
+
+## Open-ring kitchen
+
+The restaurant now uses one shared kitchen instead of two sealed halves. Pantry storage is clustered in the upper-left corner, installed appliances occupy authored positions around the outer edge, three staging counters form a central prep island, and the sink/pickup support the dining-facing service edge. Continuous space above and below the island gives a solo chef short circuits through every recipe while two chefs can work in parallel.
+
+Throwing follows the chef's facing direction. A teammate can catch a toss, or an accurate throw can land on an empty island counter. Walking every item remains possible, so throwing is optimization rather than a recipe requirement.
 
 Select **Recipes** in the kitchen HUD at any time during Prep or Service to see the selected dishes' required ingredient states, ordered station steps, and selling prices.
 
@@ -65,7 +71,7 @@ Select **Recipes** in the kitchen HUD at any time during Prep or Service to see 
 
 1. Start a new restaurant or continue the versioned browser save. A new restaurant begins on Day 1 with $150, an empty pantry, Reputation Level 1, four installed core workstations, three two-seat tables, six plates, and server Ada already hired.
 2. Move freely among Overview, Pantry, Supplier, Kitchen, Menu, Staff, and Marketing. Buy bulk ingredients, configure appliances, choose two dishes, schedule hired employees, and optionally advertise.
-3. Select **Begin Prep** to pay that shift's scheduled payroll exactly once and lock management. Retrieve persistent stock, chop, throw/catch, use the shared counter, and stage equipment while closed.
+3. Select **Begin Prep** to pay that shift's scheduled payroll exactly once and lock management. Retrieve persistent stock, circulate around the central island, chop, stage, and optionally throw while closed.
 4. Select **Open Restaurant** for a two-minute service. Customers arrive over time; servers seat parties, which creates table-linked kitchen tickets.
 5. Plate the matching food and put it in **Service Pickup**. An available server reserves it, delivers it to the correct table, and only then credits revenue.
 6. After customers eat, servers clear plates to **Dirty Return**. Either chef can wash at the sink, or a scheduled dishwasher washes one plate at a time. Clean plates return to circulation.
@@ -73,7 +79,7 @@ Select **Recipes** in the kitchen HUD at any time during Prep or Service to see 
 
 Supplier discounts are 5% at 5 units, 10% at 10 units, and 20% at 20 units. Ingredients never spoil or decay. Advertising is charged once and expires after service. Dining Level 1 provides three two-seat tables; the $300 Dining Expansion permanently adds two more tables. Physical turnover means a room can serve more customers than it seats simultaneously.
 
-The kitchen begins with four active authored appliance positions and can expand to six. Appliances can be purchased into storage and installed, stored, moved, or swapped during Planning only. A stored appliance does not unlock its recipes.
+The open kitchen begins with four active authored appliance positions on its outer edge and can expand to six. Appliances can be purchased into storage and installed, stored, moved, or swapped during Planning only. A stored appliance does not unlock its recipes.
 
 ## Save management
 

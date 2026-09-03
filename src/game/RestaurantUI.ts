@@ -4,6 +4,7 @@ import {
   type AdId, type ApplianceId, type IngredientId, type RecipeId,
 } from "./data";
 import { RestaurantModel, type ServiceEvent } from "./RestaurantModel";
+import { PlayerSession, type PlayerMode } from "./PlayerSession";
 
 type PlanningSection = "overview" | "pantry" | "supplier" | "kitchen" | "menu" | "staff" | "marketing";
 type NavigationDirection = "up" | "down" | "left" | "right";
@@ -40,14 +41,16 @@ export class RestaurantUI {
   private gamepadNavigationActive = false;
   private planningFocusKey: string | null = null;
 
-  constructor(private readonly model: RestaurantModel) {
+  constructor(private readonly model: RestaurantModel, private readonly playerSession: PlayerSession) {
     document.getElementById("reset-button")?.addEventListener("click", () => this.restartNight());
     window.addEventListener("tt-restart-night", () => this.restartNight());
+    this.playerSession.onChange(() => this.render());
     this.render(); this.pollManagementGamepad();
   }
 
   render(forceHud = true): void {
     document.body.dataset.phase = this.model.phase;
+    document.body.dataset.playerMode = this.playerSession.mode;
     const inKitchen = this.model.phase === "prep" || this.model.phase === "service";
     this.overlay.hidden = inKitchen; this.hud.hidden = !inKitchen;
     if (this.model.phase === "landing") this.renderLanding();
@@ -63,12 +66,14 @@ export class RestaurantUI {
   }
 
   private renderLanding(): void {
-    this.overlay.innerHTML = `<div class="flow-panel endless-landing"><span class="flow-kicker">MILESTONE 4 · DINING + STAFF</span><h2>Your restaurant is alive</h2>
-      <p>Plan the menu, schedule staff, cook together, and watch a physical dining room turn over through service.</p>
+    this.overlay.innerHTML = `<div class="flow-panel endless-landing"><span class="flow-kicker">OPEN KITCHEN · SOLO OR LOCAL CO-OP</span><h2>Choose how you are cooking</h2>
+      <p>Run the full restaurant alone, or add a second local chef for faster parallel play. Both modes use the same Endless restaurant.</p>
+      <div class="mode-choice" role="group" aria-label="Human player mode"><button data-player-mode="solo" class="${this.playerSession.mode === "solo" ? "is-selected" : ""}" aria-pressed="${this.playerSession.mode === "solo"}"><strong>SINGLE PLAYER</strong><span>One chef · full kitchen access</span></button><button data-player-mode="coop" class="${this.playerSession.mode === "coop" ? "is-selected" : ""}" aria-pressed="${this.playerSession.mode === "coop"}"><strong>LOCAL CO-OP</strong><span>Two chefs · shared open kitchen</span></button></div>
       <div class="landing-actions"><button class="primary-action" id="new-restaurant">NEW RESTAURANT</button>
       <button id="continue-restaurant" ${this.model.hasSave ? "" : "disabled"}>CONTINUE RESTAURANT</button>
       ${this.model.hasSave ? `<button class="danger-action" id="reset-save">RESET ENDLESS SAVE</button>` : ""}</div>
       <p class="flow-feedback">${this.model.hasSave ? `Saved restaurant · Day ${this.model.day} · ${formatMoney(this.model.cashCents)}` : "No Endless restaurant save found."}</p></div>`;
+    this.bindModeButtons(this.overlay);
     this.overlay.querySelector<HTMLButtonElement>("#new-restaurant")?.addEventListener("click", () => {
       if (this.model.hasSave && !confirm("Start a NEW RESTAURANT and overwrite the current Endless save?")) return;
       this.model.newRestaurant(); this.planningSection = "overview"; this.render();
@@ -84,11 +89,12 @@ export class RestaurantUI {
     const rep = this.model.reputationProgress(); const demand = this.model.demandPreview();
     const tabs: PlanningSection[] = ["overview", "pantry", "supplier", "kitchen", "menu", "staff", "marketing"];
     this.overlay.innerHTML = `<div class="planning-hub"><header class="planning-top"><div><span class="flow-kicker">DAY ${this.model.day} · PLANNING</span><h2>Restaurant Hub</h2></div>
-      <div class="planning-stats"><span>CASH <b>${formatMoney(this.model.cashCents)}</b></span><span>REPUTATION <b>LV ${rep.level}</b></span><span>DEMAND <b>${demand.potential}</b></span><span>DINING <b>${demand.capacity}</b></span></div></header>
+      <div class="planning-stats"><span>CASH <b>${formatMoney(this.model.cashCents)}</b></span><span>REPUTATION <b>LV ${rep.level}</b></span><span>DEMAND <b>${demand.potential}</b></span><span>DINING <b>${demand.capacity}</b></span><button class="player-mode-toggle" data-player-mode="${this.playerSession.mode === "solo" ? "coop" : "solo"}">${this.playerSession.mode === "solo" ? "ADD PLAYER 2" : "USE SOLO MODE"}</button></div></header>
       <nav class="planning-tabs" aria-label="Planning sections">${tabs.map((tab) => `<button data-section="${tab}" class="${tab === this.planningSection ? "is-active" : ""}">${tab.toUpperCase()}</button>`).join("")}</nav>
       <section class="planning-content" aria-label="${this.sectionTitle()} planning section">${this.planningContent()}</section>
       <footer class="planning-footer"><span>${this.model.lastFeedback}</span><button class="primary-action" id="begin-prep" ${this.model.selectedRecipeIds.length !== 2 ? "disabled" : ""}>BEGIN PREP · START/MENU →</button></footer></div>`;
     this.overlay.querySelectorAll<HTMLButtonElement>("[data-section]").forEach((button) => button.addEventListener("click", () => { this.planningSection = button.dataset.section as PlanningSection; this.renderPlanning(); }));
+    this.bindModeButtons(this.overlay);
     this.bindPlanningActions();
     this.overlay.querySelector<HTMLButtonElement>("#begin-prep")?.addEventListener("click", () => { if (this.model.beginPrep()) { this.phaseChanged(); this.render(); } else this.renderPlanning(); });
     if (this.gamepadNavigationActive) this.restorePlanningFocus();
@@ -187,12 +193,13 @@ export class RestaurantUI {
   private renderHud(): void {
     const menu = this.model.selectedRecipeIds.map((id) => RECIPES[id].displayName).join(" · ");
     this.hud.innerHTML = `<div class="hud-bar"><strong class="phase-pill ${this.model.phase}">${this.model.phase === "prep" ? "CLOSED · PREP" : "OPEN · SERVICE"}</strong><span class="hud-day">DAY ${this.model.day}</span>
-      <span class="hud-cash">CASH <b></b></span><span class="hud-menu">${menu}</span><span class="hud-time"></span><button class="hud-recipes-button" id="toggle-recipe-guide" aria-expanded="${this.recipeGuideOpen}">RECIPES</button></div>
+      <span class="hud-cash">CASH <b></b></span><span class="hud-menu">${menu}</span><span class="hud-time"></span><span class="hud-player-mode">${this.playerSession.mode === "solo" ? "SOLO" : "2 CHEFS"}</span>${this.playerSession.mode === "solo" ? `<button class="hud-join-button" data-player-mode="coop">ADD P2</button>` : ""}<button class="hud-recipes-button" id="toggle-recipe-guide" aria-expanded="${this.recipeGuideOpen}">RECIPES</button></div>
       <div class="hud-stock"></div><div class="tickets"></div><div class="hud-feedback"></div>${this.model.phase === "prep" ? `<button class="open-action" id="open-restaurant">OPEN RESTAURANT · START/MENU</button>` : ""}
       <aside class="recipe-guide" aria-label="Tonight's recipe guide" ${this.recipeGuideOpen ? "" : "hidden"}><div class="recipe-guide__header"><div><span>TONIGHT'S MENU</span><strong>How to make each dish</strong></div><button id="close-recipe-guide" aria-label="Close recipe guide">×</button></div><div class="recipe-guide__grid">${this.recipeGuideMarkup()}</div></aside>`;
     this.hud.querySelector<HTMLButtonElement>("#open-restaurant")?.addEventListener("click", () => { const events = this.model.startService(performance.now()); this.phaseChanged(events); });
     this.hud.querySelector<HTMLButtonElement>("#toggle-recipe-guide")?.addEventListener("click", () => this.toggleRecipeGuide());
     this.hud.querySelector<HTMLButtonElement>("#close-recipe-guide")?.addEventListener("click", () => this.toggleRecipeGuide(false));
+    this.hud.querySelector<HTMLButtonElement>(".hud-join-button")?.addEventListener("click", () => this.playerSession.setMode("coop"));
     this.updateHud(performance.now());
   }
 
@@ -224,6 +231,9 @@ export class RestaurantUI {
   }
 
   private restartNight(): void { if (this.model.restartNight()) { this.recipeGuideOpen = false; this.planningSection = "overview"; this.phaseChanged(); this.render(); } }
+  private bindModeButtons(root: ParentNode): void {
+    root.querySelectorAll<HTMLButtonElement>("[data-player-mode]").forEach((button) => button.addEventListener("click", () => this.playerSession.setMode(button.dataset.playerMode as PlayerMode)));
+  }
   private purchaseCue(): void { window.dispatchEvent(new Event("tt-purchase")); }
   private navigationKey(button: HTMLButtonElement): string {
     if (button.dataset.section) return `section:${button.dataset.section}`;

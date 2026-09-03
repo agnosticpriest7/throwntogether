@@ -4,13 +4,13 @@ Working title. This repository copy is the current design reference through Mile
 
 ## Project goal
 
-Build a fixed-screen local co-op cooking game for two players on the same PC. The central fantasy is that two people choose how ambitious their restaurant will be, invest real restaurant money, configure a kitchen they own, and live with those decisions during service.
+Build a fixed-screen restaurant cooking game that is fully playable by one person, with a second local co-op chef as an optional efficiency upgrade. The central fantasy is choosing how ambitious the restaurant will be, investing real restaurant money, configuring a kitchen the players own, and living with those decisions during service.
 
 The core design pillars are:
 
 1. Players choose difficulty through their nightly menu and demand decisions.
 2. Ingredients are purchased persistent inventory; waste is a real financial loss.
-3. Throwing loose ingredients is fast while the central shared counter is safe.
+3. Throwing loose ingredients is an optional high-skill convenience while open routes and central staging counters are always safe.
 4. The kitchen itself—owned equipment, installed capacity, and workspace—is progression.
 5. Human chefs stay at the center while deterministic role-specific staff turn money into focused automation.
 6. Chaos should come from player decisions, coordination, limited capacity, and service pressure rather than environmental gimmicks.
@@ -90,7 +90,7 @@ Meals add their recipe sale price only when an AI server successfully delivers t
 
 Owned and installed appliances are separate. Stored appliances do not enable recipes. Equipment may only be reconfigured during Planning and occupies fixed authored positions.
 
-Kitchen Level 1 has four active appliance/workstation positions. Kitchen Expansion I costs $400 and permanently increases this to six visibly usable positions. The divider, shared counter, storage, staging counters, and serving destination do not consume slots.
+Kitchen Level 1 has four active appliance/workstation positions. Kitchen Expansion I costs $400 and permanently increases this to six visibly usable positions. The pantry, central island counters, sink, trash, and serving destination do not consume slots.
 
 Prototype purchasable equipment:
 
@@ -146,7 +146,11 @@ Advertising is charged once, expires after that service, and never directly gran
 
 ## Kitchen and service rules
 
-Players remain restricted to their own sides of the divider. Throwable ingredients may be caught automatically by a receiver with free hands. Missed ingredients become unusable purchased waste and leave a floor mess. Any usable item may use the shared counter.
+The kitchen is one open ring workspace. One chef can reach the pantry, every installed appliance, all three central staging counters, plating, service pickup, trash, and dish sink. The compact pantry occupies the upper-left corner; appliances line the outer working edge; the central island supports staging and co-op handoffs; pickup and dish support sit beside the dining-room service edge. Both chefs share the full kitchen when local co-op is active.
+
+Single Player is the default session mode and never requires a second controller. Local Co-op adds a second independently controlled chef without changing the restaurant save. P2 may be selected before play or joined from the kitchen. Co-op enables parallel prep, transport, cooking, and organic specialization, but no recipe or route requires a handoff.
+
+Throwable ingredients travel in the chef's facing direction. A teammate with free hands may catch them, or a well-aimed solo/co-op toss may land on an empty central island counter. A miss becomes unusable purchased waste and leaves a floor mess. Throwing is useful for speed, never mandatory for ordinary transport.
 
 Prep is untimed. Ingredients may be retrieved, moved, thrown, chopped, assembled, and staged. Ovens and fryers do not complete cooking before Service.
 
