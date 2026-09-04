@@ -37,6 +37,12 @@ export const SAVE_KEY = "thrown-together:endless-save";
 export const STARTING_CASH_CENTS = 15_000;
 export const STARTING_REPUTATION_POINTS = 0;
 export const SERVICE_DURATION_MS = 120_000;
+export const FIRST_CUSTOMER_DELAY_MS = 6_000;
+export function restaurantClock(elapsedMs: number, durationMs: number): string {
+  const minutes = 11 * 60 + Math.floor(Math.max(0, Math.min(1, elapsedMs / durationMs)) * 600);
+  const hour = Math.floor(minutes / 60);
+  return `${hour % 12 || 12}:${String(minutes % 60).padStart(2, "0")} ${hour < 12 ? "AM" : "PM"}`;
+}
 export const DEMAND_TEST_MULTIPLIER_BPS = 15_000;
 export const ORDER_PATIENCE_MS = 38_500;
 export const TABLE_WAIT_PATIENCE_MS = 30_000;

@@ -1,6 +1,6 @@
 import {
   ADVERTISING, APPLIANCES, APPLIANCE_IDS, DEMAND_TEST_MULTIPLIER_BPS, DINING_EXPANSION, DISHWASH_DURATION_MS,
-  EATING_DURATION_MS, INGREDIENT_IDS, INGREDIENTS, KITCHEN_EXPANSION, ORDER_PATIENCE_MS,
+  EATING_DURATION_MS, FIRST_CUSTOMER_DELAY_MS, INGREDIENT_IDS, INGREDIENTS, KITCHEN_EXPANSION, ORDER_PATIENCE_MS,
   PICKUP_SLOT_COUNT, PLATE_COUNT, RECIPES, REPUTATION_LEVELS, SAVE_KEY, SAVE_VERSION,
   SERVER_CLEAR_DURATION_MS, SERVER_DELIVERY_DURATION_MS, SERVER_SEAT_DURATION_MS,
   SERVICE_DURATION_MS, STAFF_CANDIDATES, STAFF_ROLES, STARTING_CASH_CENTS,
@@ -200,7 +200,7 @@ export class RestaurantModel {
     this.phase = "service"; this.serviceStartedAt = now; this.ordersGenerated = 0; this.activeOrders = []; this.readyDishes = []; this.lastCall = false;
     this.customers = []; this.prepareDiningTables();
     this.activeStaff = this.staffRoster.filter(({ scheduled }) => scheduled).map((employee, index) => ({ employeeId: employee.id, name: employee.name, role: employee.role, state: "idle", task: null, x: employee.role === "server" ? 960 + index * 18 : 835, y: employee.role === "server" ? 545 : 330, completedTasks: 0 }));
-    this.nextCustomerAt = now; this.lastFeedback = "OPEN · Customers are arriving!"; return this.updateService(now);
+    this.nextCustomerAt = now + Math.min(FIRST_CUSTOMER_DELAY_MS, this.serviceDurationMs * 0.05); this.lastFeedback = "OPEN · 11 AM · First guests arriving shortly."; return this.updateService(now);
   }
   updateService(now: number): ServiceEvent[] {
     if (this.phase !== "service") return [];
