@@ -2,6 +2,8 @@ import type { IngredientId } from "./data";
 import type { Vec2 } from "./config";
 
 export const KITCHEN_BOUNDS = { minX: 48, maxX: 912, minY: 88, maxY: 548 } as const;
+export const RESTAURANT_BOUNDS = { minX: 48, maxX: 1220, minY: 88, maxY: 548 } as const;
+export const SERVICE_DOOR = { kitchenX: 912, diningX: 960, minY: 340, maxY: 420 } as const;
 
 export const OPEN_KITCHEN_PLAYER_STARTS: [Vec2, Vec2] = [
   { x: 380, y: 500 },
@@ -11,7 +13,7 @@ export const OPEN_KITCHEN_PLAYER_STARTS: [Vec2, Vec2] = [
 export const PANTRY_LAYOUT: Array<{ id: IngredientId; position: Vec2 }> = [
   { id: "potato", position: { x: 88, y: 145 } },
   { id: "tomato", position: { x: 198, y: 145 } },
-  { id: "onion", position: { x: 88, y: 242 } },
+  { id: "lettuce", position: { x: 88, y: 242 } },
   { id: "cheese", position: { x: 198, y: 242 } },
 ];
 

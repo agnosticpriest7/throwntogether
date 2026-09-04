@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { canAutoCatch, clampToKitchen, throwLanding } from "./rules";
+import { canAutoCatch, clampRestaurantMovement, clampToKitchen, throwLanding } from "./rules";
 
 describe("transfer rules", () => {
   it("lets either player use the whole open kitchen while keeping them out of dining", () => {
@@ -10,6 +10,12 @@ describe("transfer rules", () => {
   it("supports predictable throws in both directions", () => {
     expect(throwLanding({ x: 300, y: 300 }, { x: 1, y: 0 })).toEqual({ x: 570, y: 300 });
     expect(throwLanding({ x: 700, y: 300 }, { x: -1, y: 0 })).toEqual({ x: 430, y: 300 });
+  });
+
+  it("keeps the service wall solid except at the chef door", () => {
+    expect(clampRestaurantMovement({ x: 900, y: 200 }, { x: 1000, y: 200 }).x).toBe(912);
+    expect(clampRestaurantMovement({ x: 900, y: 380 }, { x: 1000, y: 380 }).x).toBe(1000);
+    expect(clampRestaurantMovement({ x: 1000, y: 380 }, { x: 800, y: 380 }).x).toBe(800);
   });
 
   it("requires free hands for automatic catches", () => {

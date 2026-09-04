@@ -69,12 +69,12 @@ Select **Recipes** in the kitchen HUD at any time during Prep or Service to see 
 
 ## Endless restaurant loop
 
-1. Start a new restaurant or continue the versioned browser save. A new restaurant begins on Day 1 with $150, an empty pantry, Reputation Level 1, four installed core workstations, three two-seat tables, six plates, and server Ada already hired.
+1. Start a new restaurant or continue the versioned browser save. A new restaurant begins on Day 1 with $150, an empty pantry, Reputation Level 1, four installed core workstations, three two-seat tables, six plates, and no staff.
 2. Move freely among Overview, Pantry, Supplier, Kitchen, Menu, Staff, and Marketing. Buy bulk ingredients, configure appliances, choose two dishes, schedule hired employees, and optionally advertise.
 3. Select **Begin Prep** to pay that shift's scheduled payroll exactly once and lock management. Retrieve persistent stock, circulate around the central island, chop, stage, and optionally throw while closed.
-4. Select **Open Restaurant** for a two-minute arrival window. Customers arrive over time; servers seat parties, which creates table-linked kitchen tickets. At 0:00, **Last Call** stops new arrivals but keeps the kitchen open until every existing guest's final order is delivered or expires.
-5. Plate the matching food and put it in **Service Pickup**. An available server reserves it, delivers it to the correct table, and only then credits revenue.
-6. After customers eat, servers clear plates to **Dirty Return**. Either chef can wash at the sink, or a scheduled dishwasher washes one plate at a time. Clean plates return to circulation.
+4. Select **Open Restaurant** for a two-minute arrival window. Without a server, customers self-seat and create table-linked kitchen tickets. The temporary testing balance generates 50% more potential arrivals. At 0:00, **Last Call** stops new arrivals but keeps the restaurant open through unresolved service.
+5. Plate the matching food, walk through the marked chef door, and use it on the correct table. Delivery credits revenue. If a server is later hired and scheduled, Service Pickup automates that trip.
+6. After customers eat, collect each dirty table's plate, carry it back through the door, and return it to the sink. Either chef can then wash it, or a scheduled dishwasher washes one plate at a time. Clean plates return to circulation.
 7. Once Last Call has no unresolved guests or tickets, review customer, dining, staff, financial, inventory, and reputation results. Select **Next Day** with the restaurant state preserved.
 
 Supplier discounts are 5% at 5 units, 10% at 10 units, and 20% at 20 units. Ingredients never spoil or decay. Advertising is charged once and expires after service. Dining Level 1 provides three two-seat tables; the $300 Dining Expansion permanently adds two more tables. Physical turnover means a room can serve more customers than it seats simultaneously.
@@ -83,7 +83,7 @@ The open kitchen begins with four active authored appliance positions on its out
 
 ## Save management
 
-Endless state is autosaved in versioned browser local storage after purchases, menu/marketing/staff decisions, kitchen configuration, expansions, and completed nights. Save v2 persists employee identity and scheduling and migrates Milestone 3 v1 saves by adding the starting server without discarding restaurant progress. The landing screen provides **New Restaurant**, **Continue Restaurant**, and **Reset Endless Save**. Destructive actions use an in-game confirmation panel navigable by controller, keyboard, or touch rather than a browser dialog. Controller focus begins visibly on Cancel; D-pad/stick or either trigger chooses an action, A confirms, and B cancels. Saves remain in the browser/profile where they were created.
+Endless state is autosaved in versioned browser local storage after purchases, menu/marketing/staff decisions, kitchen configuration, expansions, and completed nights. Save v3 persists employee identity and scheduling, converts legacy onion stock to lettuce, and removes the former free starter server while preserving paid/progression state. The landing screen provides **New Restaurant**, **Continue Restaurant**, and **Reset Endless Save**. Destructive actions use an in-game confirmation panel navigable by controller, keyboard, or touch rather than a browser dialog. Controller focus begins visibly on Cancel; D-pad/stick or either trigger chooses an action, A confirms, and B cancels. Saves remain in the browser/profile where they were created.
 
 ## Staff and plates
 
@@ -94,14 +94,14 @@ Endless state is autosaved in versioned browser local storage after purchases, m
 
 Hires are permanent; scheduling is remembered until changed. Off employees cost nothing. If current cash cannot cover scheduled payroll, **Begin Prep** is blocked. Two servers reserve tasks independently so they cannot claim the same pickup dish, customer, or table.
 
-The six-plate pool is conserved across clean, plated/in-use, returned-dirty, and currently-washing states. Food abandoned after its customer leaves is orphaned and earns no revenue. Human chefs remain kitchen-bound; staff are deterministic role AI and never cook recipes.
+The six-plate pool is conserved across clean, plated/in-use, hand-carried dirty, returned-dirty, and currently-washing states. Food abandoned after its customer leaves is orphaned and earns no revenue. Human chefs use the service door to work the dining room; staff are deterministic role AI and never cook recipes.
 
 ## Prototype recipes
 
 | Dish | Ingredients | Kitchen path | Sale price |
 |---|---|---|---:|
 | Roast Potato | Potato | Chop → bake → plate | $8 |
-| Garden Plate | Tomato + onion | Chop both → combine on plate | $10 |
+| Garden Plate | Tomato + lettuce | Chop both → combine on plate | $10 |
 | Cheese Bake | Potato + cheese | Chop potato → assemble → bake → plate | $15 |
 | Fries | Potato | Chop → fry → plate | $12 |
 

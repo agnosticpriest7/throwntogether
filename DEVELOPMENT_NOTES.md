@@ -15,12 +15,12 @@
 
 ## Dining, staff, and plate architecture
 
-- Customer parties are deterministic solo/two-person entities with arriving, table-wait, walking/seating, food-wait, eating, leaving, and failed states. One prototype order is created per seated party and retains customer/table identity.
+- Customer parties are deterministic solo/two-person entities with arriving, table-wait, walking/seating, food-wait, eating, leaving, and failed states. With no scheduled server they self-seat at clean tables; one prototype order is created per seated party and retains customer/table identity.
 - Tables use authored positions and move through clean, reserved, waiting-food, eating, dirty, and clean-again states. Level 1 exposes three two-seat tables; Dining Expansion I exposes two additional authored tables.
 - Servers use an explicit priority state machine: deliver reserved pickup dish, seat a waiting party, clear a dirty table, idle. Dish/customer/table reservations prevent two servers claiming one task. Movement is represented over authored safe kitchen-boundary/table/entrance destinations; complex collision avoidance is intentionally omitted.
-- The service boundary has three pickup slots. Pickup validates a matching plated order but does not pay; successful server delivery credits revenue. Ready food whose customer abandons is removed and earns nothing.
-- Reaching 0:00 enters `lastCall` instead of immediately ending the day. New arrivals stop, while existing arriving/waiting guests, active tickets, patience, and staff delivery tasks keep updating. Summary begins only after no unresolved guest or ticket remains; eating and dirty-table cleanup do not hold the shift open.
-- Six plates are conserved between clean stock, plated/in-use food, dirty return, and claimed washing work. Servers create dirty-return work after eating. A human Use interaction at the sink or a visible dishwasher task washes one plate for 2.5 seconds and returns it clean.
+- The service wall has a chef-sized authored door. Manual delivery validates a plated dish against the interacted table and credits revenue there. With a scheduled server, the three-slot pickup validates and queues the same table-linked work; pickup alone does not pay. Ready food whose customer abandons is removed and earns nothing.
+- Reaching 0:00 enters `lastCall` instead of immediately ending the day. New arrivals stop, while existing guests and tickets keep updating. Summary begins after the final guest has eaten/left and any table plate already in circulation has been cleared or returned, so the day cannot strand a manually carried dish.
+- Six plates are conserved between clean stock, plated/in-use food, hand-carried dirty plates, dirty return, and claimed washing work. A chef collects a dirty table, carries its plate through the service door, and returns it to the sink; a scheduled server automates that trip. A human Use interaction at the sink or a visible dishwasher task washes one plate for 2.5 seconds and returns it clean.
 - Hired staff persist with stable ID, name, role, color variation, and the last selected schedule. Only scheduled staff spawn. Payroll is affordability-checked and charged once at Begin Prep; the saved charged-day marker prevents a restart from charging twice.
 - Press F3 to toggle the developer AI overlay. It is off by default and shows employee state, task, reserved target, and destination.
 
@@ -45,7 +45,7 @@
 
 - Both chefs use the same full kitchen bounds; there are no player-side barriers or mandatory handoffs.
 - Pantry fixtures are clustered upper-left, four base appliance slots line the north edge, two expansion slots occupy the south edge, and three island counters create safe staging in the middle.
-- Pickup remains beside the dining boundary and the sink sits close to dirty return, preserving server and dishwasher destinations while keeping both systems reachable by a solo chef.
+- Pickup remains beside the dining boundary and the sink sits close to the marked service door, preserving server and dishwasher destinations while letting a solo chef reach every table and return dirty plates.
 
 ## Open kitchen redesign playtest checklist
 
@@ -106,7 +106,7 @@
 - Customer groups are limited to one- or two-person parties and use one clearly associated prototype order per party rather than one order per individual.
 - Navigation uses authored destinations and timed deterministic movement/state changes. Basic AI overlap is accepted; there is no general-purpose pathfinding or crowd avoidance.
 - Servers and dishwashers are the only AI roles. They have no traits, levels, morale, training, or emergent recipe logic.
-- Saves use one versioned local-storage record, migrate v1 to v2, and have no cloud synchronization or guarantee for unknown future versions.
+- Saves use one versioned local-storage record, migrate supported v1/v2 data to v3, and have no cloud synchronization or guarantee for unknown future versions.
 - Appliance upgrades are represented as future data hooks only; no upgrade tree is active.
 - Desktop and TV layouts preserve the 32:15 whole-restaurant surface and scale it from available viewport height so the header, game, and control legend fit without page scrolling. Phone layouts retain their taller scrollable presentation.
 - Default order patience is 38.5 seconds (10% longer than the original 35-second prototype value).

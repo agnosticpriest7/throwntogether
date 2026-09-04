@@ -12,7 +12,7 @@ The core design pillars are:
 2. Ingredients are purchased persistent inventory; waste is a real financial loss.
 3. Throwing loose ingredients is an optional high-skill convenience while open routes and central staging counters are always safe.
 4. The kitchen itself—owned equipment, installed capacity, and workspace—is progression.
-5. Human chefs stay at the center while deterministic role-specific staff turn money into focused automation.
+5. Human chefs begin by cooking and handling table service themselves; deterministic role-specific staff later turn money into focused automation.
 6. Chaos should come from player decisions, coordination, limited capacity, and service pressure rather than environmental gimmicks.
 
 ## Endless restaurant
@@ -25,7 +25,7 @@ Endless Mode is one persistent restaurant across an unlimited sequence of days:
 4. Choose two dishes from recipes enabled by installed equipment.
 5. Hire employees, schedule a shift, and optionally advertise to increase this night's demand.
 6. Pay scheduled payroll once, enter untimed Prep, and open for timed Service.
-7. Cook table-linked tickets while servers seat, deliver, clear, and turn tables.
+7. Cook table-linked tickets, carry meals through the service door, serve the matching tables, and bring dirty plates back. Hired servers automate this work.
 8. Review operations, finances, inventory, and reputation.
 9. Persist the restaurant and begin the next day.
 
@@ -53,7 +53,7 @@ Prototype starting restaurant:
 - Reputation Level 1
 - Kitchen Level 1 with four core workstations installed
 - Dining Level 1 with three two-seat tables
-- One basic server, Ada, already hired and scheduled; her normal $30 wage applies
+- No starting staff; players handle table delivery and dirty-plate return until they hire help
 
 ## Planning Hub
 
@@ -84,7 +84,7 @@ Bulk ingredient discounts are data-driven:
 
 The Supplier shows chosen quantity, total, effective per-unit price, discount tier, current cash, and owned quantity. Players may intentionally overbuy or underbuy; do not recommend an optimum. Leftovers carry forward without decay.
 
-Meals add their recipe sale price only when an AI server successfully delivers them to the associated customer/table. Ingredient waste is reported but receives no duplicate fine.
+Meals add their recipe sale price only when a chef or AI server successfully delivers them to the associated customer/table. Ingredient waste is reported but receives no duplicate fine.
 
 ## Kitchen ownership and capacity
 
@@ -107,7 +107,7 @@ Recipes, ingredients, required states, equipment requirements, processing times,
 | Dish | Ingredients | Required installed equipment | Steps | Sale |
 |---|---|---|---|---:|
 | Roast Potato | Potato | Prep Station, Oven, Plating Station | Chop, bake, plate, serve | $8 |
-| Garden Plate | Tomato, onion | Prep Station, Plating Station | Chop both, combine on plate, serve | $10 |
+| Garden Plate | Tomato, lettuce | Prep Station, Plating Station | Chop both, combine on plate, serve | $10 |
 | Cheese Bake | Potato, cheese | Prep Station, Assembly Station, Oven, Plating Station | Chop, assemble, bake, plate, serve | $15 |
 | Fries | Potato | Prep Station, Fryer, Plating Station | Chop, fry, plate, serve | $12 |
 
@@ -134,7 +134,7 @@ Reputation changes gradually from customer-visible outcomes: successful deliveri
 
 Dining Level 1 has three authored two-seat tables. Dining Expansion I costs $300 and permanently adds two more two-seat tables, increasing simultaneous seating from 6 to 10. Seating is physical rather than a nightly admission cap: customers arrive across service, wait when every table is occupied, and may leave when table patience expires. Turnover allows more guests than the simultaneous seat count to be served.
 
-Potential arrivals equal reputation baseline adjusted by temporary advertising. Players may knowingly advertise beyond comfortable kitchen, staff, or dining throughput.
+Potential arrivals equal reputation baseline adjusted by temporary advertising. For current pressure testing, that result receives a configurable 50% demand multiplier. Players may knowingly advertise beyond comfortable kitchen, staff, or dining throughput.
 
 | Advertising | Cost | Upcoming-night demand |
 |---|---:|---:|
@@ -146,7 +146,7 @@ Advertising is charged once, expires after that service, and never directly gran
 
 ## Kitchen and service rules
 
-The kitchen is one open ring workspace. One chef can reach the pantry, every installed appliance, all three central staging counters, plating, service pickup, trash, and dish sink. The compact pantry occupies the upper-left corner; appliances line the outer working edge; the central island supports staging and co-op handoffs; pickup and dish support sit beside the dining-room service edge. Both chefs share the full kitchen when local co-op is active.
+The kitchen is one open ring workspace. One chef can reach the pantry, every installed appliance, all three central staging counters, plating, service pickup, trash, and dish sink. A marked door in the service wall lets either chef enter the dining room during Prep or Service. The compact pantry occupies the upper-left corner; appliances line the outer working edge; the central island supports staging and co-op handoffs; pickup and dish support sit beside the dining-room service edge. Both chefs share the full restaurant workspace when local co-op is active.
 
 Single Player is the default session mode and never requires a second controller. Local Co-op adds a second independently controlled chef without changing the restaurant save. P2 may be selected before play or joined from the kitchen. Co-op enables parallel prep, transport, cooking, and organic specialization, but no recipe or route requires a handoff.
 
@@ -154,13 +154,15 @@ Throwable ingredients travel in the chef's facing direction. A teammate with fre
 
 Prep is untimed. Ingredients may be retrieved, moved, thrown, chopped, assembled, and staged. Ovens and fryers do not complete cooking before Service.
 
-Service lasts two minutes for rapid prototype iteration. Customers arrive in solo or two-person parties and follow readable arriving, table-wait, seating, food-wait, eating, leaving, and failed states. A seated party creates one table-linked prototype order. Up to three tickets remain visible. Correct plated food enters one of three pickup slots; pickup itself earns nothing. Wrong dishes are refused. An available server reserves and delivers the correct dish, and revenue is credited on delivery. Expired food waits earn $0 and do not end the night.
+Service has a two-minute arrival window for rapid prototype iteration. Customers arrive in solo or two-person parties and follow readable arriving, table-wait, seating, food-wait, eating, leaving, and failed states. Without a server, customers self-seat at clean tables and create table-linked orders. Up to three tickets remain visible. A chef carries the correct plated food through the service door and interacts with its matching table; revenue is credited on delivery. With a scheduled server, the existing service pickup automates delivery instead. Wrong dishes are refused. At 0:00, Last Call stops arrivals but keeps unresolved service active. Expired food waits earn $0 and do not end the night early.
 
-Tables progress through clean, reserved, waiting for food, eating, dirty, and reusable states. After eating, a server clears the dirty plate to the kitchen return. The restaurant owns six finite plates. Either chef may wash a returned plate for 2.5 seconds at the sink, or a scheduled dishwasher performs the same visible one-at-a-time job. A dirty or in-use plate cannot be used for plating.
+Tables progress through clean, reserved, waiting for food, eating, dirty, and reusable states. Without a server, a chef collects the dirty plate, carries it through the door, and returns it to the sink queue. A scheduled server automates that trip. The restaurant owns six finite plates. Either chef may wash a returned plate for 2.5 seconds at the sink, or a scheduled dishwasher performs the same visible one-at-a-time job. A dirty or in-use plate cannot be used for plating.
 
 ## Staff and deterministic AI
 
 Hires persist in the restaurant roster. Each employee has a stable ID, first name, role, and simple visual variation. Planning marks each hire Working or Off; only working employees appear and only they cost a wage. Payroll is checked and charged exactly once when Prep begins. Insufficient payroll blocks Prep with an explanation.
+
+A new restaurant begins with an empty roster. Older saves migrate the former complimentary starting server out of the roster; servers remain available to hire normally.
 
 | Role | Hire | Wage per shift | Work |
 |---|---:|---:|---|

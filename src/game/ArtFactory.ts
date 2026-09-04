@@ -82,9 +82,9 @@ export function populateFoodArt(scene: Phaser.Scene, container: Phaser.GameObjec
     } else if (item.ingredientId === "tomato") {
       g.fillStyle(0xe94e43).fillCircle(0, 1, 14); g.lineStyle(2, ink).strokeCircle(0, 1, 14); g.fillStyle(0x579342).fillTriangle(-8, -9, 0, -16, 8, -9);
       if (item.state === "chopped") { g.lineStyle(2, 0xffc0aa).lineBetween(-10, -6, 10, 8).lineBetween(-9, 8, 9, -7); }
-    } else if (item.ingredientId === "onion") {
-      g.fillStyle(0xd8a9d2).fillCircle(0, 2, 14); g.lineStyle(2, ink).strokeCircle(0, 2, 14); g.fillStyle(0x70a653).fillTriangle(-3, -10, 0, -20, 4, -10);
-      if (item.state === "chopped") g.lineStyle(2, 0xffe2f6).strokeCircle(0, 2, 8).strokeCircle(0, 2, 4);
+    } else if (item.ingredientId === "lettuce") {
+      g.fillStyle(0x78b957).fillCircle(-6, 1, 10).fillCircle(5, 3, 11).fillCircle(1, -6, 11); g.lineStyle(2, ink).strokeCircle(-6, 1, 10).strokeCircle(5, 3, 11).strokeCircle(1, -6, 11);
+      if (item.state === "chopped") g.fillStyle(0xa9d879).fillRoundedRect(-13, -8, 10, 8, 3).fillRoundedRect(-2, -11, 11, 8, 3).fillRoundedRect(3, 1, 12, 8, 3).fillRoundedRect(-10, 3, 10, 7, 3);
     } else {
       g.fillStyle(0xf2c84b).fillTriangle(-15, 10, 15, 8, 8, -14); g.lineStyle(2, ink).strokeTriangle(-15, 10, 15, 8, 8, -14); g.fillStyle(0xc79534).fillCircle(5, 2, 3).fillCircle(-4, 5, 2);
     }
@@ -94,7 +94,7 @@ export function populateFoodArt(scene: Phaser.Scene, container: Phaser.GameObjec
       g.fillStyle(0xd6453e).fillRoundedRect(-11, -3, 22, 20, 3); g.fillStyle(0xf2bf3c);
       [-9, -4, 1, 6].forEach((x, index) => g.fillRoundedRect(x, -14 + index % 2 * 2, 5, 23, 2));
     } else if (item.recipeId === "garden-plate") {
-      g.fillStyle(0x65a94c).fillCircle(-7, 1, 8).fillCircle(4, 4, 9).fillCircle(8, -4, 7); g.fillStyle(0xe94e43).fillCircle(-4, -4, 4).fillCircle(7, 4, 4); g.fillStyle(0xd8a9d2).strokeCircle(1, 1, 6);
+      g.fillStyle(0x65a94c).fillCircle(-7, 1, 8).fillCircle(4, 4, 9).fillCircle(8, -4, 7); g.fillStyle(0xa9d879).fillRoundedRect(-11, -7, 10, 6, 2).fillRoundedRect(0, -3, 11, 6, 2); g.fillStyle(0xe94e43).fillCircle(-4, -4, 4).fillCircle(7, 4, 4);
     } else if (item.recipeId === "cheese-bake") {
       g.fillStyle(0xd98b43).fillRoundedRect(-13, -9, 26, 20, 5); g.lineStyle(2, ink).strokeRoundedRect(-13, -9, 26, 20, 5); g.fillStyle(0xf2c84b).fillCircle(-6, -3, 3).fillCircle(4, 4, 3).fillCircle(7, -5, 2);
     } else {

@@ -1,4 +1,4 @@
-export type IngredientId = "potato" | "tomato" | "onion" | "cheese";
+export type IngredientId = "potato" | "tomato" | "lettuce" | "cheese";
 export type RecipeId = "roast-potato" | "garden-plate" | "cheese-bake" | "fries";
 export type ItemState = "raw" | "chopped" | "assembled" | "cooked" | "plated" | "ruined";
 export type ApplianceId = "prep-station" | "oven" | "assembly-station" | "plating-station" | "fryer";
@@ -32,11 +32,12 @@ export interface DishItem { kind: "dish"; recipeId: RecipeId; state: "assembled"
 export type KitchenItem = IngredientItem | DishItem;
 
 export const CHOP_TIME_MS = 1400;
-export const SAVE_VERSION = 2;
+export const SAVE_VERSION = 3;
 export const SAVE_KEY = "thrown-together:endless-save";
 export const STARTING_CASH_CENTS = 15_000;
 export const STARTING_REPUTATION_POINTS = 0;
 export const SERVICE_DURATION_MS = 120_000;
+export const DEMAND_TEST_MULTIPLIER_BPS = 15_000;
 export const ORDER_PATIENCE_MS = 38_500;
 export const TABLE_WAIT_PATIENCE_MS = 30_000;
 export const EATING_DURATION_MS = 7_000;
@@ -50,7 +51,7 @@ export const PLATE_COUNT = 6;
 export const INGREDIENTS: Record<IngredientId, IngredientDefinition> = {
   potato: { id: "potato", displayName: "Potato", purchaseCostCents: 200, initialState: "raw", throwable: true, choppable: true, color: 0xc8904f, icon: "P" },
   tomato: { id: "tomato", displayName: "Tomato", purchaseCostCents: 200, initialState: "raw", throwable: true, choppable: true, color: 0xe65b4f, icon: "T" },
-  onion: { id: "onion", displayName: "Onion", purchaseCostCents: 100, initialState: "raw", throwable: true, choppable: true, color: 0xc79bd8, icon: "O" },
+  lettuce: { id: "lettuce", displayName: "Lettuce", purchaseCostCents: 100, initialState: "raw", throwable: true, choppable: true, color: 0x78b957, icon: "L" },
   cheese: { id: "cheese", displayName: "Cheese", purchaseCostCents: 400, initialState: "raw", throwable: true, choppable: false, color: 0xf1c84b, icon: "C" },
 };
 
@@ -71,8 +72,8 @@ export const RECIPES: Record<RecipeId, RecipeDefinition> = {
   },
   "garden-plate": {
     id: "garden-plate", displayName: "Garden Plate", icon: "GP", color: 0x67c79a,
-    ingredients: [{ ingredientId: "tomato", state: "chopped" }, { ingredientId: "onion", state: "chopped" }], requiredAppliances: ["prep-station", "plating-station"],
-    steps: [{ id: "chop-tomato", label: "Chop tomato", station: "chop", durationMs: CHOP_TIME_MS }, { id: "chop-onion", label: "Chop onion", station: "chop", durationMs: CHOP_TIME_MS }, { id: "combine-plate", label: "Combine on plate", station: "plate" }, { id: "serve", label: "Serve", station: "serve" }],
+    ingredients: [{ ingredientId: "tomato", state: "chopped" }, { ingredientId: "lettuce", state: "chopped" }], requiredAppliances: ["prep-station", "plating-station"],
+    steps: [{ id: "chop-tomato", label: "Chop tomato", station: "chop", durationMs: CHOP_TIME_MS }, { id: "chop-lettuce", label: "Chop lettuce", station: "chop", durationMs: CHOP_TIME_MS }, { id: "combine-plate", label: "Combine on plate", station: "plate" }, { id: "serve", label: "Carry to the matching table", station: "serve" }],
     finalResult: "Plated Garden Plate", sellingPriceCents: 1000,
   },
   "cheese-bake": {
@@ -105,7 +106,7 @@ export const STAFF_ROLES: Record<StaffRoleId, StaffRoleDefinition> = {
   dishwasher: { id: "dishwasher", displayName: "Dishwasher", hireCostCents: 12_000, wageCents: 3_500, color: 0x9b86df, taskPriority: ["wash", "idle"] },
 };
 export const STAFF_CANDIDATES: StaffCandidateDefinition[] = [
-  { id: "server-ada", name: "Ada", role: "server", colorVariant: 0, startingHired: true, startingScheduled: true },
+  { id: "server-ada", name: "Ada", role: "server", colorVariant: 0 },
   { id: "server-milo", name: "Milo", role: "server", colorVariant: 1 },
   { id: "dishwasher-june", name: "June", role: "dishwasher", colorVariant: 0 },
 ];

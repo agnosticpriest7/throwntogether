@@ -44,7 +44,7 @@ export class RestaurantUI {
   private lastHudRefresh = 0;
   private recipeGuideOpen = false;
   private planningSection: PlanningSection = "overview";
-  private readonly supplierQuantities: Record<IngredientId, number> = { potato: 1, tomato: 1, onion: 1, cheese: 1 };
+  private readonly supplierQuantities: Record<IngredientId, number> = { potato: 1, tomato: 1, lettuce: 1, cheese: 1 };
   private gamepadNavReadyAt = 0;
   private gamepadConfirmHeld = false;
   private gamepadCancelHeld = false;
@@ -127,7 +127,7 @@ export class RestaurantUI {
     const demand = this.model.demandPreview(); const rep = this.model.reputationProgress();
     return `<div class="overview-grid"><article><span>RESTAURANT</span><h3>Day ${this.model.day}</h3><p>Kitchen Level ${this.model.kitchenLevel} · ${this.model.kitchenSlotCapacity} active slots<br>Dining Level ${this.model.diningLevel} · ${this.model.diningCapacity / 2} tables / ${this.model.diningCapacity} seats</p></article>
       <article><span>REPUTATION</span><h3>Level ${rep.level}</h3><p>${rep.points} points · ${rep.nextLevelAt ? `${rep.percent}% to Level ${rep.level + 1}` : "Maximum level"}</p><i><em style="width:${rep.percent}%"></em></i></article>
-      <article><span>TONIGHT'S DEMAND</span><h3>${demand.potential} potential guests</h3><p>${demand.baseline} baseline + ${demand.adBonus} advertising<br>${demand.capacity} seats · turnover determines capacity</p></article>
+      <article><span>TONIGHT'S DEMAND</span><h3>${demand.potential} potential guests</h3><p>${demand.baseline} baseline + ${demand.adBonus} advertising + ${demand.testBonus} test boost<br>${demand.capacity} seats · turnover determines capacity</p></article>
       <article><span>PANTRY</span><h3>${INGREDIENT_IDS.reduce((sum, id) => sum + this.model.inventory[id], 0)} ingredients</h3><p>${INGREDIENT_IDS.map((id) => `${INGREDIENTS[id].displayName} ${this.model.inventory[id]}`).join(" · ")}</p></article></div>
       <div class="hub-callout"><strong>Plan in any order.</strong><span>Review stock, configure the kitchen, choose dishes, schedule staff, and set advertising. Tonight's payroll: ${formatMoney(this.model.scheduledPayrollCents)}${this.model.payrollChargedDay === this.model.day ? " · PAID" : ""}.</span></div>`;
   }
@@ -185,7 +185,7 @@ export class RestaurantUI {
     const demand = this.model.demandPreview();
     return `<div class="section-heading"><div><span class="flow-kicker">MARKETING</span><h3>Choose your own pressure</h3></div><p>Advertising applies to Day ${this.model.day} only.</p></div><div class="ad-grid">${AD_IDS.map((id) => {
       const ad = ADVERTISING[id]; return `<button class="ad-card ${this.model.selectedAdId === id ? "is-selected" : ""}" data-ad="${id}" aria-pressed="${this.model.selectedAdId === id}"><strong>${ad.displayName}</strong><b>${formatMoney(ad.costCents)}</b><span>${ad.description}</span></button>`;
-    }).join("")}</div><div class="demand-preview"><div><span>REPUTATION BASELINE</span><b>${demand.baseline}</b></div><div><span>AD EFFECT</span><b>+${demand.adBonus}</b></div><div><span>POTENTIAL ARRIVALS</span><b>${demand.potential}</b></div><div><span>SIMULTANEOUS SEATS</span><b>${demand.capacity}</b></div><div class="${demand.turnedAway ? "warning" : ""}"><span>PRESSURE ABOVE ONE SEATING</span><b>${demand.turnedAway}</b></div></div>`;
+    }).join("")}</div><div class="demand-preview"><div><span>REPUTATION BASELINE</span><b>${demand.baseline}</b></div><div><span>AD EFFECT</span><b>+${demand.adBonus}</b></div><div><span>TEST BOOST · 50%</span><b>+${demand.testBonus}</b></div><div><span>POTENTIAL ARRIVALS</span><b>${demand.potential}</b></div><div><span>SIMULTANEOUS SEATS</span><b>${demand.capacity}</b></div><div class="${demand.turnedAway ? "warning" : ""}"><span>PRESSURE ABOVE ONE SEATING</span><b>${demand.turnedAway}</b></div></div>`;
   }
 
   private bindPlanningActions(): void {
@@ -222,7 +222,7 @@ export class RestaurantUI {
     const orders = this.model.activeOrders.map((order) => { const recipe = RECIPES[order.recipeId]; const patience = Math.max(0, order.expiresAt - now); const percent = Math.max(0, Math.min(100, patience / (order.expiresAt - order.createdAt) * 100)); return `<article class="ticket"><div><b>${recipe.icon}</b><strong>${recipe.displayName}<small> · TABLE ${order.tableId.slice(1)}</small></strong><span>${Math.ceil(patience / 1000)}s</span></div><i><em style="width:${percent}%"></em></i></article>`; }).join("");
     this.setText(".phase-pill", this.model.phase === "prep" ? "CLOSED · PREP" : this.model.lastCall ? "CLOSED · LAST CALL" : "OPEN · SERVICE");
     this.setText(".hud-cash b", formatMoney(this.model.cashCents)); this.setText(".hud-time", this.model.phase === "prep" ? "UNTIMED" : this.model.lastCall ? "LAST CALL" : `${minutes}:${seconds}`);
-    const stockPanel = this.hud.querySelector<HTMLElement>(".hud-stock"); if (stockPanel) stockPanel.innerHTML = `${stock}<span>CLEAN ${this.model.platesRemaining}</span><span>DIRTY ${this.model.dirtyReturnQueue + this.model.claimedDirtyPlates}</span><span>PICKUP ${this.model.readyDishes.length}/3</span><span>ARRIVALS ${this.model.arrivals}/${this.model.potentialCustomers}</span>`;
+    const stockPanel = this.hud.querySelector<HTMLElement>(".hud-stock"); if (stockPanel) stockPanel.innerHTML = `${stock}<span>CLEAN ${this.model.platesRemaining}</span><span>DIRTY ${this.model.dirtyReturnQueue + this.model.claimedDirtyPlates + this.model.dirtyPlatesInTransit}</span><span>PICKUP ${this.model.readyDishes.length}/3</span><span>ARRIVALS ${this.model.arrivals}/${this.model.potentialCustomers}</span>`;
     const tickets = this.hud.querySelector<HTMLElement>(".tickets"); if (tickets) tickets.innerHTML = orders || `<span class="tickets-empty">${this.model.phase === "prep" ? "Prep ingredients before opening" : this.model.lastCall ? "Last call · finishing guests already inside" : this.model.arrivals >= this.model.potentialCustomers ? "All guests have arrived" : "Waiting for a party to be seated…"}</span>`;
     this.setText(".hud-feedback", this.model.lastFeedback);
   }

@@ -1,5 +1,5 @@
 import {
-  ADVERTISING, APPLIANCES, APPLIANCE_IDS, DINING_EXPANSION, DISHWASH_DURATION_MS,
+  ADVERTISING, APPLIANCES, APPLIANCE_IDS, DEMAND_TEST_MULTIPLIER_BPS, DINING_EXPANSION, DISHWASH_DURATION_MS,
   EATING_DURATION_MS, INGREDIENT_IDS, INGREDIENTS, KITCHEN_EXPANSION, ORDER_PATIENCE_MS,
   PICKUP_SLOT_COUNT, PLATE_COUNT, RECIPES, REPUTATION_LEVELS, SAVE_KEY, SAVE_VERSION,
   SERVER_CLEAR_DURATION_MS, SERVER_DELIVERY_DURATION_MS, SERVER_SEAT_DURATION_MS,
@@ -34,7 +34,7 @@ export type ServiceEvent =
   | { type: "dirty-dish-returned" }
   | { type: "plate-washed"; by: "human" | "dishwasher" }
   | { type: "service-ended" };
-export interface DemandPreview { baseline: number; adBonus: number; potential: number; capacity: number; admitted: number; turnedAway: number }
+export interface DemandPreview { baseline: number; adBonus: number; testBonus: number; potential: number; capacity: number; admitted: number; turnedAway: number }
 export interface ReputationProgress { level: number; points: number; levelStart: number; nextLevelAt: number | null; percent: number }
 export interface NightSummary {
   day: number; potentialCustomers: number; arrivals: number; admittedCustomers: number; seatedCustomers: number;
@@ -60,7 +60,7 @@ const STARTING_INSTALLED: Array<ApplianceId | null> = ["oven", "prep-station", "
 
 export class RestaurantModel {
   readonly serviceDurationMs: number;
-  readonly inventory: Record<IngredientId, number> = { potato: 0, tomato: 0, onion: 0, cheese: 0 };
+  readonly inventory: Record<IngredientId, number> = { potato: 0, tomato: 0, lettuce: 0, cheese: 0 };
   readonly applianceOwnership: Record<ApplianceId, number> = { "prep-station": 1, oven: 1, "assembly-station": 1, "plating-station": 1, fryer: 0 };
   phase: RestaurantPhase;
   hasSave = false; day = 1; cashCents = STARTING_CASH_CENTS; kitchenLevel = 1; diningLevel = 1;
@@ -70,7 +70,7 @@ export class RestaurantModel {
   ingredientSpendingCents = 0; advertisingSpendingCents = 0; capitalSpendingCents = 0; payrollSpendingCents = 0;
   payrollChargedDay = 0; revenueCents = 0; wastedValueCents = 0; ordersCompleted = 0; ordersMissed = 0;
   activeOrders: OrderTicket[] = []; readyDishes: ReadyDish[] = []; customers: CustomerParty[] = [];
-  diningTables: DiningTable[] = []; activeStaff: StaffRuntime[] = []; dirtyReturnQueue = 0; claimedDirtyPlates = 0;
+  diningTables: DiningTable[] = []; activeStaff: StaffRuntime[] = []; dirtyReturnQueue = 0; claimedDirtyPlates = 0; dirtyPlatesInTransit = 0;
   potentialCustomers = 0; admittedCustomers = 0; customersTurnedAway = 0; ordersGenerated = 0;
   arrivals = 0; seatedCustomers = 0; leftWaitingForTable = 0; leftWaitingForFood = 0;
   peakSeatsOccupied = 0; tableTurns = 0; serverDeliveries = 0; tablesCleared = 0; dishwasherPlatesWashed = 0;
@@ -163,8 +163,9 @@ export class RestaurantModel {
   }
   demandPreview(): DemandPreview {
     const baseline = this.reputationLevel().baselineDemand; const modifier = ADVERTISING[this.selectedAdId].demandBonusBps;
-    const potential = Math.ceil(baseline * (10_000 + modifier) / 10_000); const capacity = this.diningCapacity;
-    return { baseline, adBonus: potential - baseline, potential, capacity, admitted: potential, turnedAway: Math.max(0, potential - capacity) };
+    const advertised = Math.ceil(baseline * (10_000 + modifier) / 10_000);
+    const potential = Math.ceil(advertised * DEMAND_TEST_MULTIPLIER_BPS / 10_000); const capacity = this.diningCapacity;
+    return { baseline, adBonus: advertised - baseline, testBonus: potential - advertised, potential, capacity, admitted: potential, turnedAway: Math.max(0, potential - capacity) };
   }
   reputationLevel(points = this.reputationPoints) { return [...REPUTATION_LEVELS].reverse().find((entry) => points >= entry.minimumPoints) ?? REPUTATION_LEVELS[0]; }
   reputationProgress(points = this.reputationPoints): ReputationProgress {
@@ -207,7 +208,7 @@ export class RestaurantModel {
     const arrivalsOpen = now - this.serviceStartedAt < this.serviceDurationMs;
     if (!arrivalsOpen && !this.lastCall) { this.lastCall = true; this.lastFeedback = "LAST CALL · Finish the remaining orders."; }
     while (arrivalsOpen && now >= this.nextCustomerAt && this.arrivals < this.potentialCustomers) { events.push(this.createCustomer(this.nextCustomerAt)); this.nextCustomerAt += this.customerIntervalMs(); }
-    this.advanceCustomers(now, events); this.advanceStaff(now, events); this.assignStaffTasks(now, events);
+    this.advanceCustomers(now, events); this.seatCustomersWithoutServer(now, events); this.advanceStaff(now, events); this.assignStaffTasks(now, events);
     const occupiedSeats = this.customers.filter(({ state }) => ["walking_to_table", "waiting_for_food", "eating"].includes(state)).reduce((total, customer) => total + customer.size, 0);
     this.peakSeatsOccupied = Math.max(this.peakSeatsOccupied, occupiedSeats);
     if (this.lastCall && !this.hasUnresolvedService()) return [...events, ...this.finishService()];
@@ -221,6 +222,23 @@ export class RestaurantModel {
     this.lastFeedback = `${RECIPES[recipeId].displayName} is waiting for a server at pickup.`; return true;
   }
   serveDish(recipeId: RecipeId): boolean { return this.queueReadyDish(recipeId); }
+  deliverDishToTable(recipeId: RecipeId, tableId: string, now: number): ServiceEvent[] {
+    if (this.phase !== "service") return [];
+    const orderIndex = this.activeOrders.findIndex((order) => order.recipeId === recipeId && order.tableId === tableId);
+    const order = this.activeOrders[orderIndex]; const customer = order ? this.customers.find(({ id }) => id === order.customerId) : undefined;
+    if (orderIndex < 0 || !customer || customer.state !== "waiting_for_food") { this.lastFeedback = `Table ${tableId.slice(1)} is not waiting for that dish.`; return []; }
+    const events: ServiceEvent[] = []; this.completeOrderDelivery(orderIndex, customer, now, events, false); return events;
+  }
+  collectDirtyPlateFromTable(tableId: string): boolean {
+    if (this.phase !== "service") return false; const table = this.diningTables.find((candidate) => candidate.id === tableId);
+    if (!table || table.state !== "dirty") return false;
+    table.state = "clean"; table.customerId = null; this.dirtyPlatesInTransit += 1; this.tablesCleared += 1; this.tableTurns += 1;
+    this.lastFeedback = `Dirty plate collected from Table ${tableId.slice(1)}.`; return true;
+  }
+  returnCarriedDirtyPlate(): ServiceEvent | null {
+    if (this.dirtyPlatesInTransit <= 0) return null; this.dirtyPlatesInTransit -= 1; this.dirtyReturnQueue += 1;
+    this.lastFeedback = "Dirty plate returned to the sink."; return { type: "dirty-dish-returned" };
+  }
   forceOrder(recipeId: RecipeId, now: number, patienceMs = ORDER_PATIENCE_MS): OrderTicket | null {
     if (this.phase !== "service" || !this.selectedRecipeIds.includes(recipeId) || this.activeOrders.length >= 3) return null;
     let table = this.diningTables.find(({ state }) => state === "clean");
@@ -254,13 +272,14 @@ export class RestaurantModel {
   save(): void { if (!this.options.storage || !this.hasSave) return; this.options.storage.setItem(SAVE_KEY, JSON.stringify(this.toSave())); }
   private load(): boolean {
     const raw = this.options.storage?.getItem(SAVE_KEY); if (!raw) return false;
-    try { const saved = JSON.parse(raw) as EndlessSave; if (saved.version !== 1 && saved.version !== SAVE_VERSION) return false; this.applySave(saved); if (saved.version === 1 && this.options.storage) this.options.storage.setItem(SAVE_KEY, JSON.stringify(this.toSave())); return true; } catch { return false; }
+    try { const saved = JSON.parse(raw) as EndlessSave; if (![1, 2, SAVE_VERSION].includes(saved.version)) return false; this.applySave(saved); if (saved.version !== SAVE_VERSION && this.options.storage) this.options.storage.setItem(SAVE_KEY, JSON.stringify(this.toSave())); return true; } catch { return false; }
   }
   private toSave(): EndlessSave {
     return { version: SAVE_VERSION, day: this.day, cashCents: this.cashCents, inventory: { ...this.inventory }, applianceOwnership: { ...this.applianceOwnership }, installedSlots: [...this.installedSlots], kitchenLevel: this.kitchenLevel, diningLevel: this.diningLevel, reputationPoints: this.reputationPoints, selectedRecipeIds: [...this.selectedRecipeIds], selectedAdId: this.selectedAdId, startingCashCents: this.startingCashCents, ingredientSpendingCents: this.ingredientSpendingCents, advertisingSpendingCents: this.advertisingSpendingCents, capitalSpendingCents: this.capitalSpendingCents, staffRoster: this.staffRoster.map((employee) => ({ ...employee })), payrollSpendingCents: this.payrollSpendingCents, payrollChargedDay: this.payrollChargedDay };
   }
   private applySave(saved: EndlessSave): void {
-    this.day = saved.day; this.cashCents = saved.cashCents; INGREDIENT_IDS.forEach((id) => { this.inventory[id] = saved.inventory[id] ?? 0; });
+    const legacyInventory = saved.inventory as unknown as Record<string, number>;
+    this.day = saved.day; this.cashCents = saved.cashCents; INGREDIENT_IDS.forEach((id) => { this.inventory[id] = id === "lettuce" ? legacyInventory.lettuce ?? legacyInventory.onion ?? 0 : legacyInventory[id] ?? 0; });
     APPLIANCE_IDS.forEach((id) => { this.applianceOwnership[id] = saved.applianceOwnership[id] ?? APPLIANCES[id].startingOwned; });
     this.installedSlots = [...saved.installedSlots.slice(0, 6)]; while (this.installedSlots.length < 6) this.installedSlots.push(null);
     this.kitchenLevel = saved.kitchenLevel; this.diningLevel = saved.diningLevel; this.reputationPoints = saved.reputationPoints;
@@ -268,7 +287,8 @@ export class RestaurantModel {
     this.startingCashCents = saved.startingCashCents ?? saved.cashCents; this.ingredientSpendingCents = saved.ingredientSpendingCents ?? 0;
     this.advertisingSpendingCents = saved.advertisingSpendingCents ?? 0; this.capitalSpendingCents = saved.capitalSpendingCents ?? 0;
     this.payrollSpendingCents = saved.payrollSpendingCents ?? 0; this.payrollChargedDay = saved.payrollChargedDay ?? 0;
-    this.staffRoster = (saved.staffRoster?.length ? saved.staffRoster : this.startingStaff()).map((employee) => ({ ...employee })); this.startingReputationPoints = this.reputationPoints;
+    const restoredStaff = saved.staffRoster ?? [];
+    this.staffRoster = (saved.version < 3 ? restoredStaff.filter(({ id }) => id !== "server-ada") : restoredStaff).map((employee) => ({ ...employee })); this.startingReputationPoints = this.reputationPoints;
   }
   private applyCleanState(): void {
     this.day = 1; this.cashCents = STARTING_CASH_CENTS; this.kitchenLevel = 1; this.diningLevel = 1; this.reputationPoints = STARTING_REPUTATION_POINTS;
@@ -285,7 +305,7 @@ export class RestaurantModel {
     this.reputationChange = 0; this.serviceStartedAt = 0; this.nextCustomerAt = 0; this.platesRemaining = PLATE_COUNT; this.lastCall = false;
     this.nextOrderId = 1; this.nextCustomerId = 1; this.nextDishId = 1; this.clearServiceRuntime();
   }
-  private clearServiceRuntime(): void { this.activeOrders = []; this.readyDishes = []; this.customers = []; this.diningTables = []; this.activeStaff = []; this.dirtyReturnQueue = 0; this.claimedDirtyPlates = 0; }
+  private clearServiceRuntime(): void { this.activeOrders = []; this.readyDishes = []; this.customers = []; this.diningTables = []; this.activeStaff = []; this.dirtyReturnQueue = 0; this.claimedDirtyPlates = 0; this.dirtyPlatesInTransit = 0; }
   private prepareDiningTables(): void { this.diningTables = TABLES.filter(({ requiredDiningLevel }) => requiredDiningLevel <= this.diningLevel).map((table) => ({ ...table, state: "clean", customerId: null })); }
   private revalidateMenu(): void { this.selectedRecipeIds = this.selectedRecipeIds.filter((id) => this.isRecipeAvailable(id)); }
   private buyExpansion(type: "kitchen" | "dining"): boolean {
@@ -309,6 +329,15 @@ export class RestaurantModel {
       if (customer.state === "waiting_for_food" && now >= customer.foodExpiresAt) this.failFoodWait(customer, events);
       if (customer.state === "eating" && now >= customer.stateEndsAt) { customer.state = "leaving"; customer.stateEndsAt = now + 1000; const table = this.tableFor(customer); if (table) table.state = "dirty"; events.push({ type: "customer-left", customer, happy: true }); }
       if (customer.state === "leaving" && now >= customer.stateEndsAt) customer.state = "failed";
+    }
+  }
+  private seatCustomersWithoutServer(now: number, events: ServiceEvent[]): void {
+    if (this.activeStaff.some(({ role }) => role === "server")) return;
+    while (this.activeOrders.length < 3) {
+      const customer = this.customers.find(({ state }) => state === "waiting_for_table"); const table = this.diningTables.find(({ state }) => state === "clean");
+      if (!customer || !table) return;
+      customer.state = "walking_to_table"; customer.tableId = table.id; table.state = "reserved"; table.customerId = customer.id;
+      this.completeSeating(customer.id, now, events);
     }
   }
   private advanceStaff(now: number, events: ServiceEvent[]): void {
@@ -353,8 +382,11 @@ export class RestaurantModel {
     const dishIndex = this.readyDishes.findIndex(({ id }) => id === dishId); if (dishIndex < 0) return; const [dish] = this.readyDishes.splice(dishIndex, 1);
     const orderIndex = this.activeOrders.findIndex(({ id }) => id === dish.orderId); const customer = this.customers.find(({ id }) => id === dish.customerId);
     if (orderIndex < 0 || !customer || customer.state !== "waiting_for_food") { this.wastedValueCents += this.recipeIngredientValue(dish.recipeId); this.dirtyReturnQueue += 1; return; }
+    this.completeOrderDelivery(orderIndex, customer, now, events, true);
+  }
+  private completeOrderDelivery(orderIndex: number, customer: CustomerParty, now: number, events: ServiceEvent[], byServer: boolean): void {
     const [order] = this.activeOrders.splice(orderIndex, 1); customer.state = "eating"; customer.stateEndsAt = now + EATING_DURATION_MS; const table = this.tableFor(customer); if (table) table.state = "eating";
-    const price = RECIPES[order.recipeId].sellingPriceCents; this.cashCents += price; this.revenueCents += price; this.ordersCompleted += 1; this.serverDeliveries += 1;
+    const price = RECIPES[order.recipeId].sellingPriceCents; this.cashCents += price; this.revenueCents += price; this.ordersCompleted += 1; if (byServer) this.serverDeliveries += 1;
     this.lastFeedback = `${RECIPES[order.recipeId].displayName} delivered to Table ${order.tableId.slice(1)} · +$${(price / 100).toFixed(0)}`; events.push({ type: "delivery-complete", order });
   }
   private failFoodWait(customer: CustomerParty, events: ServiceEvent[]): void {
@@ -367,7 +399,8 @@ export class RestaurantModel {
   }
   private tableFor(customer: CustomerParty): DiningTable | undefined { return this.diningTables.find(({ id }) => id === customer.tableId); }
   private hasUnresolvedService(): boolean {
-    return this.activeOrders.length > 0 || this.customers.some(({ state }) => ["arriving", "waiting_for_table", "walking_to_table", "waiting_for_food"].includes(state));
+    return this.activeOrders.length > 0 || this.dirtyPlatesInTransit > 0 || this.diningTables.some(({ state }) => state === "dirty")
+      || this.customers.some(({ state }) => ["arriving", "waiting_for_table", "walking_to_table", "waiting_for_food", "eating", "leaving"].includes(state));
   }
   private recipeIngredientValue(recipeId: RecipeId): number { return RECIPES[recipeId].ingredients.reduce((total, requirement) => total + INGREDIENTS[requirement.ingredientId].purchaseCostCents, 0); }
   private finishService(): ServiceEvent[] {

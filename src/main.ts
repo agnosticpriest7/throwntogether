@@ -30,12 +30,12 @@ if (import.meta.env.DEV && new URLSearchParams(location.search).has("test")) {
     ["Open service", () => phaseChanged(restaurant.startService(performance.now()))],
     ["P1 take potato", () => actAt(0, 88, 145)], ["Give P1 raw potato", () => window.__THROWN_TOGETHER__?.giveIngredient(0, "potato")],
     ["Give P1 chopped potato", () => window.__THROWN_TOGETHER__?.giveIngredient(0, "potato", "chopped")],
-    ["Give P2 tomato", () => window.__THROWN_TOGETHER__?.giveIngredient(1, "tomato", "chopped")], ["Give P2 onion", () => window.__THROWN_TOGETHER__?.giveIngredient(1, "onion", "chopped")],
+    ["Give P2 tomato", () => window.__THROWN_TOGETHER__?.giveIngredient(1, "tomato", "chopped")], ["Give P2 lettuce", () => window.__THROWN_TOGETHER__?.giveIngredient(1, "lettuce", "chopped")],
     ["Give P2 cheese", () => window.__THROWN_TOGETHER__?.giveIngredient(1, "cheese")],
-    ["Give plated Roast", () => window.__THROWN_TOGETHER__?.giveDish(1, "roast-potato", "plated")], ["Give plated Garden", () => window.__THROWN_TOGETHER__?.giveDish(1, "garden-plate", "plated")],
-    ["Give plated Cheese", () => window.__THROWN_TOGETHER__?.giveDish(1, "cheese-bake", "plated")], ["Give plated Fries", () => window.__THROWN_TOGETHER__?.giveDish(1, "fries", "plated")],
+    ["Give P1 plated Roast", () => window.__THROWN_TOGETHER__?.giveDish(0, "roast-potato", "plated")], ["Give P1 plated Garden", () => window.__THROWN_TOGETHER__?.giveDish(0, "garden-plate", "plated")],
+    ["Give P1 plated Cheese", () => window.__THROWN_TOGETHER__?.giveDish(0, "cheese-bake", "plated")], ["Give P1 plated Fries", () => window.__THROWN_TOGETHER__?.giveDish(0, "fries", "plated")],
     ["P1 → slot 1", () => actAt(0, 330, 145)], ["P1 → slot 2", () => actAt(0, 660, 145)], ["P1 → slot 3", () => actAt(0, 495, 145)], ["P1 → slot 4", () => actAt(0, 825, 145)],
-    ["P1 → pickup", () => actAt(0, 875, 305)], ["P1 wash dish", () => actAt(0, 820, 470)], ["P1 → island", () => actAt(0, 355, 315)], ["P2 → island", () => actAt(1, 625, 315)],
+    ["P1 → pickup", () => actAt(0, 875, 305)], ["P1 → Table 1", () => actAt(0, 1035, 145)], ["P1 wash dish", () => actAt(0, 820, 470)], ["P1 → island", () => actAt(0, 355, 315)], ["P2 → island", () => actAt(1, 625, 315)],
     ["P1 floor interact", () => actAt(0, 250, 530)], ["P1 → trash", () => actAt(0, 105, 470)],
     ["Ready island toss", () => { playerSession.setMode("solo"); window.__THROWN_TOGETHER__?.setPlayer(0, 85, 315); }],
     ["Ready catch", () => { playerSession.setMode("coop"); window.__THROWN_TOGETHER__?.setPlayer(0, 355, 315); window.__THROWN_TOGETHER__?.setPlayer(1, 625, 315); }], ["P1 throw", () => window.__THROWN_TOGETHER__?.throw(0)], ["Land throw", () => window.__THROWN_TOGETHER__?.advanceFlight()],
@@ -51,12 +51,12 @@ if (import.meta.env.DEV && new URLSearchParams(location.search).has("test")) {
   function quickSetup(withFries: boolean): void {
     restaurant.newRestaurant();
     if (withFries) { restaurant.purchaseAppliance("fryer"); restaurant.removeAppliance(2); restaurant.installAppliance("fryer", 2); }
-    restaurant.purchaseIngredients("potato", 10); restaurant.purchaseIngredients("tomato", 5); restaurant.purchaseIngredients("onion", 5);
+    restaurant.purchaseIngredients("potato", 10); restaurant.purchaseIngredients("tomato", 5); restaurant.purchaseIngredients("lettuce", 5);
     restaurant.toggleRecipe("roast-potato"); restaurant.toggleRecipe(withFries ? "fries" : "garden-plate"); restaurant.beginPrep(); phaseChanged();
   }
   function staffSetup(): void {
     restaurant.newRestaurant(); restaurant.cashCents = 100_000; restaurant.hireEmployee("dishwasher-june"); restaurant.setEmployeeScheduled("dishwasher-june", true);
-    restaurant.purchaseIngredients("potato", 10); restaurant.purchaseIngredients("tomato", 5); restaurant.purchaseIngredients("onion", 5);
+    restaurant.purchaseIngredients("potato", 10); restaurant.purchaseIngredients("tomato", 5); restaurant.purchaseIngredients("lettuce", 5);
     restaurant.toggleRecipe("roast-potato"); restaurant.toggleRecipe("garden-plate"); restaurant.beginPrep(); phaseChanged();
   }
   function actAt(player: 0 | 1, x: number, y: number): void { const api = window.__THROWN_TOGETHER__; api?.setPlayer(player, x, y); api?.interact(player); }
