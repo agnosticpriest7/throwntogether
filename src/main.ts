@@ -7,6 +7,12 @@ import { TransferScene } from "./game/TransferScene";
 import { PlayerSession } from "./game/PlayerSession";
 import type { IngredientId, KitchenItem, RecipeId } from "./game/data";
 
+// Some TV remotes advertise a coarse pointer without providing a touchscreen.
+window.addEventListener("pointerdown", (event) => {
+  if (event.pointerType === "touch") document.body.dataset.touchActive = "true";
+});
+window.addEventListener("gamepadconnected", () => { delete document.body.dataset.touchActive; });
+
 const restaurant = new RestaurantModel({ storage: window.localStorage, startAtLanding: true });
 const playerSession = new PlayerSession();
 const scene = new TransferScene(restaurant, playerSession);

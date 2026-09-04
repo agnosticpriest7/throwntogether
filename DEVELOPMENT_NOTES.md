@@ -108,7 +108,7 @@
 - Servers and dishwashers are the only AI roles. They have no traits, levels, morale, training, or emergent recipe logic.
 - Saves use one versioned local-storage record, migrate supported v1/v2 data to v3, and have no cloud synchronization or guarantee for unknown future versions.
 - Appliance upgrades are represented as future data hooks only; no upgrade tree is active.
-- Desktop and TV layouts preserve the 32:15 whole-restaurant surface, reserve a separate horizontal ticket/status area above it, and include viewport margins and the control legend in height fitting. Desktop touch panels are hidden unless the device reports touch input; touch-capable displays reserve additional height for compact controls. Phone layouts retain their taller scrollable presentation.
+- Desktop and TV layouts preserve the 32:15 whole-restaurant surface with a compact header and separate horizontal ticket/status area. Large-screen touch panels activate after an actual touchscreen press, because TV remotes may falsely report a coarse pointer. Connecting a controller hides that panel again. Phone layouts retain visible touch controls and their taller scrollable presentation.
 - Default order patience is 38.5 seconds (10% longer than the original 35-second prototype value).
 - Pressing interact away from a station no longer drops or ruins the held item. Intentional disposal uses the pantry-side trash bin and records wasted value without creating floor mess. Missed throws still create gameplay-visible floor mess with no cleaning mechanic or movement penalty.
 - The nearest counter or appliance within interaction range gets a high-contrast outline and brighter fill for immediate affordance feedback.

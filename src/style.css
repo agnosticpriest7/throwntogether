@@ -405,14 +405,18 @@ body:is([data-phase="prep"], [data-phase="service"]) #game { height: auto; aspec
 
 @media (min-width: 851px) {
   main { width: min(1280px, calc(100vw - 64px), calc((100dvh - 150px) * 2.1333)); padding: 16px 0; }
-  body:is([data-phase="prep"], [data-phase="service"]) main { width: min(1280px, calc(100vw - 64px), calc((100dvh - 270px) * 2.1333)); }
+  body:is([data-phase="prep"], [data-phase="service"]) main { width: min(1600px, calc(100vw - 40px), calc((100dvh - 210px) * 2.1333)); padding: 8px 0; }
+  body:is([data-phase="prep"], [data-phase="service"]) main > header { height: 36px; }
+  body:is([data-phase="prep"], [data-phase="service"]) .eyebrow { display: none; }
+  body:is([data-phase="prep"], [data-phase="service"]) h1 { font-size: 22px; }
+  body:is([data-phase="prep"], [data-phase="service"]) #reset-button { padding: 4px 10px; font-size: 11px; }
   #touch-controls { display: none; }
 }
 
-/* Real touch devices retain controls, with their height included in the fit. */
+/* TV remotes can report coarse pointers. Only a real touch enables this panel. */
 @media (min-width: 851px) and (any-pointer: coarse) {
-  body:is([data-phase="prep"], [data-phase="service"]) main { width: min(1280px, calc(100vw - 64px), calc((100dvh - 430px) * 2.1333)); }
-  body:is([data-phase="prep"], [data-phase="service"]) #touch-controls { display: grid; }
+  body[data-touch-active="true"]:is([data-phase="prep"], [data-phase="service"]) main { width: min(1280px, calc(100vw - 40px), calc((100dvh - 370px) * 2.1333)); }
+  body[data-touch-active="true"]:is([data-phase="prep"], [data-phase="service"]) #touch-controls { display: grid; }
   .touch-player { padding: 5px; }
   .touch-dpad { grid-template-columns: repeat(3, 32px); grid-template-rows: repeat(3, 32px); gap: 3px; }
   .touch-button { width: 32px; height: 32px; }
