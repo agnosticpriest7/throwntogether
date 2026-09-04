@@ -75,6 +75,17 @@ describe("Staff hiring, scheduling, and payroll", () => {
 });
 
 describe("Physical dining and delivery", () => {
+  it("lets a human collect pickup food without paying until table delivery", () => {
+    const model = openService(undefined, false); const order = forcedOrder(model);
+    expect(model.queueReadyDish("roast-potato")).toBe(true);
+    const dish = model.takeReadyDish(); expect(dish?.tableId).toBe(order.tableId);
+    expect(model.takeReadyDish()).toBeNull(); expect(model.revenueCents).toBe(0);
+    model.deliverDishToTable(dish!.recipeId, order.tableId, 2); expect(model.revenueCents).toBe(800);
+  });
+  it("does not let a human take food already claimed by an AI server", () => {
+    const model = openService(); forcedOrder(model); model.queueReadyDish("roast-potato"); model.updateService(1);
+    expect(model.takeReadyDish()).toBeNull(); expect(model.readyDishes).toHaveLength(1);
+  });
   it("self-seats a waiting party when no server is employed and creates a valid ticket", () => { const model = openService(undefined, false); const events = model.updateService(801); expect(model.activeStaff).toHaveLength(0); expect(events.some(({ type }) => type === "order-arrived")).toBe(true); expect(model.activeOrders[0].tableId).toMatch(/^t/); expect(model.selectedRecipeIds).toContain(model.activeOrders[0].recipeId); });
   it("leaves customers waiting when the room is full and expires table patience", () => { const model = openService(); model.diningTables.forEach((table) => { table.state = "waiting_food"; table.customerId = 999; }); model.updateService(801); expect(model.customers.some(({ state }) => state === "waiting_for_table")).toBe(true); model.updateService(TABLE_WAIT_PATIENCE_MS + 1); expect(model.leftWaitingForTable).toBeGreaterThan(0); });
   it("dining expansion adds two real tables and four seats", () => { const model = modelWithMenu(); model.cashCents = 50_000; model.buyDiningExpansion(); model.beginPrep(); model.startService(0); expect(model.diningCapacity).toBe(10); expect(model.diningTables).toHaveLength(5); });

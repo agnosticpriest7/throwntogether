@@ -12,9 +12,9 @@ export const OPEN_KITCHEN_PLAYER_STARTS: [Vec2, Vec2] = [
 
 export const PANTRY_LAYOUT: Array<{ id: IngredientId; position: Vec2 }> = [
   { id: "potato", position: { x: 88, y: 145 } },
-  { id: "tomato", position: { x: 198, y: 145 } },
+  { id: "tomato", position: { x: 88, y: 339 } },
   { id: "lettuce", position: { x: 88, y: 242 } },
-  { id: "cheese", position: { x: 198, y: 242 } },
+  { id: "cheese", position: { x: 198, y: 145 } },
 ];
 
 export const ISLAND_COUNTERS = [

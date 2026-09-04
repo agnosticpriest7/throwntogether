@@ -222,6 +222,11 @@ export class RestaurantModel {
     this.lastFeedback = `${RECIPES[recipeId].displayName} is waiting for a server at pickup.`; return true;
   }
   serveDish(recipeId: RecipeId): boolean { return this.queueReadyDish(recipeId); }
+  takeReadyDish(): ReadyDish | null {
+    const index = this.readyDishes.findIndex((dish) => !dish.claimedBy && this.activeOrders.some((order) => order.id === dish.orderId));
+    if (this.phase !== "service" || index < 0) return null;
+    return this.readyDishes.splice(index, 1)[0];
+  }
   deliverDishToTable(recipeId: RecipeId, tableId: string, now: number): ServiceEvent[] {
     if (this.phase !== "service") return [];
     const orderIndex = this.activeOrders.findIndex((order) => order.recipeId === recipeId && order.tableId === tableId);

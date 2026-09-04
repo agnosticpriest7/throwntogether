@@ -194,6 +194,13 @@ export class TransferScene extends Phaser.Scene {
     }
     if (table && this.restaurant.phase === "service") { this.interactWithTable(player, table); return; }
     if (!player.held) {
+      if (station?.type === "pickup") {
+        const dish = this.restaurant.takeReadyDish();
+        if (!dish) { this.callout("NO UNCLAIMED MEALS AT PICKUP", "#ffdc74"); return; }
+        const recipe = RECIPES[dish.recipeId];
+        player.held = { kind: "dish", recipeId: dish.recipeId, state: "plated", valueCents: recipe.ingredients.reduce((sum, ingredient) => sum + INGREDIENTS[ingredient.ingredientId].purchaseCostCents, 0) };
+        this.updateHeld(player); this.audioCues.play("pickup"); this.callout(`${recipe.displayName.toUpperCase()} · TABLE ${dish.tableId.slice(1)}`, "#7ed8ba"); return;
+      }
       if (station?.type === "sink") { this.startHumanWash(station); return; }
       if (station?.item && station.processStartedAt === 0) {
         player.held = station.item; this.setStationItem(station, null); this.updateHeld(player); this.audioCues.play("pickup"); return;
@@ -283,7 +290,6 @@ export class TransferScene extends Phaser.Scene {
   private serve(player: Player): void {
     const held = player.held;
     if (!held || held.kind !== "dish" || held.state !== "plated") { this.callout("ONLY PLATED DISHES CAN BE SERVED", "#ff7e70"); return; }
-    if (!this.restaurant.activeStaff.some(({ role }) => role === "server")) { this.callout("NO SERVER · CARRY THIS THROUGH THE DOOR TO ITS TABLE", "#ffdc74"); return; }
     if (!this.restaurant.serveDish(held.recipeId)) { this.callout("NO MATCHING ORDER · REFUSED", "#ff7e70"); return; }
     player.held = null; this.updateHeld(player); this.audioCues.play("orderComplete");
     this.callout(`${RECIPES[held.recipeId].displayName.toUpperCase()} READY FOR SERVER`, "#7ed8ba"); this.ui?.refresh(performance.now() + 1000);
@@ -491,7 +497,7 @@ export class TransferScene extends Phaser.Scene {
       station.background.setFillStyle(highlighted ? 0xfff4bd : 0xf2d7aa, 1).setStrokeStyle(highlighted ? 7 : 4, highlighted ? 0xffd33d : ART_PALETTE.ink, 1);
     });
   }
-  private nearestStation(position: Vec2): Station | null { return this.stations.map((station) => ({ station, range: distance(position, station.position) })).filter(({ range }) => range <= INTERACT_DISTANCE).sort((a, b) => a.range - b.range)[0]?.station ?? null; }
+  private nearestStation(position: Vec2): Station | null { return this.stations.map((station) => ({ station, range: station.type === "pickup" ? Math.min(distance(position, station.position), distance(position, SERVER_STAGING_POS)) : distance(position, station.position) })).filter(({ range }) => range <= INTERACT_DISTANCE).sort((a, b) => a.range - b.range)[0]?.station ?? null; }
   private nearestSource(position: Vec2): Source | null { return this.sources.map((source) => ({ source, range: distance(position, source.position) })).filter(({ range }) => range <= INTERACT_DISTANCE).sort((a, b) => a.range - b.range)[0]?.source ?? null; }
   private nearestTable(position: Vec2): DiningTable | null { return this.restaurant.diningTables.map((table) => ({ table, range: distance(position, table) })).filter(({ range }) => range <= INTERACT_DISTANCE).sort((a, b) => a.range - b.range)[0]?.table ?? null; }
   private updateSourceCounts(): void { this.sources?.forEach((source) => source.countText.setText(`STOCK ${this.restaurant.inventory[source.id]}`)); }
