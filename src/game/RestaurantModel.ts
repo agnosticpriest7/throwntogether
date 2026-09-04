@@ -74,7 +74,7 @@ export class RestaurantModel {
   potentialCustomers = 0; admittedCustomers = 0; customersTurnedAway = 0; ordersGenerated = 0;
   arrivals = 0; seatedCustomers = 0; leftWaitingForTable = 0; leftWaitingForFood = 0;
   peakSeatsOccupied = 0; tableTurns = 0; serverDeliveries = 0; tablesCleared = 0; dishwasherPlatesWashed = 0;
-  reputationChange = 0; serviceStartedAt = 0; nextCustomerAt = 0; platesRemaining = PLATE_COUNT;
+  reputationChange = 0; serviceStartedAt = 0; nextCustomerAt = 0; platesRemaining = PLATE_COUNT; lastCall = false;
   lastFeedback = "Start a new restaurant or continue your saved one.";
   private nextOrderId = 1; private nextCustomerId = 1; private nextDishId = 1;
   private randomState: number; private readonly initialSeed: number;
@@ -196,7 +196,7 @@ export class RestaurantModel {
 
   startService(now: number): ServiceEvent[] {
     if (this.phase !== "prep") return [];
-    this.phase = "service"; this.serviceStartedAt = now; this.ordersGenerated = 0; this.activeOrders = []; this.readyDishes = [];
+    this.phase = "service"; this.serviceStartedAt = now; this.ordersGenerated = 0; this.activeOrders = []; this.readyDishes = []; this.lastCall = false;
     this.customers = []; this.prepareDiningTables();
     this.activeStaff = this.staffRoster.filter(({ scheduled }) => scheduled).map((employee, index) => ({ employeeId: employee.id, name: employee.name, role: employee.role, state: "idle", task: null, x: employee.role === "server" ? 960 + index * 18 : 835, y: employee.role === "server" ? 545 : 330, completedTasks: 0 }));
     this.nextCustomerAt = now; this.lastFeedback = "OPEN · Customers are arriving!"; return this.updateService(now);
@@ -204,11 +204,13 @@ export class RestaurantModel {
   updateService(now: number): ServiceEvent[] {
     if (this.phase !== "service") return [];
     const events: ServiceEvent[] = [];
-    if (now - this.serviceStartedAt >= this.serviceDurationMs) return this.finishService();
-    while (now >= this.nextCustomerAt && this.arrivals < this.potentialCustomers) { events.push(this.createCustomer(this.nextCustomerAt)); this.nextCustomerAt += this.customerIntervalMs(); }
+    const arrivalsOpen = now - this.serviceStartedAt < this.serviceDurationMs;
+    if (!arrivalsOpen && !this.lastCall) { this.lastCall = true; this.lastFeedback = "LAST CALL · Finish the remaining orders."; }
+    while (arrivalsOpen && now >= this.nextCustomerAt && this.arrivals < this.potentialCustomers) { events.push(this.createCustomer(this.nextCustomerAt)); this.nextCustomerAt += this.customerIntervalMs(); }
     this.advanceCustomers(now, events); this.advanceStaff(now, events); this.assignStaffTasks(now, events);
     const occupiedSeats = this.customers.filter(({ state }) => ["walking_to_table", "waiting_for_food", "eating"].includes(state)).reduce((total, customer) => total + customer.size, 0);
     this.peakSeatsOccupied = Math.max(this.peakSeatsOccupied, occupiedSeats);
+    if (this.lastCall && !this.hasUnresolvedService()) return [...events, ...this.finishService()];
     return events;
   }
   queueReadyDish(recipeId: RecipeId): boolean {
@@ -280,7 +282,7 @@ export class RestaurantModel {
     this.ordersCompleted = 0; this.ordersMissed = 0; this.potentialCustomers = 0; this.admittedCustomers = 0; this.customersTurnedAway = 0;
     this.ordersGenerated = 0; this.arrivals = 0; this.seatedCustomers = 0; this.leftWaitingForTable = 0; this.leftWaitingForFood = 0;
     this.peakSeatsOccupied = 0; this.tableTurns = 0; this.serverDeliveries = 0; this.tablesCleared = 0; this.dishwasherPlatesWashed = 0;
-    this.reputationChange = 0; this.serviceStartedAt = 0; this.nextCustomerAt = 0; this.platesRemaining = PLATE_COUNT;
+    this.reputationChange = 0; this.serviceStartedAt = 0; this.nextCustomerAt = 0; this.platesRemaining = PLATE_COUNT; this.lastCall = false;
     this.nextOrderId = 1; this.nextCustomerId = 1; this.nextDishId = 1; this.clearServiceRuntime();
   }
   private clearServiceRuntime(): void { this.activeOrders = []; this.readyDishes = []; this.customers = []; this.diningTables = []; this.activeStaff = []; this.dirtyReturnQueue = 0; this.claimedDirtyPlates = 0; }
@@ -364,6 +366,9 @@ export class RestaurantModel {
     events.push({ type: "customer-left", customer, happy: false });
   }
   private tableFor(customer: CustomerParty): DiningTable | undefined { return this.diningTables.find(({ id }) => id === customer.tableId); }
+  private hasUnresolvedService(): boolean {
+    return this.activeOrders.length > 0 || this.customers.some(({ state }) => ["arriving", "waiting_for_table", "walking_to_table", "waiting_for_food"].includes(state));
+  }
   private recipeIngredientValue(recipeId: RecipeId): number { return RECIPES[recipeId].ingredients.reduce((total, requirement) => total + INGREDIENTS[requirement.ingredientId].purchaseCostCents, 0); }
   private finishService(): ServiceEvent[] {
     const events: ServiceEvent[] = [];

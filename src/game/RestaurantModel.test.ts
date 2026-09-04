@@ -71,6 +71,26 @@ describe("Physical dining and delivery", () => {
   it("returns a table to reusable state after eating and server clearing", () => { const model = openService(); const order = deliver(model); const deliveredAt = 1 + SERVER_DELIVERY_DURATION_MS; model.updateService(deliveredAt + EATING_DURATION_MS); const table = model.diningTables.find(({ id }) => id === order.tableId)!; expect(table.state).toBe("dirty"); model.updateService(deliveredAt + EATING_DURATION_MS + SERVER_CLEAR_DURATION_MS); expect(table.state).toBe("clean"); expect(model.dirtyReturnQueue).toBe(1); });
 });
 
+describe("Service last call", () => {
+  it("keeps service open after the clock ends until the final order expires", () => {
+    const model = modelWithMenu(undefined, 1_000); expect(model.beginPrep()).toBe(true); model.startService(0);
+    model.customers = []; model.activeOrders = []; model.potentialCustomers = 0; model.arrivals = 0;
+    const order = model.forceOrder("roast-potato", 900, 2_000); expect(order).not.toBeNull();
+    model.updateService(1_000);
+    expect(model.phase).toBe("service"); expect(model.lastCall).toBe(true); expect(model.activeOrders).toHaveLength(1);
+    const events = model.updateService(2_901);
+    expect(events.map(({ type }) => type)).toEqual(expect.arrayContaining(["order-expired", "service-ended"]));
+    expect(model.phase).toBe("summary");
+  });
+
+  it("closes immediately at last call when no guests or orders remain", () => {
+    const model = modelWithMenu(undefined, 1_000); expect(model.beginPrep()).toBe(true); model.startService(0);
+    model.customers = []; model.activeOrders = []; model.potentialCustomers = 0; model.arrivals = 0;
+    expect(model.updateService(1_000).some(({ type }) => type === "service-ended")).toBe(true);
+    expect(model.phase).toBe("summary");
+  });
+});
+
 describe("Plate conservation and dishwashing", () => {
   it("dirty plates cannot be used until a human wash restores one", () => { const model = openService(); expect(model.useCleanPlate()).toBe(true); expect(model.platesRemaining).toBe(5); model.dirtyReturnQueue = 1; expect(model.claimDirtyPlate()).toBe(true); expect(model.platesRemaining).toBe(5); expect(model.completePlateWash("human")?.type).toBe("plate-washed"); expect(model.platesRemaining).toBe(6); });
   it("a scheduled dishwasher visibly claims and restores one returned plate", () => { const model = modelWithMenu(); model.cashCents = 50_000; model.hireEmployee("dishwasher-june"); model.setEmployeeScheduled("dishwasher-june", true); model.beginPrep(); model.startService(0); model.platesRemaining = 5; model.dirtyReturnQueue = 1; model.updateService(10); const dishwasher = model.activeStaff.find(({ role }) => role === "dishwasher")!; expect(dishwasher.task?.type).toBe("wash"); expect(model.dirtyReturnQueue).toBe(0); model.updateService(10 + DISHWASH_DURATION_MS); expect(model.platesRemaining).toBe(6); expect(model.dishwasherPlatesWashed).toBe(1); });

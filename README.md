@@ -72,10 +72,10 @@ Select **Recipes** in the kitchen HUD at any time during Prep or Service to see 
 1. Start a new restaurant or continue the versioned browser save. A new restaurant begins on Day 1 with $150, an empty pantry, Reputation Level 1, four installed core workstations, three two-seat tables, six plates, and server Ada already hired.
 2. Move freely among Overview, Pantry, Supplier, Kitchen, Menu, Staff, and Marketing. Buy bulk ingredients, configure appliances, choose two dishes, schedule hired employees, and optionally advertise.
 3. Select **Begin Prep** to pay that shift's scheduled payroll exactly once and lock management. Retrieve persistent stock, circulate around the central island, chop, stage, and optionally throw while closed.
-4. Select **Open Restaurant** for a two-minute service. Customers arrive over time; servers seat parties, which creates table-linked kitchen tickets.
+4. Select **Open Restaurant** for a two-minute arrival window. Customers arrive over time; servers seat parties, which creates table-linked kitchen tickets. At 0:00, **Last Call** stops new arrivals but keeps the kitchen open until every existing guest's final order is delivered or expires.
 5. Plate the matching food and put it in **Service Pickup**. An available server reserves it, delivers it to the correct table, and only then credits revenue.
 6. After customers eat, servers clear plates to **Dirty Return**. Either chef can wash at the sink, or a scheduled dishwasher washes one plate at a time. Clean plates return to circulation.
-7. Review customer, dining, staff, financial, inventory, and reputation results. Select **Next Day** with the restaurant state preserved.
+7. Once Last Call has no unresolved guests or tickets, review customer, dining, staff, financial, inventory, and reputation results. Select **Next Day** with the restaurant state preserved.
 
 Supplier discounts are 5% at 5 units, 10% at 10 units, and 20% at 20 units. Ingredients never spoil or decay. Advertising is charged once and expires after service. Dining Level 1 provides three two-seat tables; the $300 Dining Expansion permanently adds two more tables. Physical turnover means a room can serve more customers than it seats simultaneously.
 
