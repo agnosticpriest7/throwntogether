@@ -389,3 +389,40 @@ footer strong { color: #49352d; }
 kbd { border-color: #70452f; color: #49352d; background: #fff1cf; }
 #test-harness { border-color: #70452f; background: #fff1cfaa; }
 #test-harness::before { color: #a25138; }
+
+/* Keep status and tickets in their own space, above the whole restaurant. */
+body:is([data-phase="prep"], [data-phase="service"]) #game-frame { padding-top: 126px; aspect-ratio: auto; }
+body:is([data-phase="prep"], [data-phase="service"]) #game { height: auto; aspect-ratio: 32 / 15; }
+#restaurant-hud { border-radius: 12px; }
+.hud-bar { display: flex; flex-wrap: wrap; gap: 6px 10px; min-height: 38px; padding: 5px 10px; }
+.hud-menu { flex: 1; }
+.hud-stock { flex-wrap: wrap; gap: 4px 10px; min-height: 24px; }
+.tickets { top: 70px; left: 0; right: 0; width: auto; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.ticket { min-width: 0; padding: 5px 7px; box-shadow: none; }
+.ticket div { grid-template-columns: auto minmax(0, 1fr) auto; }
+.ticket strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tickets-empty { grid-column: 1 / -1; }
+
+@media (min-width: 851px) {
+  main { width: min(1280px, calc(100vw - 64px), calc((100dvh - 150px) * 2.1333)); padding: 16px 0; }
+  body:is([data-phase="prep"], [data-phase="service"]) main { width: min(1280px, calc(100vw - 64px), calc((100dvh - 270px) * 2.1333)); }
+  #touch-controls { display: none; }
+}
+
+/* Real touch devices retain controls, with their height included in the fit. */
+@media (min-width: 851px) and (any-pointer: coarse) {
+  body:is([data-phase="prep"], [data-phase="service"]) main { width: min(1280px, calc(100vw - 64px), calc((100dvh - 430px) * 2.1333)); }
+  body:is([data-phase="prep"], [data-phase="service"]) #touch-controls { display: grid; }
+  .touch-player { padding: 5px; }
+  .touch-dpad { grid-template-columns: repeat(3, 32px); grid-template-rows: repeat(3, 32px); gap: 3px; }
+  .touch-button { width: 32px; height: 32px; }
+  .touch-action { width: 48px; height: 48px; }
+}
+
+@media (max-width: 850px) {
+  body:is([data-phase="prep"], [data-phase="service"]) #game-frame { padding-top: 148px; }
+  .tickets { top: 88px; }
+  .ticket div { gap: 3px; font-size: 9px; }
+  .ticket b { display: none; }
+  .ticket div { grid-template-columns: minmax(0, 1fr) auto; }
+}
