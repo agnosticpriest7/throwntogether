@@ -10,7 +10,7 @@ $root = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $repo = 'agnosticpriest7/throwntogether'
 $url = 'https://agnosticpriest7.github.io/throwntogether/'
 function Git([string[]]$Arguments) {
-    $value = & git -C $root @Arguments
+    $value = & git.exe -C $root @Arguments
     if ($LASTEXITCODE -ne 0) { throw "git failed: $Arguments" }
     return $value
 }
@@ -98,7 +98,7 @@ try {
     $publish = Join-Path $builds ('Publish-' + [Guid]::NewGuid().ToString('N'))
     New-Item -ItemType Directory -Path $publish | Out-Null
     function Publish-Git([string[]]$Arguments) {
-        & git -C $publish @Arguments | Out-Host
+        & git.exe -C $publish @Arguments | Out-Host
         if ($LASTEXITCODE -ne 0) { throw "Deployment git failed: $Arguments. Inspect $publish" }
     }
     Publish-Git @('init','-b','gh-pages')
