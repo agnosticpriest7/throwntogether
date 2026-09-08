@@ -1,150 +1,56 @@
-<!DOCTYPE html>
-<html lang="en-us">
-  <head>
-    <meta charset="utf-8">
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-    <title>Unity Web Player | ThrownTogetherUnity</title>
-    <link rel="shortcut icon" href="TemplateData/favicon.ico">
-    <link rel="stylesheet" href="TemplateData/style.css">
-  </head>
-  <body>
-    <div id="unity-container" class="unity-desktop">
-      <div id="unity-fullscreen-container">
-        <canvas id="unity-canvas" width="960" height="600" tabindex="-1"></canvas>
-        <div id="unity-loading-container">
-          <div id="unity-loading-bar">
-            <div id="unity-logo"></div>
-            <div id="unity-progress-bar-empty">
-              <div id="unity-progress-bar-full"></div>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div id="unity-warning"> </div>
-      <div id="unity-footer">
-        <div id="unity-logo-title-footer"></div>
-        <div id="unity-fullscreen-button"></div>
-        <div id="unity-build-title">ThrownTogetherUnity</div>
-      </div>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Thrown Together — Web development test</title>
+  <style>
+    html,body { margin:0; width:100%; height:100%; overflow:hidden; background:#101820; color:#eee; font:14px system-ui,sans-serif; }
+    #web-host { width:100%; height:100%; display:flex; align-items:center; justify-content:center; flex-direction:column; background:#101820; }
+    #game-frame { position:relative; flex:none; }
+    canvas { display:block; width:100%; height:100%; outline:none; }
+    #loading { position:absolute; inset:0; display:grid; place-content:center; text-align:center; background:#101820; padding:24px; }
+    #web-tools { height:32px; width:100%; box-sizing:border-box; display:flex; align-items:center; justify-content:center; gap:12px; padding:2px 8px; }
+    #focus-hint { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    button { color:#eee; background:#263740; border:1px solid #687b84; border-radius:3px; padding:3px 8px; white-space:nowrap; }
+    button:focus-visible { outline:2px solid #a4e8d3; }
+  </style>
+</head>
+<body>
+  <main id="web-host">
+    <div id="game-frame">
+      <canvas id="unity-canvas" width="960" height="600" tabindex="0" aria-label="Thrown Together game"></canvas>
+      <div id="loading" role="status">Loading Unity…</div>
     </div>
-    <script>
-      let canvas = document.querySelector("#unity-canvas");
-      let fullscreenContainer = document.querySelector("#unity-fullscreen-container");
-
-      // Shows a temporary message banner/ribbon for a few seconds, or
-      // a permanent error message on top of the canvas if type=='error'.
-      // If type=='warning', a yellow highlight color is used.
-      // Modify or remove this function to customize the visually presented
-      // way that non-critical warnings and error messages are presented to the
-      // user.
-      function unityShowBanner(msg, type) {
-        var warningBanner = document.querySelector("#unity-warning");
-        function updateBannerVisibility() {
-          warningBanner.style.display = warningBanner.children.length ? 'block' : 'none';
-        }
-        var div = document.createElement('div');
-        div.innerHTML = msg;
-        warningBanner.appendChild(div);
-        if (type == 'error') div.style = 'background: red; padding: 10px;';
-        else {
-          if (type == 'warning') div.style = 'background: yellow; padding: 10px;';
-          setTimeout(function() {
-            warningBanner.removeChild(div);
-            updateBannerVisibility();
-          }, 5000);
-        }
-        updateBannerVisibility();
-      }
-
-      var buildUrl = "Build";
-      var loaderUrl = buildUrl + "/78a581ae60c37fe42938ec759c0dc42d.loader.js";
-      var config = {
-        arguments: [],
-        dataUrl: buildUrl + "/941281f199bf1046ea3ee6f133fc5cbe.data",
-        frameworkUrl: buildUrl + "/d25ba467e7a56ff6ad92506c6c01d2e2.framework.js",
-        codeUrl: buildUrl + "/93bd351c6e679c6d1d0c120c04f997ef.wasm",
-        streamingAssetsUrl: "StreamingAssets",
-
-        // If you have a custom web site structure, or want to place multiple Unity build instances on the same page,
-        // you can pass fullscreenElementID: "my-unity-fullscreen-container-id", in this configuration field to
-        // explicitly point to the element tree root that is displayed in fullscreen mode.
-        fullscreenElementID: "unity-fullscreen-container",
-
-        companyName: "DefaultCompany",
-        productName: "ThrownTogetherUnity",
-        productVersion: "0.1.0",
-        showBanner: unityShowBanner,
-        // errorHandler: function(err, url, line) {
-        //    alert("error " + err + " occurred at line " + line);
-        //    // Return 'true' if you handled this error and don't want Unity
-        //    // to process it further, 'false' otherwise.
-        //    return true;
-        // },
-      };
-
-      // By default, Unity keeps WebGL canvas render target size matched with
-      // the DOM size of the canvas element (scaled by window.devicePixelRatio)
-      // Set this to false if you want to decouple this synchronization from
-      // happening inside the engine, and you would instead like to size up
-      // the canvas DOM size and WebGL render target sizes yourself.
-      // config.matchWebGLToCanvasSize = false;
-
-      // If you would like all file writes inside Unity Application.persistentDataPath
-      // directory to automatically persist so that the contents are remembered when
-      // the user revisits the site the next time, uncomment the following line:
-      // config.autoSyncPersistentDataPath = true;
-      // This autosyncing is currently not the default behavior to avoid regressing
-      // existing user projects that might rely on the earlier manual
-      // JS_FileSystem_Sync() behavior, but in future Unity version, this will be
-      // expected to change.
-
-      if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
-        // Mobile device style: fill the whole browser client area with the game canvas:
-
-        var meta = document.createElement('meta');
-        meta.name = 'viewport';
-        meta.content = 'width=device-width, height=device-height, initial-scale=1.0, user-scalable=no, shrink-to-fit=yes';
-        document.getElementsByTagName('head')[0].appendChild(meta);
-        document.querySelector("#unity-container").className = "unity-mobile";
-        canvas.className = "unity-mobile";
-
-        // To lower canvas resolution on mobile devices to gain some
-        // performance, uncomment the following line:
-        // config.devicePixelRatio = 1;
-
-
-      } else {
-        // Desktop style: Render the game canvas container in a window that can be maximized to fullscreen:
-        fullscreenContainer.style.width = "960px";
-        fullscreenContainer.style.height = "600px";
-      }
-
-
-      var script = document.createElement("script");
-      script.src = loaderUrl;
-      script.onload = () => {
-        const loadingContainer = document.querySelector("#unity-loading-container");
-        const progressBarFull = document.querySelector("#unity-progress-bar-full");
-
-        createUnityInstance(canvas, config, (progress) => {
-          if (progress < 1) {
-            loadingContainer.style.display = "block";
-            progressBarFull.style.width = 100 * progress + "%";
-          } else {
-            loadingContainer.style.display = "none";
-          }
-        }).then((unityInstance) => {
-                document.querySelector("#unity-fullscreen-button").onclick = () => {
-                  unityInstance.SetFullscreen(1);
-                };
-
-              }).catch((message) => {
-                alert(message);
-              });
-            };
-
-      document.body.appendChild(script);
-
-    </script>
-  </body>
+    <div id="web-tools">
+      <span id="focus-hint" role="status">Click game / press A to focus</span>
+      <button id="focus-game" type="button">Focus game</button>
+      <button id="fullscreen" type="button">Fullscreen</button>
+    </div>
+  </main>
+  <script src="web-shell.js"></script>
+  <script>
+    const canvas=document.getElementById("unity-canvas");
+    const loading=document.getElementById("loading");
+    const shell=ThrownTogetherWeb.attach(window,document);
+    const config={
+      dataUrl:"Build/ccbf07f87ce442db46484c934107ac9c.data",
+      frameworkUrl:"Build/f064632c541e6756a98f12a9a267c5b2.framework.js",
+      codeUrl:"Build/881197c76d1d5106e889c4bc6af8dba3.wasm",
+      streamingAssetsUrl:"StreamingAssets",
+      companyName:"DefaultCompany",
+      productName:"ThrownTogetherUnity",
+      productVersion:"0.1.0",
+      matchWebGLToCanvasSize:true,
+      showBanner:(message,type)=>{ if(type==="error") { loading.style.display="grid"; loading.textContent=message; } else console.warn(message); }
+    };
+    const loader=document.createElement("script");
+    loader.src="Build/c8257f66f193baa1d0e1c7d6e245fd11.loader.js";
+    loader.onerror=()=>{ loading.textContent="Unity loader could not download. Refresh this page to retry."; };
+    loader.onload=()=>createUnityInstance(canvas,config,p=>{loading.textContent="Loading Unity… "+Math.round(p*100)+"%";})
+      .then(()=>{ loading.style.display="none"; shell.ready(); })
+      .catch(error=>{ loading.style.display="grid"; loading.textContent="Build failed to load: "+error; console.error(error); });
+    document.body.appendChild(loader);
+  </script>
+</body>
 </html>
