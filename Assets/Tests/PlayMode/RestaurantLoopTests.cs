@@ -52,6 +52,10 @@ namespace ThrownTogether.Tests
         [UnityTest]
         public IEnumerator VirtualGamepadDrivesMovementAndSouthButtonPickup()
         {
+            var background=InputSystem.settings.backgroundBehavior;
+            var editorInput=InputSystem.settings.editorInputBehaviorInPlayMode;
+            InputSystem.settings.backgroundBehavior=InputSettings.BackgroundBehavior.IgnoreFocus;
+            InputSystem.settings.editorInputBehaviorInPlayMode=InputSettings.EditorInputBehaviorInPlayMode.AllDeviceInputAlwaysGoesToGameView;
             var gamepad=InputSystem.AddDevice<Gamepad>();
             var input=chef.GetComponent<ChefInput>(); input.BindDevices(gamepad); input.enabled=true;
             try
@@ -71,7 +75,12 @@ namespace ThrownTogether.Tests
                 Assert.That(chef.Hands.Item,Is.Not.Null);
                 Assert.That(chef.Hands.Item.Payload.state,Is.EqualTo(FoodState.Raw));
             }
-            finally { input.enabled=false; InputSystem.RemoveDevice(gamepad); }
+            finally
+            {
+                input.enabled=false; InputSystem.RemoveDevice(gamepad);
+                InputSystem.settings.backgroundBehavior=background;
+                InputSystem.settings.editorInputBehaviorInPlayMode=editorInput;
+            }
         }
         [UnityTest]
         public IEnumerator ChefMovesAndStopsWithoutSlidingAndCannotReachRemoteStations()
