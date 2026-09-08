@@ -3454,6 +3454,8 @@ MonoBehaviour:
   chef: {fileID: 1490827822}
   order: {fileID: 2044820154}
   gameplayCamera: {fileID: 1263851648}
+  settings: {fileID: 6625039057315428969}
+  audioFeedback: {fileID: 6625039057315428968}
 --- !u!4 &1600033228
 Transform:
   m_ObjectHideFlags: 0
@@ -4437,6 +4439,101 @@ Transform:
   m_Children: []
   m_Father: {fileID: 392225065}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1001 &6625039057315428967
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: 3437671092485113078, guid: ccd0afcca488ce14eb419dc6ea0b4cf8, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3437671092485113078, guid: ccd0afcca488ce14eb419dc6ea0b4cf8, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3437671092485113078, guid: ccd0afcca488ce14eb419dc6ea0b4cf8, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3437671092485113078, guid: ccd0afcca488ce14eb419dc6ea0b4cf8, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 3437671092485113078, guid: ccd0afcca488ce14eb419dc6ea0b4cf8, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3437671092485113078, guid: ccd0afcca488ce14eb419dc6ea0b4cf8, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3437671092485113078, guid: ccd0afcca488ce14eb419dc6ea0b4cf8, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3437671092485113078, guid: ccd0afcca488ce14eb419dc6ea0b4cf8, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3437671092485113078, guid: ccd0afcca488ce14eb419dc6ea0b4cf8, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3437671092485113078, guid: ccd0afcca488ce14eb419dc6ea0b4cf8, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3539554286442473733, guid: ccd0afcca488ce14eb419dc6ea0b4cf8, type: 3}
+      propertyPath: chef
+      value: 
+      objectReference: {fileID: 1490827822}
+    - target: {fileID: 3539554286442473733, guid: ccd0afcca488ce14eb419dc6ea0b4cf8, type: 3}
+      propertyPath: prep
+      value: 
+      objectReference: {fileID: 1010364282}
+    - target: {fileID: 3539554286442473733, guid: ccd0afcca488ce14eb419dc6ea0b4cf8, type: 3}
+      propertyPath: fryer
+      value: 
+      objectReference: {fileID: 392225064}
+    - target: {fileID: 3539554286442473733, guid: ccd0afcca488ce14eb419dc6ea0b4cf8, type: 3}
+      propertyPath: order
+      value: 
+      objectReference: {fileID: 2044820154}
+    - target: {fileID: 6044836712049777557, guid: ccd0afcca488ce14eb419dc6ea0b4cf8, type: 3}
+      propertyPath: m_Name
+      value: Restaurant Audio
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: ccd0afcca488ce14eb419dc6ea0b4cf8, type: 3}
+--- !u!114 &6625039057315428968 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 3539554286442473733, guid: ccd0afcca488ce14eb419dc6ea0b4cf8, type: 3}
+  m_PrefabInstance: {fileID: 6625039057315428967}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: daf1e17df8e287e4eba47cc7097277c5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: ThrownTogether.Runtime::ThrownTogether.RestaurantAudioFeedback
+--- !u!114 &6625039057315428969 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 2604761309018196762, guid: ccd0afcca488ce14eb419dc6ea0b4cf8, type: 3}
+  m_PrefabInstance: {fileID: 6625039057315428967}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 319ede5338e47af448b368860bf09eae, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: ThrownTogether.Runtime::ThrownTogether.SettingsService
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
@@ -4461,3 +4558,4 @@ SceneRoots:
   - {fileID: 1263851650}
   - {fileID: 1289965675}
   - {fileID: 1600033228}
+  - {fileID: 6625039057315428967}

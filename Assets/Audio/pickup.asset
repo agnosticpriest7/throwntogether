@@ -1,0 +1,22 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c51ec7ab860b3cf42a42cbd5a5aeb5fd, type: 3}
+  m_Name: pickup
+  m_EditorClassIdentifier: ThrownTogether.Runtime::ThrownTogether.AudioCue
+  clips:
+  - {fileID: 8300000, guid: b0aae108a9d3c544f9e5a4b59caac1d1, type: 3}
+  - {fileID: 8300000, guid: 4ebc8103187cc9e45963383868393f7a, type: 3}
+  group: {fileID: -3549611856582843773, guid: 2fd06ac794904d549b669564d2f161b6, type: 2}
+  volume: 0.5
+  volumeVariation: 0.04
+  pitchVariation: 0.03
+  loop: 0

@@ -12,6 +12,7 @@ namespace ThrownTogether
         public string Feedback { get; private set; }
         private float feedbackUntil;
         private CharacterController motor;
+        public event System.Action<Interactable,bool,bool> InteractionSucceeded;
         private void Awake() => motor=GetComponent<CharacterController>();
         public void Move(Vector2 input, float seconds)
         {
@@ -39,7 +40,11 @@ namespace ThrownTogether
             FindFocus();
             if (Focus == null) { Feedback="Move closer and face a station"; feedbackUntil=Time.time+1.5f; return false; }
             Feedback=Focus.Prompt(this); feedbackUntil=Time.time+1.5f;
-            return Focus.Interact(this);
+            bool hadItem=Hands.Item != null;
+            bool plated=Focus is CounterStation counter && counter.CanCombine(this);
+            bool used=Focus.Interact(this);
+            if(used) InteractionSucceeded?.Invoke(Focus,hadItem,plated);
+            return used;
         }
         private void LateUpdate() { FindFocus(); if (Time.time>feedbackUntil) Feedback=""; }
     }

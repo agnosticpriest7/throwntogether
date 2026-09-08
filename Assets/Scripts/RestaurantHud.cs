@@ -7,6 +7,8 @@ namespace ThrownTogether
         public ChefController chef;
         public CustomerOrder order;
         public Camera gameplayCamera;
+        public SettingsService settings;
+        public RestaurantAudioFeedback audioFeedback;
         private GUIStyle label, small, title;
         private void Awake()
         {

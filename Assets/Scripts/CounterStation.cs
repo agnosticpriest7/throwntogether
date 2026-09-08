@@ -10,7 +10,7 @@ namespace ThrownTogether
             if (chef.Hands.Item == null) return slot.Item != null ? "Pick up " + slot.Item.Payload.Label : "Counter empty";
             return slot.Item == null ? "Place " + chef.Hands.Item.Payload.Label : "Counter occupied";
         }
-        private bool CanCombine(ChefController chef) => slot.Item != null && chef.Hands.Item != null &&
+        public bool CanCombine(ChefController chef) => slot.Item != null && chef.Hands.Item != null &&
             (ItemPayload.CanPlate(slot.Item.Payload,chef.Hands.Item.Payload) || ItemPayload.CanPlate(chef.Hands.Item.Payload,slot.Item.Payload));
         public override bool Interact(ChefController chef)
         {

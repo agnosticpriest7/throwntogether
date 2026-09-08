@@ -11,8 +11,8 @@ namespace ThrownTogether.Editor
     public static class BuildAutomation
     {
         [Serializable]
-        private sealed class Configuration { public string[] scenes; }
-        [Serializable] private sealed class BuildStamp { public string commit; public string builtAtUtc; }
+        private sealed class Configuration { public string[] scenes; public string developmentVersion; }
+        [Serializable] private sealed class BuildStamp { public string commit; public string builtAtUtc; public string developmentVersion; }
 
         // Invoke with -batchmode -quit -buildTarget WebGL (or Win64) -executeMethod ...
         public static void BuildWeb() => Build(BuildTarget.WebGL, "Builds/Web");
@@ -42,7 +42,8 @@ namespace ThrownTogether.Editor
                 if(diagnostics)
                 {
                     Directory.CreateDirectory("Assets/Resources");
-                    File.WriteAllText("Assets/Resources/DevelopmentBuildStamp.json",JsonUtility.ToJson(new BuildStamp { commit=commit, builtAtUtc=DateTime.UtcNow.ToString("o") }));
+                    if(string.IsNullOrWhiteSpace(config.developmentVersion)) throw new BuildFailedException("Development builds require developmentVersion in build-config.json.");
+                    File.WriteAllText("Assets/Resources/DevelopmentBuildStamp.json",JsonUtility.ToJson(new BuildStamp { commit=commit, builtAtUtc=DateTime.UtcNow.ToString("o"), developmentVersion=config.developmentVersion }));
                     AssetDatabase.Refresh();
                 }
                 else if(AssetDatabase.LoadAssetAtPath<TextAsset>("Assets/Resources/DevelopmentBuildStamp.json") != null)

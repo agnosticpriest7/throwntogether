@@ -1,0 +1,87 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1 &6044836712049777557
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 3437671092485113078}
+  - component: {fileID: 7894553291150463859}
+  - component: {fileID: 2604761309018196762}
+  - component: {fileID: 3539554286442473733}
+  m_Layer: 0
+  m_Name: RestaurantAudio
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &3437671092485113078
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6044836712049777557}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &7894553291150463859
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6044836712049777557}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fca97405abe949b4ab8154e96718af5f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: ThrownTogether.Runtime::ThrownTogether.AudioPlayback
+--- !u!114 &2604761309018196762
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6044836712049777557}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 319ede5338e47af448b368860bf09eae, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: ThrownTogether.Runtime::ThrownTogether.SettingsService
+  mixer: {fileID: 24100000, guid: 2fd06ac794904d549b669564d2f161b6, type: 2}
+--- !u!114 &3539554286442473733
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6044836712049777557}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: daf1e17df8e287e4eba47cc7097277c5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: ThrownTogether.Runtime::ThrownTogether.RestaurantAudioFeedback
+  playback: {fileID: 7894553291150463859}
+  chef: {fileID: 0}
+  prep: {fileID: 0}
+  fryer: {fileID: 0}
+  order: {fileID: 0}
+  pickup: {fileID: 11400000, guid: 0055a757a36d39e46ba8214db059c0e2, type: 2}
+  place: {fileID: 11400000, guid: 20fb9132363f46940999749f368072a8, type: 2}
+  chop: {fileID: 11400000, guid: 5bcc2daa51ca74e43823a61a81625e88, type: 2}
+  fryerStart: {fileID: 11400000, guid: d88030bf240fec94f9cf4a315ae04f11, type: 2}
+  sizzle: {fileID: 11400000, guid: f174ca14667a17841b8280387f6c8952, type: 2}
+  complete: {fileID: 11400000, guid: 2384dc64df0f909499b972ed449a743f, type: 2}
+  plate: {fileID: 11400000, guid: 840ac21f2d73e544e94178d3ec3dad2f, type: 2}
+  success: {fileID: 11400000, guid: 0a57cc8b10e20264e868cc266a508ca0, type: 2}
+  uiClick: {fileID: 11400000, guid: 286959cd7da3b594494003b5735d711f, type: 2}

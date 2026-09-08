@@ -20,3 +20,6 @@ Data definition compatibility, opt-in diagnostic panel/build stamp, regression c
 
 ### 2026-09-08 — Web / Xbox Edge readiness audit
 Focused Web shell/input diagnostics and synthetic regression checks; no gameplay milestone or physical-controller claim. Account-wide usage and project cost remain unavailable; no estimated usage numbers recorded.
+
+### 2026-09-08 — final pre-playtest foundations
+Narrow audio/settings/identity foundation with original generated WAVs, regression verification and Web baseline. No subagents or additional milestone. Account-wide usage and project cost are unavailable; no estimates recorded.

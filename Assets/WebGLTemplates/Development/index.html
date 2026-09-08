@@ -48,7 +48,7 @@
     loader.src="Build/{{{ LOADER_FILENAME }}}";
     loader.onerror=()=>{ loading.textContent="Unity loader could not download. Refresh this page to retry."; };
     loader.onload=()=>createUnityInstance(canvas,config,p=>{loading.textContent="Loading Unity… "+Math.round(p*100)+"%";})
-      .then(()=>{ loading.style.display="none"; shell.ready(); })
+      .then(()=>{ canvas.dataset.loaderReadyMs=Math.round(performance.now()); loading.style.display="none"; shell.ready(); })
       .catch(error=>{ loading.style.display="grid"; loading.textContent="Build failed to load: "+error; console.error(error); });
     document.body.appendChild(loader);
   </script>

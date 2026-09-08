@@ -105,7 +105,7 @@ try {
     if (Get-ChildItem $output -Recurse -File | Where-Object Extension -In '.gz','.br','.unityweb') { throw 'Unexpected compressed output.' }
     if (Get-ChildItem $output -Recurse -File | Where-Object Length -GE 100MB) { throw 'Output exceeds GitHub single-file limit.' }
     Set-Content -LiteralPath "$output/.nojekyll" -Value '' -NoNewline
-    @{ sourceCommit=$sha; builtAtUtc=[DateTime]::UtcNow.ToString('o'); scenes=(Get-Content "$root/build-config.json" -Raw | ConvertFrom-Json).scenes } | ConvertTo-Json | Set-Content "$output/build-info.json"
+    @{ sourceCommit=$sha; developmentVersion=(Get-Content "$root/build-config.json" -Raw | ConvertFrom-Json).developmentVersion; builtAtUtc=[DateTime]::UtcNow.ToString('o'); scenes=(Get-Content "$root/build-config.json" -Raw | ConvertFrom-Json).scenes } | ConvertTo-Json | Set-Content "$output/build-info.json"
     Write-Host "Web build: $output"
     Assert-Clean
     if ((Git @('rev-parse','HEAD')) -ne $sha) { throw 'Source commit changed during build.' }
