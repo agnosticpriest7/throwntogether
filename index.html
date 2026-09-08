@@ -10,10 +10,8 @@
     #game-frame { position:relative; flex:none; }
     canvas { display:block; width:100%; height:100%; outline:none; }
     #loading { position:absolute; inset:0; display:grid; place-content:center; text-align:center; background:#101820; padding:24px; }
-    #web-tools { height:32px; width:100%; box-sizing:border-box; display:flex; align-items:center; justify-content:center; gap:12px; padding:2px 8px; }
+    #web-tools { min-height:32px; flex:none; flex-wrap:wrap; width:100%; box-sizing:border-box; display:flex; align-items:center; justify-content:center; gap:12px; padding:2px 8px; }
     #focus-hint { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-    button { color:#eee; background:#263740; border:1px solid #687b84; border-radius:3px; padding:3px 8px; white-space:nowrap; }
-    button:focus-visible { outline:2px solid #a4e8d3; }
   </style>
 </head>
 <body>
@@ -23,9 +21,9 @@
       <div id="loading" role="status">Loading Unity…</div>
     </div>
     <div id="web-tools">
-      <span id="focus-hint" role="status">Click game / press A to focus</span>
-      <button id="focus-game" type="button">Focus game</button>
-      <button id="fullscreen" type="button">Fullscreen</button>
+      <span id="focus-hint" role="status">Click game to focus</span>
+      <span id="xbox-hint">Xbox Edge: hold Menu (≡) → Use game controls</span>
+
     </div>
   </main>
   <script src="web-shell.js"></script>
@@ -34,13 +32,15 @@
     const loading=document.getElementById("loading");
     const shell=ThrownTogetherWeb.attach(window,document);
     const config={
-      dataUrl:"Build/e6fad11919a2d3d49195fcfe877b07d1.data",
+      dataUrl:"Build/56af222d1aaa1102d48dc1667e3ded8d.data",
       frameworkUrl:"Build/f064632c541e6756a98f12a9a267c5b2.framework.js",
       codeUrl:"Build/aebb2847088081f0fe970760e3eeb696.wasm",
       streamingAssetsUrl:"StreamingAssets",
       companyName:"DefaultCompany",
       productName:"ThrownTogetherUnity",
       productVersion:"0.1.0",
+      // Preserve Edge's native Menu/right-click controller-mode menu on the canvas.
+      disabledCanvasEvents:['dragstart'],
       matchWebGLToCanvasSize:true,
       autoSyncPersistentDataPath:true,
       showBanner:(message,type)=>{ if(type==="error") { loading.style.display="grid"; loading.textContent=message; } else console.warn(message); }
