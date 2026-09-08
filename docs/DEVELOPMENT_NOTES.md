@@ -30,8 +30,10 @@ Live Editor tests: EditMode 3/3 and PlayMode 4/4 passed, including the existing 
 
 The full loop was also exercised through Unity MCP in Play Mode with the chef positioned at each station: actual station interactions and timers produced plated Fries, delivery, eating and Complete. The running scene and visible success HUD were captured and inspected. No new Console errors remained after these checks. The deployment pipeline reruns both suites on the committed snapshot before building and publishing; build provenance remains available at build-info.json.
 
-Batch validation exposed Unity 6000.6 failing to rewrite cached compiler response files between processes. The pipeline now regenerates only Builds/Workspace/Library/Bee/artifacts/rsp before each stage, retaining the larger caches. Synthetic input waits for bounded observed movement rather than relying on a short first-frame timing assumption.
+Batch validation exposed Unity 6000.6 compiler helpers retaining response-file handles between processes. The pipeline contains each batch Editor and its descendants in a Windows job, releases that job when the stage exits, and regenerates only Builds/Workspace/Library/Bee/artifacts/rsp before each stage, retaining larger caches. Synthetic input explicitly advances input processing and the production input handler with fixed steps, restoring its temporary focus settings afterward.
 
+
+Final committed-snapshot validation passed EditMode 3/3 and PlayMode 4/4, then built Web successfully from `8ee1b2d399a1ffff293d7f55e7f6f99da9f4ef25`. Deployment commit `de36ced8aa5c5b588f7756b37d021d6dfff3ed9d` on gh-pages completed successfully. The public restaurant rendered correctly; loader, framework, data and WebAssembly assets returned HTTP 200 below /throwntogether/, with application/wasm for WebAssembly. Browser Console showed only the previously parked URP upscaling warning and no errors. No physical controller, Xbox Edge or TV testing was performed. Refresh with a build query if an already-open tab retains the older Bootstrap page.
 ## Exact human playtest checklist
 
 1. Does movement feel responsive?
