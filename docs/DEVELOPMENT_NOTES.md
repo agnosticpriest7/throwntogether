@@ -30,6 +30,8 @@ Live Editor tests: EditMode 3/3 and PlayMode 4/4 passed, including the existing 
 
 The full loop was also exercised through Unity MCP in Play Mode with the chef positioned at each station: actual station interactions and timers produced plated Fries, delivery, eating and Complete. The running scene and visible success HUD were captured and inspected. No new Console errors remained after these checks. The deployment pipeline reruns both suites on the committed snapshot before building and publishing; build provenance remains available at build-info.json.
 
+Batch validation exposed Unity 6000.6 failing to rewrite cached compiler response files between processes. The pipeline now regenerates only Builds/Workspace/Library/Bee/artifacts/rsp before each stage, retaining the larger caches. Synthetic input waits for bounded observed movement rather than relying on a short first-frame timing assumption.
+
 ## Exact human playtest checklist
 
 1. Does movement feel responsive?

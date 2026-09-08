@@ -21,7 +21,7 @@ namespace ThrownTogether.Tests
         public IEnumerator SetUp()
         {
             original=SceneManager.GetActiveScene();
-            suspended=Object.FindObjectsByType<RestaurantHud>(FindObjectsSortMode.None).Any(x=>x.gameObject.scene==original)
+            suspended=Object.FindObjectsByType<RestaurantHud>().Any(x=>x.gameObject.scene==original)
                 ? original.GetRootGameObjects().Where(x=>x.activeSelf).ToArray() : new GameObject[0];
             foreach(var root in suspended) root.SetActive(false);
 #if UNITY_EDITOR
@@ -30,7 +30,7 @@ namespace ThrownTogether.Tests
             yield return SceneManager.LoadSceneAsync("RestaurantDevelopment",LoadSceneMode.Additive);
 #endif
             testScene=SceneManager.GetSceneAt(SceneManager.sceneCount-1); SceneManager.SetActiveScene(testScene);
-            chef=Object.FindObjectsByType<ChefController>(FindObjectsSortMode.None).First(x=>x.gameObject.scene==testScene);
+            chef=Object.FindObjectsByType<ChefController>().First(x=>x.gameObject.scene==testScene);
             chef.GetComponent<ChefInput>().enabled=false;
             yield return null;
         }
@@ -57,8 +57,12 @@ namespace ThrownTogether.Tests
             try
             {
                 var before=chef.transform.position;
-                InputSystem.QueueStateEvent(gamepad,new GamepadState { leftStick=Vector2.right*.5f });
-                yield return new WaitForSeconds(.25f);
+                var deadline=Time.realtimeSinceStartup+3;
+                while(chef.transform.position.x<before.x+.2f && Time.realtimeSinceStartup<deadline)
+                {
+                    InputSystem.QueueStateEvent(gamepad,new GamepadState { leftStick=Vector2.right*.5f });
+                    yield return null;
+                }
                 Assert.That(chef.transform.position.x,Is.GreaterThan(before.x+.1f));
                 InputSystem.QueueStateEvent(gamepad,new GamepadState()); yield return null;
                 Approach(Find<SourceStation>("POTATOES"));

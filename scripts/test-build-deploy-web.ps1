@@ -56,6 +56,9 @@ try {
     & tar -xf $archive -C $workspace
     if ($LASTEXITCODE -ne 0) { throw 'Source extraction failed.' }
     function Run-Unity([string]$Name, [string[]]$Extra) {
+        # Unity 6000.6 can fail rewriting cached response files on the next process.
+        # Regenerate only these tiny compiler inputs; retain native/asset build caches.
+        Remove-OwnedDirectory (Join-Path $workspace 'Library/Bee/artifacts/rsp') $workspace
         $log = Join-Path $logs "$Name.log"
         $arguments = @('-batchmode','-projectPath',$workspace,'-logFile',$log) + $Extra
         $quoted = $arguments | ForEach-Object { '"' + $_ + '"' }
