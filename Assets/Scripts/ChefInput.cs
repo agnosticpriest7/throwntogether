@@ -1,3 +1,4 @@
+using System.Linq;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.SceneManagement;
@@ -10,6 +11,8 @@ namespace ThrownTogether
         private InputActionMap controls;
         private InputAction move, use, restart;
         private ChefController chef;
+        public InputDevice LastActiveDevice { get; private set; }
+        public bool AcceptsDevice(InputDevice device) => device != null && (!controls.devices.HasValue || controls.devices.Value.Contains(device));
         private void Awake()
         {
             chef=GetComponent<ChefController>(); controls=new InputActionMap("Chef");
@@ -19,9 +22,10 @@ namespace ThrownTogether
             move.AddBinding("<Gamepad>/leftStick");
             use=controls.AddAction("Use",InputActionType.Button); use.AddBinding("<Keyboard>/e"); use.AddBinding("<Keyboard>/space"); use.AddBinding("<Gamepad>/buttonSouth");
             restart=controls.AddAction("Restart",InputActionType.Button); restart.AddBinding("<Keyboard>/r"); restart.AddBinding("<Gamepad>/start");
+            controls.actionTriggered += context => { if (context.performed) LastActiveDevice=context.control.device; };
         }
         // A future local join flow can restrict each instance to its assigned devices.
-        public void BindDevices(params InputDevice[] devices) => controls.devices=devices;
+        public void BindDevices(params InputDevice[] devices) { controls.devices=devices; LastActiveDevice=null; }
         private void OnEnable() => controls.Enable();
         private void OnDisable() => controls.Disable();
         private void OnDestroy() => controls.Dispose();
@@ -31,13 +35,15 @@ namespace ThrownTogether
             chef.Move(move.ReadValue<Vector2>(),seconds);
             if (use.WasPressedThisFrame()) chef.Use();
             if (restart.WasPressedThisFrame())
-            {
+                RestartSlice();
+        }
+        public void RestartSlice()
+        {
 #if UNITY_EDITOR
-                UnityEditor.SceneManagement.EditorSceneManager.LoadSceneInPlayMode(SceneManager.GetActiveScene().path,new LoadSceneParameters(LoadSceneMode.Single));
+            UnityEditor.SceneManagement.EditorSceneManager.LoadSceneInPlayMode(gameObject.scene.path,new LoadSceneParameters(LoadSceneMode.Single));
 #else
-                SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+            SceneManager.LoadScene(gameObject.scene.name);
 #endif
-            }
         }
     }
 }

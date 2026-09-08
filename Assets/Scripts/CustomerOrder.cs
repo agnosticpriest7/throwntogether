@@ -5,7 +5,7 @@ namespace ThrownTogether
     public enum OrderPhase { Waiting, Delivering, Eating, Complete }
     public sealed class CustomerOrder : MonoBehaviour
     {
-        public DishRecipe recipe;
+        public RecipeDefinition recipe;
         public CarrySlot tableSlot;
         public Transform customerVisual;
         public OrderPhase Phase { get; private set; }

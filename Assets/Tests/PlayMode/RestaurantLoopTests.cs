@@ -57,10 +57,17 @@ namespace ThrownTogether.Tests
             InputSystem.settings.backgroundBehavior=InputSettings.BackgroundBehavior.IgnoreFocus;
             InputSystem.settings.editorInputBehaviorInPlayMode=InputSettings.EditorInputBehaviorInPlayMode.AllDeviceInputAlwaysGoesToGameView;
             var gamepad=InputSystem.AddDevice<Gamepad>();
+            var unassigned=InputSystem.AddDevice<Gamepad>();
             var input=chef.GetComponent<ChefInput>(); input.BindDevices(gamepad); input.enabled=true;
             try
             {
                 var before=chef.transform.position;
+                Assert.That(Object.FindObjectsByType<ChefController>().Count(x=>x.gameObject.scene==testScene),Is.EqualTo(1));
+                Assert.That(input.AcceptsDevice(gamepad),Is.True); Assert.That(input.AcceptsDevice(unassigned),Is.False);
+                InputSystem.QueueStateEvent(unassigned,new GamepadState { leftStick=Vector2.right }.WithButton(GamepadButton.South));
+                InputSystem.Update(); input.Tick(1f/60);
+                Assert.That(chef.transform.position.x,Is.EqualTo(before.x).Within(.001f));
+                Assert.That(chef.Hands.Item,Is.Null);
                 // Drive input and gameplay together, independent of Editor frame scheduling.
                 for(int frame=0;frame<15;frame++)
                 {
@@ -74,10 +81,12 @@ namespace ThrownTogether.Tests
                 InputSystem.Update(); input.Tick(1f/60);
                 Assert.That(chef.Hands.Item,Is.Not.Null);
                 Assert.That(chef.Hands.Item.Payload.state,Is.EqualTo(FoodState.Raw));
+                Assert.That(input.LastActiveDevice,Is.SameAs(gamepad));
             }
             finally
             {
                 input.enabled=false; InputSystem.RemoveDevice(gamepad);
+                InputSystem.RemoveDevice(unassigned);
                 InputSystem.settings.backgroundBehavior=background;
                 InputSystem.settings.editorInputBehaviorInPlayMode=editorInput;
             }
@@ -122,6 +131,43 @@ namespace ThrownTogether.Tests
             Assert.That(service.order.tableSlot.Item,Is.Not.Null);
             Assert.That(service.order.recipe.Matches(service.order.tableSlot.Item.Payload),Is.True);
             Assert.That(service.order.CanAccept(service.order.tableSlot.Item.Payload),Is.False);
+        }
+        [UnityTest]
+        public IEnumerator InvalidSequenceNeverReservesOrCompletesOrder()
+        {
+            var service=Find<ServiceStation>("PICKUP");
+            Use(Find<SourceStation>("POTATOES"));
+            Approach(Find<ProcessingStation>("FRYER")); Assert.That(chef.Use(),Is.False);
+            Approach(service); Assert.That(chef.Use(),Is.False);
+            Use(Find<CounterStation>("SPARE")); Use(Find<SourceStation>("PLATES"));
+            Approach(service); Assert.That(chef.Use(),Is.False,"Empty plate is not an order");
+            yield return null;
+            Assert.That(service.order.Phase,Is.EqualTo(OrderPhase.Waiting));
+            Assert.That(service.order.tableSlot.Item,Is.Null);
+        }
+        [UnityTest]
+        public IEnumerator RestartRestoresInitialSinglePlayerSlice()
+        {
+            var spawn=chef.transform.position;
+            Use(Find<SourceStation>("POTATOES")); Use(Find<ProcessingStation>("PREP"));
+            Assert.That(Find<ProcessingStation>("PREP").Busy,Is.True);
+            chef.GetComponent<ChefInput>().RestartSlice();
+            yield return null;
+            testScene=SceneManager.GetActiveScene();
+            // Single-mode restart replaces the test host as well as the restaurant.
+            if(!original.IsValid() || !original.isLoaded) original=SceneManager.CreateScene("Restart test host");
+            chef=Object.FindObjectsByType<ChefController>().Single(x=>x.gameObject.scene==testScene);
+            chef.GetComponent<ChefInput>().enabled=false;
+            Assert.That(Vector3.Distance(chef.transform.position,spawn),Is.LessThan(.1f));
+            Assert.That(chef.Hands.Item,Is.Null);
+            Assert.That(Find<ServiceStation>("PICKUP").order.Phase,Is.EqualTo(OrderPhase.Waiting));
+            Assert.That(Find<ServiceStation>("PICKUP").order.tableSlot.Item,Is.Null);
+            foreach(var station in Interactable.Active.OfType<CounterStation>().Where(x=>x.gameObject.scene==testScene)) Assert.That(station.slot.Item,Is.Null);
+            foreach(var station in Interactable.Active.OfType<ProcessingStation>().Where(x=>x.gameObject.scene==testScene)) Assert.That(station.Busy,Is.False);
+#if UNITY_EDITOR || THROWNTOGETHER_DIAGNOSTICS
+            Assert.That(Object.FindObjectsByType<DevelopmentDiagnostics>().Single(x=>x.gameObject.scene==testScene).Expanded,Is.False);
+#endif
+            Use(Find<SourceStation>("POTATOES")); Assert.That(chef.Hands.Item.Payload.state,Is.EqualTo(FoodState.Raw));
         }
     }
 }

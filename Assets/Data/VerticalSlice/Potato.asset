@@ -12,7 +12,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d6c665a2cacd8d0438e1fb55145e62c0, type: 3}
   m_Name: Potato
   m_EditorClassIdentifier: ThrownTogether.Runtime::ThrownTogether.IngredientDefinition
+  id: ingredient.potato
   displayName: Potato
+  description: 'First-service vertical slice: Potato.'
   stateNames:
   - Raw potato
   - Cut potato

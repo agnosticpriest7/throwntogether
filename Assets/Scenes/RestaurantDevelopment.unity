@@ -487,6 +487,7 @@ MonoBehaviour:
   stationName: 3  FRYER
   slot: {fileID: 2135689098}
   recipe: {fileID: 11400000, guid: 830e48340fe60a04d9bd300c2a09cacf, type: 2}
+  appliance: {fileID: 11400000, guid: 475fbb7cc10ea324e9f5933c09cc6953, type: 2}
 --- !u!4 &392225065
 Transform:
   m_ObjectHideFlags: 0
@@ -1612,6 +1613,7 @@ MonoBehaviour:
   stationName: 2  PREP
   slot: {fileID: 965603868}
   recipe: {fileID: 11400000, guid: 053676bb01529b14cad60da95b8c76cc, type: 2}
+  appliance: {fileID: 11400000, guid: e44dec7cace5afa4aa3fa018441f5a5b, type: 2}
 --- !u!4 &1010364283
 Transform:
   m_ObjectHideFlags: 0

@@ -12,6 +12,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 96a4d0bc108f9c348a46a175fb7d9bc5, type: 3}
   m_Name: FryPotato
   m_EditorClassIdentifier: ThrownTogether.Runtime::ThrownTogether.ProcessingRecipe
+  id: process.fry-potato
+  displayName: Fry potato
+  description: 'First-service vertical slice: Fry potato.'
   ingredient: {fileID: 11400000, guid: b6c37beafb6da634496b787d071ca4ac, type: 2}
   input: 1
   output: 2

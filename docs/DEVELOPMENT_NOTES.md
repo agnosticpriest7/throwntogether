@@ -48,3 +48,15 @@ Final committed-snapshot validation passed EditMode 3/3 and PlayMode 4/4, then b
 10. Does the complete potato-to-fries loop feel satisfying?
 
 Also try raw potato at the fryer, unplated fries at service, interacting while hands are full, and restarting after completion. Record actual platform, input and findings in PLAYTEST_FEEDBACK.md. The public URL is https://agnosticpriest7.github.io/throwntogether/.
+
+## Safe foundation follow-up
+
+The data and diagnostics foundations preserve the first-service gameplay. See TECHNICAL_ARCHITECTURE.md for the six definition families, compatibility migration and proposed optional Player 2 coordinator. No second chef, new live recipe, progression system or Vertical Slice #2 was added.
+
+Diagnostics: the detailed overlay starts OFF. Toggle with F3 or click the tiny DEV/version strip at the bottom right. The strip shows the deployed commit and detected gamepad count; the expanded panel includes commit/time, active input device, gamepad names/IDs, target, held item/state and FPS. Gameplay mappings remain WASD/arrows/left stick, E/Space/A and R/Start. Diagnostics are compiled out when -developmentDiagnostics is omitted from the direct build invocation.
+
+Additional physical playtest checks: confirm Xbox Edge shows the expected commit; press a controller button if no pad is initially detected; confirm the gamepad count and last-active-device display; disconnect/reconnect the controller and verify keyboard fallback where available; run the existing ten-question checklist above. Neither physical controller, couch readability, Xbox Edge nor second-player behavior is implied by automated tests. No subjective feel changes were made.
+
+Regression additions cover data compatibility and exact times, plating by food state, wrong ingredients, invalid service, restart, and one chef with an assigned gamepad ignoring an unassigned gamepad. The existing full loop remains the acceptance test. Employee capabilities, campaign balance, upgrade effects and future join/restart policies remain deferred design questions, not implemented features.
+
+Live foundation verification: EditMode 8/8 and PlayMode 6/6 passed. Unity MCP exercised the existing timed loop through customer completion with exactly one chef and diagnostics initially closed. Console errors: zero. The committed-snapshot pipeline reruns both suites before publication.

@@ -93,3 +93,9 @@ Commission a human visual slice before full replacement, then production charact
 - QA
 - store assets
 - release pipeline
+
+## Current checkpoint — after Vertical Slice #1
+
+First-service gameplay is complete. The follow-up is limited to reusable data definitions, development diagnostics/build provenance, regression coverage and documented optional local-input pairing. Employee/advertising/upgrade definitions are inert schemas; their systems and balance remain in the future phases above.
+
+Next human gate: physical Xbox/controller/TV playtest using docs/DEVELOPMENT_NOTES.md, including build ID and controller connection checks. Player 2 activation and its join/disconnect/restart UX follow that feedback and explicit authorization. No Vertical Slice #2, restaurant redesign or subjective feel adjustment is authorized by this checkpoint. Stop autonomous development after this foundation verification/deployment.

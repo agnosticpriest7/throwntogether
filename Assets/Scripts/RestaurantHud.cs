@@ -8,6 +8,12 @@ namespace ThrownTogether
         public CustomerOrder order;
         public Camera gameplayCamera;
         private GUIStyle label, small, title;
+        private void Awake()
+        {
+#if UNITY_EDITOR || THROWNTOGETHER_DIAGNOSTICS
+            gameObject.AddComponent<DevelopmentDiagnostics>();
+#endif
+        }
         private void OnGUI()
         {
             if (chef == null || order == null) return;

@@ -5,6 +5,7 @@ namespace ThrownTogether
     public sealed class ProcessingStation : CounterStation
     {
         public ProcessingRecipe recipe;
+        public ApplianceDefinition appliance;
         private float elapsed;
         public bool Busy { get; private set; }
         public override float Progress => Busy ? Mathf.Clamp01(elapsed/recipe.duration) : -1;
@@ -21,7 +22,7 @@ namespace ThrownTogether
             if (Busy) return false;
             if (slot.Item == null && chef.Hands.Item != null)
             {
-                if (!recipe.Accepts(chef.Hands.Item.Payload)) return false;
+                if ((appliance != null && !appliance.Supports(recipe)) || !recipe.Accepts(chef.Hands.Item.Payload)) return false;
                 if (!slot.TryTake(chef.Hands.Item)) return false;
                 elapsed=0; Busy=true; return true;
             }

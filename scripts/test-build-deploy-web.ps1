@@ -98,7 +98,7 @@ try {
     if ($Mode -eq 'Test') { return }
     $output = Join-Path $builds 'Web'
     Remove-OwnedDirectory $output $builds
-    Run-Unity 'Web' @('-quit','-buildTarget','WebGL','-executeMethod','ThrownTogether.Editor.BuildAutomation.BuildWeb','-buildOutput',$output)
+    Run-Unity 'Web' @('-quit','-buildTarget','WebGL','-executeMethod','ThrownTogether.Editor.BuildAutomation.BuildWeb','-buildOutput',$output,'-developmentDiagnostics','-buildCommit',$sha)
     if (!(Test-Path "$output/index.html") -or !(Get-ChildItem "$output/Build" -Filter '*.wasm') -or !(Get-ChildItem "$output/Build" -Filter '*.data')) { throw 'Incomplete Web output.' }
     if (Get-ChildItem $output -Recurse -File | Where-Object Extension -In '.gz','.br','.unityweb') { throw 'Unexpected compressed output.' }
     if (Get-ChildItem $output -Recurse -File | Where-Object Length -GE 100MB) { throw 'Output exceeds GitHub single-file limit.' }

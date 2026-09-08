@@ -12,6 +12,7 @@ namespace ThrownTogether.Editor
     {
         [Serializable]
         private sealed class Configuration { public string[] scenes; }
+        [Serializable] private sealed class BuildStamp { public string commit; public string builtAtUtc; }
 
         // Invoke with -batchmode -quit -buildTarget WebGL (or Win64) -executeMethod ...
         public static void BuildWeb() => Build(BuildTarget.WebGL, "Builds/Web");
@@ -34,6 +35,18 @@ namespace ThrownTogether.Editor
                         throw new BuildFailedException("Invalid configured scene: " + scene);
 
                 var args = Environment.GetCommandLineArgs();
+                bool diagnostics=args.Contains("-developmentDiagnostics");
+                string commit="unversioned";
+                int commitIndex=Array.IndexOf(args,"-buildCommit");
+                if(commitIndex>=0 && commitIndex+1<args.Length) commit=args[commitIndex+1];
+                if(diagnostics)
+                {
+                    Directory.CreateDirectory("Assets/Resources");
+                    File.WriteAllText("Assets/Resources/DevelopmentBuildStamp.json",JsonUtility.ToJson(new BuildStamp { commit=commit, builtAtUtc=DateTime.UtcNow.ToString("o") }));
+                    AssetDatabase.Refresh();
+                }
+                else if(AssetDatabase.LoadAssetAtPath<TextAsset>("Assets/Resources/DevelopmentBuildStamp.json") != null)
+                    AssetDatabase.DeleteAsset("Assets/Resources/DevelopmentBuildStamp.json");
                 var output = defaultOutput;
                 for (var i = 0; i < args.Length; i++)
                     if (args[i] == "-buildOutput")
@@ -56,7 +69,8 @@ namespace ThrownTogether.Editor
                     scenes = config.scenes,
                     locationPathName = output,
                     target = target,
-                    options = BuildOptions.StrictMode
+                    options = BuildOptions.StrictMode,
+                    extraScriptingDefines = diagnostics ? new[] { "THROWNTOGETHER_DIAGNOSTICS" } : new string[0]
                 });
                 if (report.summary.result != BuildResult.Succeeded || report.summary.totalErrors != 0)
                     throw new BuildFailedException($"Build failed: {report.summary.result}, {report.summary.totalErrors} errors.");

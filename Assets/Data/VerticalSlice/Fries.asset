@@ -12,6 +12,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: cacc153c4bd5a834eae8c4576d3c1e5a, type: 3}
   m_Name: Fries
   m_EditorClassIdentifier: ThrownTogether.Runtime::ThrownTogether.DishRecipe
+  id: recipe.fries
   displayName: Fries
+  description: 'First-service vertical slice: Fries.'
   ingredient: {fileID: 11400000, guid: b6c37beafb6da634496b787d071ca4ac, type: 2}
   requiredState: 2
+  steps:
+  - {fileID: 11400000, guid: 053676bb01529b14cad60da95b8c76cc, type: 2}
+  - {fileID: 11400000, guid: 830e48340fe60a04d9bd300c2a09cacf, type: 2}

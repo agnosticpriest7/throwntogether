@@ -7,6 +7,41 @@ namespace ThrownTogether.Tests
     {
         private T Data<T>(string name) where T:UnityEngine.Object => AssetDatabase.LoadAssetAtPath<T>("Assets/Data/VerticalSlice/"+name+".asset");
         [Test]
+        public void CatalogMigrationPreservesRecipeAndApplianceCompatibility()
+        {
+            var fries=Data<RecipeDefinition>("Fries"); var prep=Data<ProcessingRecipe>("PrepPotato"); var fry=Data<ProcessingRecipe>("FryPotato");
+            Assert.That(fries.id,Is.EqualTo("recipe.fries"));
+            Assert.That(fries.displayName,Is.EqualTo("Fries"));
+            Assert.That(fries.steps,Is.EqualTo(new[] { prep,fry }));
+            Assert.That(Data<ApplianceDefinition>("Fryer").Supports(fry),Is.True);
+            Assert.That(Data<ApplianceDefinition>("Fryer").Supports(prep),Is.False);
+            Assert.That(Data<ApplianceDefinition>("PrepStation").Supports(prep),Is.True);
+            Assert.That(prep.duration,Is.EqualTo(1.5f)); Assert.That(fry.duration,Is.EqualTo(5f));
+        }
+        [TestCase(FoodState.Raw,false)]
+        [TestCase(FoodState.Cut,false)]
+        [TestCase(FoodState.Cooked,true)]
+        public void PlatingAndOrderRequireCookedPotato(FoodState state,bool accepted)
+        {
+            var food=ItemPayload.Food(Data<IngredientDefinition>("Potato")); food.state=state;
+            Assert.That(ItemPayload.CanPlate(ItemPayload.Plate(),food),Is.EqualTo(accepted));
+            food.isPlate=true;
+            Assert.That(Data<RecipeDefinition>("Fries").Matches(food),Is.EqualTo(accepted));
+        }
+        [Test]
+        public void RecipeRejectsAnotherIngredientAndMissingDefinition()
+        {
+            var other=UnityEngine.ScriptableObject.CreateInstance<IngredientDefinition>();
+            var empty=UnityEngine.ScriptableObject.CreateInstance<RecipeDefinition>();
+            try
+            {
+                var item=ItemPayload.Food(other); item.state=FoodState.Cooked; item.isPlate=true;
+                Assert.That(Data<RecipeDefinition>("Fries").Matches(item),Is.False);
+                Assert.That(empty.Matches(ItemPayload.Plate()),Is.False);
+            }
+            finally { UnityEngine.Object.DestroyImmediate(other); UnityEngine.Object.DestroyImmediate(empty); }
+        }
+        [Test]
         public void AuthoredPotatoProgressionUsesTwoDistinctTimedRecipes()
         {
             var potato=Data<IngredientDefinition>("Potato"); var prep=Data<ProcessingRecipe>("PrepPotato"); var fryer=Data<ProcessingRecipe>("FryPotato");
