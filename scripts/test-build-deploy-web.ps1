@@ -25,7 +25,13 @@ function Remove-OwnedDirectory([string]$Path, [string]$Parent) {
     if (!$full.StartsWith($prefix, [StringComparison]::OrdinalIgnoreCase)) { throw "Unsafe cleanup path: $full" }
     if (Test-Path -LiteralPath $full) {
         if ((Get-Item -LiteralPath $full).Attributes -band [IO.FileAttributes]::ReparsePoint) { throw 'Refusing linked directory.' }
-        Remove-Item -LiteralPath $full -Recurse -Force
+        for ($attempt = 0; $attempt -lt 15; $attempt++) {
+            try { Remove-Item -LiteralPath $full -Recurse -Force; break }
+            catch [IO.IOException] {
+                if ($attempt -eq 14) { throw }
+                Start-Sleep -Seconds 1
+            }
+        }
     }
 }
 if ((Git @('rev-parse','--show-toplevel')).Replace('\','/') -ne $root.Replace('\','/')) { throw 'Wrong repository root.' }
@@ -89,6 +95,7 @@ try {
             $remaining = Get-CimInstance Win32_Process -Filter "ProcessId=$($child.ProcessId)"
             if ($remaining -and $remaining.CreationDate -eq $child.CreationDate) {
                 Stop-Process -Id $child.ProcessId -Force -ErrorAction SilentlyContinue
+                Wait-Process -Id $child.ProcessId -Timeout 15 -ErrorAction SilentlyContinue
             }
         }
         if ($process.ExitCode -ne 0) { throw "Unity $Name exited $($process.ExitCode); see $log" }
