@@ -80,7 +80,7 @@ namespace ThrownTogether
                     "\nConnected gamepads: "+(pads.Length==0 ? "None detected (press a controller button in Web)" : pads)+
                     "\nAssignment: "+(input != null && input.HasExplicitDeviceAssignment ? "Explicit device set" : "Player 1 solo fallback; all mapped pads eligible")+
                     "\nBrowser API: "+browserPads+
-                    "\nInput focus: "+(WebInputFocus.HasFocus ? "YES" : "NO — click game / press A with page active")+
+                    "\nInput focus: "+(WebInputFocus.HasFocus ? "YES" : "NO — click game with the browsing pointer")+
                     "\nController event: "+ControllerEvent+
                     "\nTarget: "+(chef != null && chef.Focus != null ? chef.Focus.stationName : "None")+
                     "\nHeld: "+(item==null ? "Nothing" : item.Label)+" | State: "+(item==null ? "—" : item.EmptyPlate ? "Empty plate" : item.state.ToString())+
