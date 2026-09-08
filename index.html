@@ -34,7 +34,7 @@
     const loading=document.getElementById("loading");
     const shell=ThrownTogetherWeb.attach(window,document);
     const config={
-      dataUrl:"Build/e9c3268d7a98f1464702d7462b2bd1cd.data",
+      dataUrl:"Build/e6fad11919a2d3d49195fcfe877b07d1.data",
       frameworkUrl:"Build/f064632c541e6756a98f12a9a267c5b2.framework.js",
       codeUrl:"Build/aebb2847088081f0fe970760e3eeb696.wasm",
       streamingAssetsUrl:"StreamingAssets",
@@ -42,6 +42,7 @@
       productName:"ThrownTogetherUnity",
       productVersion:"0.1.0",
       matchWebGLToCanvasSize:true,
+      autoSyncPersistentDataPath:true,
       showBanner:(message,type)=>{ if(type==="error") { loading.style.display="grid"; loading.textContent=message; } else console.warn(message); }
     };
     const loader=document.createElement("script");
