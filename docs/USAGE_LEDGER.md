@@ -17,3 +17,6 @@ One-chef potato-to-fries service loop, data assets, authored greybox, tests and 
 
 ### 2026-09-08 — safe post-slice foundations
 Data definition compatibility, opt-in diagnostic panel/build stamp, regression coverage and single-player input isolation; no new milestone. Actual account-wide usage and project cost are unavailable. No usage values or savings are estimated.
+
+### 2026-09-08 — Web / Xbox Edge readiness audit
+Focused Web shell/input diagnostics and synthetic regression checks; no gameplay milestone or physical-controller claim. Account-wide usage and project cost remain unavailable; no estimated usage numbers recorded.

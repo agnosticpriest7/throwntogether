@@ -39,6 +39,8 @@ if ((Git @('rev-parse','--show-toplevel')).Replace('\','/') -ne $root.Replace('\
 if ((Git @('branch','--show-current')) -ne 'main') { throw 'Run from main.' }
 if ((Git @('remote','get-url','origin')) -notmatch '^https://github\.com/agnosticpriest7/throwntogether(?:\.git)?$') { throw 'Unexpected origin.' }
 Assert-Clean
+& node --test (Join-Path $root 'scripts/web-shell.test.cjs')
+if ($LASTEXITCODE -ne 0) { throw 'Browser shell regression tests failed.' }
 $sha = Git @('rev-parse','HEAD')
 if ($Mode -eq 'Deploy') {
     Git @('fetch','origin') | Out-Host

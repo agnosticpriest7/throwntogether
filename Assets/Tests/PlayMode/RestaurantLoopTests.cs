@@ -109,6 +109,58 @@ namespace ThrownTogether.Tests
             chef.FindFocus(); Assert.That(chef.Focus,Is.Null);
         }
         [UnityTest]
+        public IEnumerator FocusBlocksInputAndHeldButtonsRequireReleaseAfterRegain()
+        {
+            var background=InputSystem.settings.backgroundBehavior;
+            var editorInput=InputSystem.settings.editorInputBehaviorInPlayMode;
+            InputSystem.settings.backgroundBehavior=InputSettings.BackgroundBehavior.IgnoreFocus;
+            InputSystem.settings.editorInputBehaviorInPlayMode=InputSettings.EditorInputBehaviorInPlayMode.AllDeviceInputAlwaysGoesToGameView;
+            var pad=InputSystem.AddDevice<Gamepad>();
+            var input=chef.GetComponent<ChefInput>(); input.BindDevices(pad); input.enabled=true;
+            try
+            {
+                Approach(Find<SourceStation>("POTATOES")); var before=chef.transform.position;
+                input.SetInputFocus(false);
+                InputSystem.QueueStateEvent(pad,new GamepadState {leftStick=Vector2.right}.WithButton(GamepadButton.South));
+                InputSystem.Update(); input.Tick(1f/60);
+                Assert.That(chef.transform.position,Is.EqualTo(before)); Assert.That(chef.Hands.Item,Is.Null);
+                input.SetInputFocus(true);
+                InputSystem.QueueStateEvent(pad,new GamepadState().WithButton(GamepadButton.South)); InputSystem.Update(); input.Tick(1f/60);
+                Assert.That(chef.Hands.Item,Is.Null,"Focus gesture must not also pick up an item");
+                InputSystem.QueueStateEvent(pad,new GamepadState()); InputSystem.Update(); input.Tick(1f/60);
+                InputSystem.QueueStateEvent(pad,new GamepadState().WithButton(GamepadButton.South)); InputSystem.Update(); input.Tick(1f/60);
+                Assert.That(chef.Hands.Item,Is.Not.Null);
+                Assert.That(input.LastActiveDevice,Is.SameAs(pad));
+            }
+            finally
+            {
+                input.enabled=false; InputSystem.RemoveDevice(pad);
+                InputSystem.settings.backgroundBehavior=background; InputSystem.settings.editorInputBehaviorInPlayMode=editorInput;
+            }
+            yield return null;
+        }
+        [UnityTest]
+        public IEnumerator SoloFallbackRecognizesNewControllerAfterRemoval()
+        {
+            var input=chef.GetComponent<ChefInput>(); input.BindDevices((InputDevice[])null);
+            var first=InputSystem.AddDevice<Gamepad>();
+            Assert.That(input.AcceptsDevice(first),Is.True);
+            InputSystem.RemoveDevice(first);
+            Assert.That(input.AcceptsDevice(first),Is.False);
+            var replacement=InputSystem.AddDevice<Gamepad>();
+            try
+            {
+                Assert.That(input.AcceptsDevice(replacement),Is.True);
+                Assert.That(input.HasExplicitDeviceAssignment,Is.False);
+#if UNITY_EDITOR || THROWNTOGETHER_DIAGNOSTICS
+                var diagnostics=Object.FindObjectsByType<DevelopmentDiagnostics>().Single(x=>x.gameObject.scene==testScene);
+                Assert.That(diagnostics.ControllerEvent,Does.Contain("Added"));
+#endif
+            }
+            finally { InputSystem.RemoveDevice(replacement); }
+            yield return null;
+        }
+        [UnityTest]
         public IEnumerator FullLoopRejectsInvalidInputsThenDeliversPlatedFries()
         {
             var source=Find<SourceStation>("POTATOES"); var prep=Find<ProcessingStation>("PREP"); var fryer=Find<ProcessingStation>("FRYER");

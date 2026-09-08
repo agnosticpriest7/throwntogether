@@ -60,3 +60,28 @@ Additional physical playtest checks: confirm Xbox Edge shows the expected commit
 Regression additions cover data compatibility and exact times, plating by food state, wrong ingredients, invalid service, restart, and one chef with an assigned gamepad ignoring an unassigned gamepad. The existing full loop remains the acceptance test. Employee capabilities, campaign balance, upgrade effects and future join/restart policies remain deferred design questions, not implemented features.
 
 Live foundation verification: EditMode 8/8 and PlayMode 6/6 passed. Unity MCP exercised the existing timed loop through customer completion with exactly one chef and diagnostics initially closed. Console errors: zero. The committed-snapshot pipeline reruns both suites before publication.
+
+## Web / Xbox Edge readiness audit
+
+Input System 1.20.0 is active (new input backend). Its installed WebGLSupport maps browser devices with mapping="standard" to Gamepad; non-standard devices become Joystick and are not bound to chef controls. The existing left-stick/buttonSouth bindings support the standard Xbox layout. Player 1 currently accepts all mapped pads through the documented solo fallback, not exclusive pairing. No remapping or second player was added. Browser detection can require activating the page and pressing a controller button; a missing pad before interaction is not proof of a hardware failure.
+
+The existing F3/DEV panel now distinguishes browser Gamepad API names/mapping from Unity gamepads, labels each mapped pad's Player 1 eligibility, reports last active device, live canvas/document focus, and last Unity controller connection event. Solo fallback naturally accepts a newly discovered device after reconnection; explicit future device pairing still needs its own reconnect policy. The API can be unavailable/blocked and reports that state without throwing.
+
+Development builds use Assets/WebGLTemplates/Development: a focusable canvas, focused-canvas arrow/Space scroll suppression, focus prompt/button and optional Fullscreen button. A standard pad's A rising edge can focus the canvas only while the page is already active; it cannot activate an inactive browser tab. Web input is disabled without visible-document/canvas focus; held interaction/restart buttons must be released after focus regain. Browser shortcuts, Tab and Escape remain available. No gameplay mapping, movement parameter or processing time was changed.
+
+Resize/fullscreen retain the original 960:600 (16:10) render aspect through letterboxing, including portrait/ultrawide windows. The camera itself is untouched. Unity matches render-target size to canvas CSS size and native devicePixelRatio, preserving high-DPI scaling. The shell does not disable browser zoom. Fullscreen is a user-initiated browser request; unsupported/denied requests show a message rather than failing the game. Omitting -developmentDiagnostics selects Unity's ordinary release template and removes diagnostic UI/helpers.
+
+Hosting remains relative-path HTTPS GitHub Pages with uncompressed hashed data/wasm, no worker threads or cross-origin isolation requirement, and no Unity data cache. The existing URP upscaling warning is parked; new runtime errors are not accepted. Node browser-shell tests run before Unity tests in the pipeline (Node.js 20+ required). Automated tests cover aspect geometry, focus predicates, scroll keys, standard A focus eligibility, Unity focus/input suppression, release-after-focus, and simulated controller removal/replacement. These are synthetic tests, not physical Xbox or Edge certification.
+
+### Short physical Xbox / Edge checklist
+1. Refresh and confirm the DEV build ID; focus the page, press A, and open F3/DEV. Record browser controller name/mapping, Unity detection and P1: yes.
+2. Complete potato → prep → fryer → plate → customer with left stick/A. Verify arrows/Space do not scroll if testing keyboard fallback.
+3. Leave/return to the tab; focus the game, release held buttons and resume. Check Focus: YES and no stuck movement or accidental action.
+4. Disconnect/reconnect the controller, press a button, and confirm detection/P1 eligibility and a connection event before resuming.
+5. Enter/exit fullscreen, resize/zoom Edge and check the whole room, DEV panel and controls remain visible on the TV. Record console errors and actual Xbox/Edge/controller versions.
+
+Physical controller, Xbox Edge, TV scaling and platform-specific fullscreen permissions remain unverified until that checklist is performed.
+
+References: https://developer.mozilla.org/en-US/docs/Web/API/Gamepad_API/Using_the_Gamepad_API and installed InputSystem/Runtime/Plugins/WebGL/WebGLSupport.cs. Browser API detection and Unity mapping are intentionally reported separately.
+
+Live audit verification: 8 PlayMode tests passed, including synthetic focus/reconnect checks. Unity MCP completed the original timed cooking/delivery loop; Console errors remained zero. The deployment pipeline runs browser-shell tests plus all EditMode/PlayMode tests on committed source before Web publication.

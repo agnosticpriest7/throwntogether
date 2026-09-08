@@ -62,7 +62,7 @@ namespace ThrownTogether.Editor
                     PlayerSettings.WebGL.threadsSupport = false;
                     PlayerSettings.WebGL.dataCaching = false;
                     PlayerSettings.WebGL.nameFilesAsHashes = true;
-                    PlayerSettings.WebGL.template = "APPLICATION:Default";
+                    PlayerSettings.WebGL.template = diagnostics ? "PROJECT:Development" : "APPLICATION:Default";
                 }
                 var report = BuildPipeline.BuildPlayer(new BuildPlayerOptions
                 {

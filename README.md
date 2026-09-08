@@ -37,7 +37,7 @@ From this repository in PowerShell:
 ./scripts/test-build-deploy-web.ps1 -Mode Test
 ```
 
-Commit source changes first. Deployment also requires main to be pushed and equal to origin/main. Requires 64-bit Windows PowerShell/PowerShell, Git, tar, the licensed Unity version in ProjectVersion.txt with Web Build Support, and authenticated GitHub CLI (`gh`) for Pages settings. Use `-UnityPath` if Unity is installed outside the default Hub directory.
+Commit source changes first. Deployment also requires main to be pushed and equal to origin/main. Requires 64-bit Windows PowerShell/PowerShell, Git, tar, Node.js 20+ (browser-shell tests), the licensed Unity version in ProjectVersion.txt with Web Build Support, and authenticated GitHub CLI (`gh`) for Pages settings. Use `-UnityPath` if Unity is installed outside the default Hub directory.
 
 The script builds a committed snapshot in ignored `Builds/Workspace`, leaving the canonical Editor open and main clean. Logs and test XML are in `Builds/PipelineLogs`; static output is in `Builds/Web`. Both test suites must pass before building. A failed test/build prevents publication. `-Mode Build` deliberately still runs tests. Concurrent runs are blocked; each Unity stage has a configurable 90-minute timeout.
 
