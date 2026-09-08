@@ -34,9 +34,9 @@
     const loading=document.getElementById("loading");
     const shell=ThrownTogetherWeb.attach(window,document);
     const config={
-      dataUrl:"Build/ccbf07f87ce442db46484c934107ac9c.data",
+      dataUrl:"Build/e9c3268d7a98f1464702d7462b2bd1cd.data",
       frameworkUrl:"Build/f064632c541e6756a98f12a9a267c5b2.framework.js",
-      codeUrl:"Build/881197c76d1d5106e889c4bc6af8dba3.wasm",
+      codeUrl:"Build/aebb2847088081f0fe970760e3eeb696.wasm",
       streamingAssetsUrl:"StreamingAssets",
       companyName:"DefaultCompany",
       productName:"ThrownTogetherUnity",
@@ -45,10 +45,10 @@
       showBanner:(message,type)=>{ if(type==="error") { loading.style.display="grid"; loading.textContent=message; } else console.warn(message); }
     };
     const loader=document.createElement("script");
-    loader.src="Build/c8257f66f193baa1d0e1c7d6e245fd11.loader.js";
+    loader.src="Build/0126373d6cb56d28b34c712bfc41ed66.loader.js";
     loader.onerror=()=>{ loading.textContent="Unity loader could not download. Refresh this page to retry."; };
     loader.onload=()=>createUnityInstance(canvas,config,p=>{loading.textContent="Loading Unity… "+Math.round(p*100)+"%";})
-      .then(()=>{ loading.style.display="none"; shell.ready(); })
+      .then(()=>{ canvas.dataset.loaderReadyMs=Math.round(performance.now()); loading.style.display="none"; shell.ready(); })
       .catch(error=>{ loading.style.display="grid"; loading.textContent="Build failed to load: "+error; console.error(error); });
     document.body.appendChild(loader);
   </script>
