@@ -44,6 +44,10 @@ namespace ThrownTogether
             if(GUI.Button(new Rect(800,703,460,17),"DEV "+version+" | Pads: "+Gamepad.all.Count+" | F3 / click diagnostics")) Expanded=!Expanded;
             if(Expanded)
             {
+                var color=GUI.color;
+                GUI.color=new Color(.035f,.055f,.07f,1);
+                GUI.DrawTexture(new Rect(24,105,540,220),Texture2D.whiteTexture);
+                GUI.color=color;
                 GUI.Box(new Rect(24,105,540,220),GUIContent.none);
                 var pads=string.Join(", ",Gamepad.all.Select(p=>p.displayName+" #"+p.deviceId));
                 var item=chef != null && chef.Hands.Item != null ? chef.Hands.Item.Payload : null;
