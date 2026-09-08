@@ -39,6 +39,8 @@ namespace ThrownTogether
         {
             if(text==null) text=new GUIStyle(GUI.skin.label) { fontSize=16, wordWrap=true };
             var matrix=GUI.matrix;
+            var depth=GUI.depth;
+            GUI.depth=-100;
             GUI.matrix=Matrix4x4.TRS(Vector3.zero,Quaternion.identity,new Vector3(Screen.width/1280f,Screen.height/720f,1));
             // Clickable in browser/controller pointer mode without adding a gamepad binding.
             if(GUI.Button(new Rect(800,703,460,17),"DEV "+version+" | Pads: "+Gamepad.all.Count+" | F3 / click diagnostics")) Expanded=!Expanded;
@@ -60,6 +62,7 @@ namespace ThrownTogether
                 GUI.Label(new Rect(34,112,520,210),details,text);
             }
             GUI.matrix=matrix;
+            GUI.depth=depth;
         }
     }
 }
