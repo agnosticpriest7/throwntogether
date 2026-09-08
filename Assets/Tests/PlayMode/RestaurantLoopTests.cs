@@ -61,17 +61,17 @@ namespace ThrownTogether.Tests
             try
             {
                 var before=chef.transform.position;
-                var deadline=Time.realtimeSinceStartup+3;
-                while(chef.transform.position.x<before.x+.2f && Time.realtimeSinceStartup<deadline)
+                // Drive input and gameplay together, independent of Editor frame scheduling.
+                for(int frame=0;frame<15;frame++)
                 {
                     InputSystem.QueueStateEvent(gamepad,new GamepadState { leftStick=Vector2.right*.5f });
-                    yield return null;
+                    InputSystem.Update(); input.Tick(1f/60);
                 }
                 Assert.That(chef.transform.position.x,Is.GreaterThan(before.x+.1f));
-                InputSystem.QueueStateEvent(gamepad,new GamepadState()); yield return null;
+                InputSystem.QueueStateEvent(gamepad,new GamepadState()); InputSystem.Update();
                 Approach(Find<SourceStation>("POTATOES"));
                 InputSystem.QueueStateEvent(gamepad,new GamepadState().WithButton(GamepadButton.South));
-                yield return null; yield return null;
+                InputSystem.Update(); input.Tick(1f/60);
                 Assert.That(chef.Hands.Item,Is.Not.Null);
                 Assert.That(chef.Hands.Item.Payload.state,Is.EqualTo(FoodState.Raw));
             }
@@ -81,6 +81,7 @@ namespace ThrownTogether.Tests
                 InputSystem.settings.backgroundBehavior=background;
                 InputSystem.settings.editorInputBehaviorInPlayMode=editorInput;
             }
+            yield return null;
         }
         [UnityTest]
         public IEnumerator ChefMovesAndStopsWithoutSlidingAndCannotReachRemoteStations()

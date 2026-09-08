@@ -25,9 +25,10 @@ namespace ThrownTogether
         private void OnEnable() => controls.Enable();
         private void OnDisable() => controls.Disable();
         private void OnDestroy() => controls.Dispose();
-        private void Update()
+        private void Update() => Tick(Time.deltaTime);
+        public void Tick(float seconds)
         {
-            chef.Move(move.ReadValue<Vector2>(),Time.deltaTime);
+            chef.Move(move.ReadValue<Vector2>(),seconds);
             if (use.WasPressedThisFrame()) chef.Use();
             if (restart.WasPressedThisFrame())
             {
