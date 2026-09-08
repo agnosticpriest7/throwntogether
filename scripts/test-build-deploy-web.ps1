@@ -64,9 +64,32 @@ try {
         $quoted = $arguments | ForEach-Object { '"' + $_ + '"' }
         Write-Host "Unity $Name running; log: $log"
         $process = Start-Process -FilePath $UnityPath -ArgumentList $quoted -WindowStyle Hidden -PassThru
+        $descendants = @{}
+        $parents = [Collections.Generic.HashSet[int]]::new()
+        [void]$parents.Add($process.Id)
         $deadline = (Get-Date).AddMinutes($TimeoutMinutes)
         while (!$process.WaitForExit(1000)) {
+            # Record this batch process's children before intermediaries exit.
+            # Never stop helpers belonging to the open canonical Editor.
+            $snapshot = @(Get-CimInstance Win32_Process)
+            do {
+                $added = $false
+                foreach ($child in $snapshot) {
+                    if ($parents.Contains([int]$child.ParentProcessId) -and !$parents.Contains([int]$child.ProcessId)) {
+                        [void]$parents.Add([int]$child.ProcessId)
+                        $descendants[[int]$child.ProcessId] = $child
+                        $added = $true
+                    }
+                }
+            } while ($added)
             if ((Get-Date) -gt $deadline) { $process.Kill(); $process.WaitForExit(); throw "Unity $Name timed out; see $log" }
+        }
+        foreach ($child in $descendants.Values) {
+            if ($child.Name -notmatch '^(bee_backend|dotnet|Unity\.ILPP\..*|UnityShaderCompiler)\.exe$') { continue }
+            $remaining = Get-CimInstance Win32_Process -Filter "ProcessId=$($child.ProcessId)"
+            if ($remaining -and $remaining.CreationDate -eq $child.CreationDate) {
+                Stop-Process -Id $child.ProcessId -Force -ErrorAction SilentlyContinue
+            }
         }
         if ($process.ExitCode -ne 0) { throw "Unity $Name exited $($process.ExitCode); see $log" }
     }
