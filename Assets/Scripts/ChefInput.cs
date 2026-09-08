@@ -25,7 +25,13 @@ namespace ThrownTogether
             controls.actionTriggered += context => { if (context.performed) LastActiveDevice=context.control.device; };
         }
         // A future local join flow can restrict each instance to its assigned devices.
-        public void BindDevices(params InputDevice[] devices) { controls.devices=devices; LastActiveDevice=null; }
+        public void BindDevices(params InputDevice[] devices)
+        {
+            // Explicit nullable assignment avoids converting null into an empty ReadOnlyArray.
+            if(devices==null) controls.devices=null;
+            else controls.devices=devices;
+            LastActiveDevice=null;
+        }
         private void OnEnable() => controls.Enable();
         private void OnDisable() => controls.Disable();
         private void OnDestroy() => controls.Dispose();

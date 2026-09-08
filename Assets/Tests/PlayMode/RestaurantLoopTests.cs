@@ -82,6 +82,10 @@ namespace ThrownTogether.Tests
                 Assert.That(chef.Hands.Item,Is.Not.Null);
                 Assert.That(chef.Hands.Item.Payload.state,Is.EqualTo(FoodState.Raw));
                 Assert.That(input.LastActiveDevice,Is.SameAs(gamepad));
+                input.BindDevices(); Assert.That(input.AcceptsDevice(gamepad),Is.False,"Empty assignment disables device input");
+                input.BindDevices((InputDevice[])null);
+                Assert.That(input.AcceptsDevice(gamepad),Is.True,"Null restores single-player fallback");
+                Assert.That(input.AcceptsDevice(unassigned),Is.True);
             }
             finally
             {
