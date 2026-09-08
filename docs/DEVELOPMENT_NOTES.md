@@ -116,3 +116,5 @@ Current retest (supersedes the custom Focus game/Fullscreen instructions above):
 3. Confirm Edge's Menu UI remains accessible; test using Edge's own fullscreen controls only after mode switching works. Report Xbox/Edge versions and whether the menu differs over canvas versus hint bar if it still fails.
 
 No gameplay input binding, controller-to-keyboard translation, camera, timing, layout or gameplay-feel changes. Native Xbox Game Controls is not considered fixed until another physical Xbox test succeeds. Node regressions execute the actual template configuration and check that context/menu keys remain uncancelled, right-click does not refocus, and no custom fullscreen/gamepad-polling API is needed. The existing pipeline runs both Unity test suites before Web publication.
+
+Hosted refresh verification exposed a stale unversioned web-shell.js cache referring to removed buttons. The template now appends the generated DATA_FILENAME hash to the helper URL, keeping each build's HTML and helper in sync. This is a hosting compatibility correction; no browser event or gameplay mapping is synthesized.

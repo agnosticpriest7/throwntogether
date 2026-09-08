@@ -59,6 +59,7 @@ test('actual development template overrides Unity context-menu suppression befor
   const html=fs.readFileSync(require('node:path').join(__dirname,'../Assets/WebGLTemplates/Development/index.html'),'utf8');
   assert.match(html,/Xbox Edge: hold Menu \(≡\) → Use game controls/);
   assert.doesNotMatch(html,/id="(?:fullscreen|focus-game)"/);
+  assert.ok(html.includes('<script src="web-shell.js?build={{{ DATA_FILENAME }}}"></script>'),'Helper cache key must track the built data hash');
   const source=html.match(/<script>\s*([\s\S]*?)<\/script>/)[1]
     .replace(/\{\{\{ JSON.stringify\([^)]+\) \}\}\}/g,'"test"').replace(/\{\{\{[^}]+\}\}\}/g,'test');
   const {doc,win}=page(); let received;
