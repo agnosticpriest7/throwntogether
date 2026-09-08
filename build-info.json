@@ -1,7 +1,7 @@
 {
-  "builtAtUtc": "2026-09-08T08:31:14.1098753Z",
+  "sourceCommit": "8ee1b2d399a1ffff293d7f55e7f6f99da9f4ef25",
   "scenes": [
-    "Assets/Scenes/Bootstrap.unity"
+    "Assets/Scenes/RestaurantDevelopment.unity"
   ],
-  "sourceCommit": "c6c570f2728986fb78e128a6f03f7b8e603dcea9"
+  "builtAtUtc": "2026-09-08T17:57:06.9587626Z"
 }
