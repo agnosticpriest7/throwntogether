@@ -23,3 +23,6 @@ Focused Web shell/input diagnostics and synthetic regression checks; no gameplay
 
 ### 2026-09-08 — final pre-playtest foundations
 Narrow audio/settings/identity foundation with original generated WAVs, regression verification and Web baseline. No subagents or additional milestone. Account-wide usage and project cost are unavailable; no estimates recorded.
+
+### Xbox Edge native controller-mode investigation
+Focused template/loader inspection, browser event regression tests and Web redeployment following Kyle's physical report. No input remapping or new milestone. Account-wide usage and project cost remain unavailable; no estimates recorded.
