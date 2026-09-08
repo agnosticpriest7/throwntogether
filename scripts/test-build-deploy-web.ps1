@@ -116,6 +116,9 @@ try {
     @{build_type='legacy';source=@{branch='gh-pages';path='/'}} | ConvertTo-Json | Set-Content $pagesConfig
     & gh api --method PUT "repos/$repo/pages" --input $pagesConfig | Out-Host
     if ($LASTEXITCODE -ne 0) { throw "Build published. Human action: GitHub Settings > Pages > Deploy from a branch > gh-pages > / (root) > Save. URL: $url" }
+    # The initial switch from Actions to branch publishing may not schedule a build.
+    & gh api --method POST "repos/$repo/pages/builds" | Out-Host
+    if ($LASTEXITCODE -ne 0) { throw "Static files pushed, but Pages build request failed. Check GitHub Pages deployment status before refreshing $url" }
     $after = Git @('ls-remote','origin','refs/heads/legacy/web-prototype','refs/tags/web-prototype-final','refs/tags/web-prototype-final^{}')
     if (($legacy -join "`n") -ne ($after -join "`n")) { throw 'Legacy refs changed during deployment; investigate.' }
     Assert-Clean
