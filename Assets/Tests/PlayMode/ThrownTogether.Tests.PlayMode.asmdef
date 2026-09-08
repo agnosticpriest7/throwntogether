@@ -1,0 +1,6 @@
+{
+  "name": "ThrownTogether.Tests.PlayMode",
+  "rootNamespace": "ThrownTogether.Tests",
+  "references": [],
+  "optionalUnityReferences": ["TestAssemblies"]
+}

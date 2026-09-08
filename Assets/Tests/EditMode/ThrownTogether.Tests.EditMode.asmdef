@@ -1,0 +1,7 @@
+{
+  "name": "ThrownTogether.Tests.EditMode",
+  "rootNamespace": "ThrownTogether.Tests",
+  "references": [],
+  "includePlatforms": ["Editor"],
+  "optionalUnityReferences": ["TestAssemblies"]
+}

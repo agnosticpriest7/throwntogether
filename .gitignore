@@ -1,12 +1,37 @@
-node_modules/
-dist/
-.vite/
-coverage/
-*.log
+# Unity generated state (keep Assets, Packages, ProjectSettings and .meta files).
+/[Ll]ibrary/
+/[Tt]emp/
+/[Oo]bj/
+/[Ll]ogs/
+/[Uu]ser[Ss]ettings/
+/[Bb]uild/
+/[Bb]uilds/
+/[Tt]est[Rr]esults/
+/[Mm]emoryCaptures/
+/[Rr]ecordings/
+/[Aa]rtifacts/
+# Generated IDE files.
+.vs/
+.idea/
+*.csproj
+*.sln
+*.slnx
+*.suo
+*.user
+*.userprefs
+*.pidb
+*.booproj
+*.svd
+*.pdb
+*.mdb
+*.opendb
+*.VC.db
+# Local build packages and OS files.
+*.apk
+*.aab
+*.unitypackage
 .DS_Store
 Thumbs.db
-.idea/
-.vscode/
-*.local
-screenshots/
+sysinfo.txt
+crash-report.txt
 .codex-remote-attachments/
