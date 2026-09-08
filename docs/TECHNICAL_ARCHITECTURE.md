@@ -125,7 +125,11 @@ Major features should compile, pass relevant tests, create no new unexplained Co
 
 ## Local build and Web publication
 
-`Assets/Editor/BuildAutomation.cs` exposes CLI entry points `ThrownTogether.Editor.BuildAutomation.BuildWeb` and `BuildWindows`. Both read the ordered scene list from root `build-config.json`, validate scene assets, use StrictMode and fail on a failed build report or compilation errors. Bootstrap is the only configured scene. Windows shares the implementation but is not part of the Web pipeline's validation.
+`Assets/Editor/BuildAutomation.cs` exposes CLI entry points `ThrownTogether.Editor.BuildAutomation.BuildWeb` and `BuildWindows`. Both read the ordered scene list from root `build-config.json`, validate scene assets, use StrictMode and fail on a failed build report or compilation errors. RestaurantDevelopment is the configured scene for Vertical Slice #1. Windows shares the implementation but is not part of the Web pipeline's validation.
+
+## Vertical Slice #1 foundations
+
+The ThrownTogether.Runtime assembly separates per-chef input/movement, single-item carry slots, interactables, data-driven processing recipes, plating, dish matching and customer orders into reusable components. The development restaurant is an authored scene using shared data/material assets and chef/item prefabs. Processing stations use deterministic elapsed-time transitions (1.5-second prep, 5-second frying); service uses a temporary automatic delivery, not employee AI. Input maps belong to individual chefs and expose device binding for later local joining. Full implementation details, controls and human acceptance checks are in `docs/DEVELOPMENT_NOTES.md`.
 
 For direct CLI use on a closed/disposable project, invoke Unity with `-batchmode -quit -projectPath <project> -buildTarget WebGL -executeMethod ThrownTogether.Editor.BuildAutomation.BuildWeb -logFile <log>`. Default output: Builds/Web; `-buildOutput <path>` overrides it. For Windows use `-buildTarget Win64 -executeMethod ThrownTogether.Editor.BuildAutomation.BuildWindows` (default Builds/Windows/ThrownTogether.exe). Direct invocation applies Web player settings to that checkout; the wrapper isolates these changes.
 

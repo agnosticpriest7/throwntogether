@@ -1,10 +1,10 @@
 # Thrown Together
 
-Development now uses Unity 6. Open this repository as a Unity project with **6000.6.0f1**, then open `Assets/Scenes/Bootstrap.unity`.
+Development now uses Unity 6. Open this repository with **6000.6.0f1**, then open `Assets/Scenes/RestaurantDevelopment.unity` and press Play. Bootstrap remains a separate minimal startup scene.
 
 The canonical local checkout is `C:\Projects\ThrownTogetherUnity\ThrownTogetherUnity`.
 
-Read `AGENTS.md` and the design and technical documents in `docs/` before development. The environment bootstrap includes minimal EditMode and PlayMode smoke tests; gameplay development has not begun.
+Read `AGENTS.md` and the design and technical documents in `docs/` before development. Vertical Slice #1 provides one chef's potato → prep → fryer → plate → customer loop. Move with WASD/arrows/left stick; use stations with E/Space/controller A; restart with R/Start. See `docs/DEVELOPMENT_NOTES.md` for the complete flow, limitations and human playtest checklist.
 
 ## Browser prototype archive
 
@@ -41,7 +41,7 @@ Commit source changes first. Deployment also requires main to be pushed and equa
 
 The script builds a committed snapshot in ignored `Builds/Workspace`, leaving the canonical Editor open and main clean. Logs and test XML are in `Builds/PipelineLogs`; static output is in `Builds/Web`. Both test suites must pass before building. A failed test/build prevents publication. `-Mode Build` deliberately still runs tests. Concurrent runs are blocked; each Unity stage has a configurable 90-minute timeout.
 
-The explicit scene list is `build-config.json`, currently only Bootstrap. It overrides the checked-in Build Settings scene list. No gameplay exists yet, so the published build is an environment smoke check.
+The explicit scene list is `build-config.json`, currently only RestaurantDevelopment. It overrides the checked-in Build Settings scene list. The public build is the tiny first-service gameplay slice.
 
 Deployment uses an isolated repository under ignored `Builds/Publish-*`, with ordinary commits/pushes to **gh-pages** only. No generated files enter main. Retained staging folders/logs can be inspected after failures. Pages is configured automatically using `gh`; if permissions prevent this, select **Settings > Pages > Build and deployment > Source: Deploy from a branch > Branch: gh-pages > / (root) > Save**. No GitHub-hosted Unity compilation or license secret is needed.
 

@@ -1,7 +1,7 @@
 {
   "name": "ThrownTogether.Tests.EditMode",
   "rootNamespace": "ThrownTogether.Tests",
-  "references": [],
+  "references": ["ThrownTogether.Runtime"],
   "includePlatforms": ["Editor"],
   "optionalUnityReferences": ["TestAssemblies"]
 }
