@@ -122,3 +122,27 @@ Major features should compile, pass relevant tests, create no new unexplained Co
 - minimize shared-scene churn
 - avoid unnecessary hard references
 - keep code ownership boundaries understandable
+
+## Local build and Web publication
+
+`Assets/Editor/BuildAutomation.cs` exposes CLI entry points `ThrownTogether.Editor.BuildAutomation.BuildWeb` and `BuildWindows`. Both read the ordered scene list from root `build-config.json`, validate scene assets, use StrictMode and fail on a failed build report or compilation errors. Bootstrap is the only configured scene. Windows shares the implementation but is not part of the Web pipeline's validation.
+
+For direct CLI use on a closed/disposable project, invoke Unity with `-batchmode -quit -projectPath <project> -buildTarget WebGL -executeMethod ThrownTogether.Editor.BuildAutomation.BuildWeb -logFile <log>`. Default output: Builds/Web; `-buildOutput <path>` overrides it. For Windows use `-buildTarget Win64 -executeMethod ThrownTogether.Editor.BuildAutomation.BuildWindows` (default Builds/Windows/ThrownTogether.exe). Direct invocation applies Web player settings to that checkout; the wrapper isolates these changes.
+
+Recommended Windows commands:
+
+```powershell
+./scripts/test-build-deploy-web.ps1 -Mode Test
+./scripts/test-build-deploy-web.ps1 -Mode Build
+./scripts/test-build-deploy-web.ps1
+```
+
+The wrapper requires clean main, snapshots committed Assets/Packages/ProjectSettings/config into ignored Builds/Workspace, retains its Library cache, runs all discovered EditMode then PlayMode tests, checks exit codes and fresh XML (including nonzero test counts), and only then builds. It checks generated index/data/wasm files and rejects compressed or oversized files. Canonical Unity can remain open. Output: Builds/Web; diagnostics: Builds/PipelineLogs. Deployment additionally requires local HEAD to match freshly fetched origin/main, both before and after the build.
+
+Web settings favor static-host compatibility: compression disabled, decompression fallback disabled, native threads disabled (no cross-origin isolation headers needed), data caching disabled, hashed build filenames and Unity's default template with relative asset URLs. These work below `/throwntogether/` without root-relative asset paths. The deploy root contains `.nojekyll` and `build-info.json`. This is a test distribution, not a production optimization pass.
+
+Publishing uses a separate temporary Git repository in Builds/Publish-* and normal fast-forward commits to gh-pages. An existing deployment's files are replaced in the index, without checking out browser or Unity sources there. Concurrent remote deployment updates cause push rejection rather than overwrite. No force push is used. Main, legacy/web-prototype and web-prototype-final are never publication targets.
+
+Pages source: **Deploy from a branch, gh-pages, / (root)**. The script configures this with authenticated `gh api`; if unavailable it reports that exact human action. Public test URL: **https://agnosticpriest7.github.io/throwntogether/**. Publishing is local and explicit, not triggered by every main push. Check `/throwntogether/build-info.json` for deployed provenance. The retired browser Actions workflow remains only in legacy history.
+
+References: [GitHub Pages publishing sources](https://docs.github.com/en/pages/getting-started-with-github-pages/configuring-a-publishing-source-for-your-github-pages-site), [Unity Web deployment and compression](https://docs.unity3d.com/Manual/webgl-deploying.html).

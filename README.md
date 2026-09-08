@@ -14,7 +14,7 @@ The existing Git history is preserved. The final browser prototype, including it
 - Annotated tag: `web-prototype-final`
 - Final browser commit: `540af75152c94420d8a88e20c46b50162b4c9493`
 
-The Unity transition continues directly from that commit on `main`. The browser-specific GitHub Pages workflow is retired from main along with the browser source; it remains available in the archive. No Unity deployment workflow has been added.
+The Unity transition continues directly from that commit on `main`. The browser-specific GitHub Pages workflow is retired from main along with the browser source; it remains available in the archive.
 
 The old local browser checkout at `C:\Projects\ThrownTogether` is preserved. Use the canonical Unity checkout for future main development; do not pull Unity main into the old browser folder if you want to keep its current browser files.
 
@@ -23,3 +23,26 @@ The old local browser checkout at `C:\Projects\ThrownTogether` is preserved. Use
 Track Assets (including `.meta` files), Packages, ProjectSettings and documentation. Unity-generated caches, local settings, logs, test results and build outputs are ignored. Keep Force Text serialization and Visible Meta Files enabled.
 
 Run the two project test assemblies through Unity's Test Runner. See `docs/BOOTSTRAP_REPORT.md` for the bootstrap results and batch test instructions.
+
+## Local Web test builds
+
+From this repository in PowerShell:
+
+```powershell
+# Tests, local Web build, then GitHub Pages deployment (default).
+./scripts/test-build-deploy-web.ps1
+# Tests and local build, without publishing.
+./scripts/test-build-deploy-web.ps1 -Mode Build
+# Both test suites only.
+./scripts/test-build-deploy-web.ps1 -Mode Test
+```
+
+Commit source changes first. Deployment also requires main to be pushed and equal to origin/main. Requires Git, tar, the licensed Unity version in ProjectVersion.txt with Web Build Support, and authenticated GitHub CLI (`gh`) for Pages settings. Use `-UnityPath` if Unity is installed outside the default Hub directory.
+
+The script builds a committed snapshot in ignored `Builds/Workspace`, leaving the canonical Editor open and main clean. Logs and test XML are in `Builds/PipelineLogs`; static output is in `Builds/Web`. Both test suites must pass before building. A failed test/build prevents publication. `-Mode Build` deliberately still runs tests. Concurrent runs are blocked; each Unity stage has a configurable 90-minute timeout.
+
+The explicit scene list is `build-config.json`, currently only Bootstrap. It overrides the checked-in Build Settings scene list. No gameplay exists yet, so the published build is an environment smoke check.
+
+Deployment uses an isolated repository under ignored `Builds/Publish-*`, with ordinary commits/pushes to **gh-pages** only. No generated files enter main. Retained staging folders/logs can be inspected after failures. Pages is configured automatically using `gh`; if permissions prevent this, select **Settings > Pages > Build and deployment > Source: Deploy from a branch > Branch: gh-pages > / (root) > Save**. No GitHub-hosted Unity compilation or license secret is needed.
+
+Public test URL: **https://agnosticpriest7.github.io/throwntogether/**. Allow Pages a few minutes after publication, then refresh. `build-info.json` at that URL identifies the source commit. Xbox Edge/controller testing is a human follow-up, not implied by a successful deployment.
