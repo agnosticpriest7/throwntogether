@@ -35,3 +35,4 @@ Focused polish, local co-op and short restaurant-shift implementation after expl
 
 ### 0.3.0 priorities 1–3
 Owner reported 61% remaining until September 14 and approved these three bounded batches; priority 4 is deferred. Reused existing data, meshes, IMGUI and pipeline; one combined Web candidate planned after Editor verification. No subagents used. Actual token/project cost is unavailable; the reported allowance is not an independently measured account-wide usage value.
+Verification outcome: one pre-build headless-focus test failure was corrected; two successful Web candidates were built, with the second correcting hosted font/contrast findings. No account usage or cost estimate is inferred from these runs. Work stops at approved priorities 1–3.
