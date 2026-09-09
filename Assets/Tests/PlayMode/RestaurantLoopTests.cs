@@ -351,9 +351,8 @@ namespace ThrownTogether.Tests
             Assert.That(counter.slot.Item,Is.Null);
             Use(service); Assert.That(chef.Hands.Item,Is.Null); Assert.That(service.order.Phase,Is.EqualTo(OrderPhase.Delivering));
             yield return new WaitUntil(()=>service.order.Phase==OrderPhase.Complete);
-            Assert.That(service.order.tableSlot.Item,Is.Not.Null);
-            Assert.That(service.order.recipe.Matches(service.order.tableSlot.Item.Payload),Is.True);
-            Assert.That(service.order.CanAccept(service.order.tableSlot.Item.Payload),Is.False);
+            Assert.That(service.order.tableSlot.Item,Is.Null);
+            Assert.That(service.order.dishReturn.Count,Is.EqualTo(1),"Finished meals return one dirty plate");
             var count=Object.FindObjectsByType<SessionSummary>().Single(s=>s.gameObject.scene==testScene).PlayerOne;
             Assert.That(count.prep,Is.EqualTo(1)); Assert.That(count.fry,Is.EqualTo(1));
             Assert.That(count.plates,Is.EqualTo(1)); Assert.That(count.served,Is.EqualTo(1));

@@ -8,11 +8,13 @@ namespace ThrownTogether.Tests
         [TestCase(FoodState.Raw,false)]
         [TestCase(FoodState.Cut,true)]
         [TestCase(FoodState.Cooked,false)]
-        public void TomatoSaladOnlyAcceptsSlicedTomato(FoodState state,bool accepted)
+        public void GardenSaladRequiresBothPreparedIngredients(FoodState state,bool accepted)
         {
             var tomato=Data<IngredientDefinition>("Tomato");var item=ItemPayload.Food(tomato);item.state=state;
             Assert.That(ItemPayload.CanPlate(ItemPayload.Plate(),item),Is.EqualTo(accepted));
-            item.isPlate=true;Assert.That(Data<RecipeDefinition>("TomatoSalad").Matches(item),Is.EqualTo(accepted));
+            item.isPlate=true;Assert.That(Data<RecipeDefinition>("TomatoSalad").Matches(item),Is.False,"Tomato alone is incomplete");
+            item.additions.Add(new IngredientPortion{ingredient=Data<IngredientDefinition>("Lettuce"),state=FoodState.Cut});
+            Assert.That(Data<RecipeDefinition>("TomatoSalad").Matches(item),Is.EqualTo(accepted));
             item.isPlate=false;
             Assert.That(Data<ProcessingRecipe>("FryPotato").Accepts(item),Is.False);
             Assert.That(Data<ProcessingRecipe>("FryMushrooms").Accepts(item),Is.False);
@@ -25,6 +27,20 @@ namespace ThrownTogether.Tests
             Assert.That(item.cubeMesh,Is.Not.Null);
             Assert.That(item.cylinderMesh,Is.Not.Null);
             Assert.That(item.visualShader,Is.Not.Null);
+        }
+        [Test] public void GardenSaladAcceptsEitherAssemblyOrderAndRejectsDuplicatesAndDirtyPlates()
+        {
+            var tomato=Data<IngredientDefinition>("Tomato");var lettuce=Data<IngredientDefinition>("Lettuce");var recipe=Data<RecipeDefinition>("TomatoSalad");
+            foreach(bool reverse in new[]{false,true})
+            {
+                var first=ItemPayload.Food(reverse ? lettuce:tomato);first.state=FoodState.Cut;
+                var second=ItemPayload.Food(reverse ? tomato:lettuce);second.state=FoodState.Cut;
+                var plate=ItemPayload.Plate();Assert.That(ItemPayload.CanPlate(plate,first),Is.True);plate.AddFood(first);
+                Assert.That(recipe.Matches(plate),Is.False);Assert.That(ItemPayload.CanPlate(plate,first),Is.False,"No duplicate ingredient");
+                second.state=FoodState.Raw;Assert.That(ItemPayload.CanPlate(plate,second),Is.False);second.state=FoodState.Cut;
+                Assert.That(ItemPayload.CanPlate(plate,second),Is.True);plate.AddFood(second);Assert.That(recipe.Matches(plate),Is.True);
+                plate.MakeDirty();Assert.That(recipe.Matches(plate),Is.False);Assert.That(ItemPayload.CanPlate(plate,first),Is.False);Assert.That(plate.IngredientCount,Is.Zero);
+            }
         }
         private T Data<T>(string name) where T:UnityEngine.Object => AssetDatabase.LoadAssetAtPath<T>("Assets/Data/VerticalSlice/"+name+".asset");
         [Test]

@@ -76,3 +76,10 @@ The owner-confirmed co-op/food-shape build before this batch is deployment commi
 New builds include a SHA-256 artifact manifest. Publication verifies the files against it and rejects source files, compressed output, missing payloads or changed bytes. Generated manifests and restored snapshots stay under ignored Builds/ or on gh-pages.
 
 Latest variety build: use **Menu > Kitchen, shift length and practice > Kitchen** to switch between First Service, Prep Island and Split Line. Tomato Salad needs chopping and ordinary-counter plating, with no frying; try its guided loop under **Practice one step**. **Co-op setup and controller help** explains joining and recovery. Layout changes reset the current session only after confirmation.
+
+## 0.6.0 kitchen care
+Open **Quick Play** to choose a kitchen. Tutorial, Career, Trials and Endless are visible but greyed out until implemented.
+
+**Cutting/washing:** press Use to begin, then stay still. Moving pauses progress; press Use again to resume. Another chef can take over an abandoned job. Fryers continue unattended. After customers eat, collect dirty plates from the kitchen return rack, wash them at the sink (3 seconds), and pick up the clean plate. The clean-plate source remains unlimited for this development version.
+
+**Garden Salad:** chop tomato and lettuce separately, combine both with one clean plate on an ordinary counter, then pick up and serve. Either ingredient can be added first. Pause > Recipe book has the steps.

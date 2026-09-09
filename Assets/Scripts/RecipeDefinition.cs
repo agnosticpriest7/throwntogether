@@ -8,6 +8,12 @@ namespace ThrownTogether
         public IngredientDefinition ingredient;
         public FoodState requiredState=FoodState.Cooked;
         public ProcessingRecipe[] steps = new ProcessingRecipe[0];
-        public bool Matches(ItemPayload item) => ingredient != null && item != null && item.isPlate && item.ingredient==ingredient && item.state==requiredState;
+        public IngredientPortion[] additionalIngredients=new IngredientPortion[0];
+        public bool Matches(ItemPayload item)
+        {
+            if(ingredient==null || item==null || !item.isPlate || item.dirty || item.IngredientCount!=1+additionalIngredients.Length || !item.Contains(ingredient,requiredState)) return false;
+            foreach(var part in additionalIngredients) if(!item.Contains(part.ingredient,part.state)) return false;
+            return true;
+        }
     }
 }

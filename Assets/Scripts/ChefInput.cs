@@ -59,7 +59,7 @@ namespace ThrownTogether
             LastActiveDevice=null;
         }
         private void OnEnable() { if(InputFocused) controls.Enable(); }
-        private void OnDisable() => controls.Disable();
+        private void OnDisable() { controls.Disable(); chef.CancelWork(); }
 #if UNITY_WEBGL && !UNITY_EDITOR
         private void OnApplicationFocus(bool focused) { if(!focused) SetInputFocus(false); }
         private void OnApplicationPause(bool paused) { if(paused) SetInputFocus(false); }

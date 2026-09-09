@@ -68,6 +68,22 @@ namespace ThrownTogether
             Box(t,"Door seam",new Vector3(0,.54f,-.757f),new Vector3(.025f,.87f,.015f),new Color(.12f,.18f,.18f));
             Box(t,"Left handle",new Vector3(-.13f,.75f,-.79f),new Vector3(.045f,.19f,.045f),steel);
             Box(t,"Right handle",new Vector3(.13f,.75f,-.79f),new Vector3(.045f,.19f,.045f),steel);
+            if(station is WashingStation)
+            {
+                Tint(t,"Worktop",steel);
+                Box(t,"Sink bowl",new Vector3(0,1.23f,0),new Vector3(1.4f,.06f,1),new Color(.12f,.28f,.35f));
+                for(int side=-1;side<=1;side+=2) Box(t,"Sink rim",new Vector3(side*.76f,1.29f,0),new Vector3(.09f,.13f,1.16f),steel);
+                Box(t,"Tap upright",new Vector3(.42f,1.58f,.56f),new Vector3(.09f,.65f,.09f),steel);
+                Box(t,"Tap spout",new Vector3(.42f,1.88f,.32f),new Vector3(.09f,.09f,.53f),steel);
+                return;
+            }
+            if(station is DishReturnStation)
+            {
+                Tint(t,"Cabinet",new Color(.35f,.29f,.24f));
+                for(int side=-1;side<=1;side+=2) Box(t,"Return tray rim",new Vector3(side*.7f,1.35f,0),new Vector3(.07f,.25f,1.1f),steel);
+                Box(t,"Return tray back",new Vector3(0,1.35f,.55f),new Vector3(1.45f,.25f,.07f),steel);
+                return;
+            }
             if(station is SourceStation source)
             {
                 if(source.plates)
@@ -138,7 +154,7 @@ namespace ThrownTogether
             {
                 m.one.SetActive(hud.chef!=null && hud.chef.Focus==m.station);
                 m.two.SetActive(hud.coop!=null && hud.coop.PlayerTwo!=null && hud.coop.PlayerTwo.Focus==m.station);
-                m.ready.SetActive(m.station is ProcessingStation p && !p.Busy && p.slot.Item!=null);
+                m.ready.SetActive(m.station is ProcessingStation p && !p.Busy && p.slot.Item!=null || m.station is WashingStation w && !w.Busy && w.slot.Item!=null);
             }
         }
         private void OnDestroy() { if(material!=null) Destroy(material); }

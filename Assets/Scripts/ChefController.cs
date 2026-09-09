@@ -10,6 +10,8 @@ namespace ThrownTogether
         public float reach=2.0f;
         public Interactable Focus { get; private set; }
         public string Feedback { get; private set; }
+        public int WorkRevision { get; private set; }
+        public void CancelWork() => WorkRevision++;
         private float feedbackUntil;
         private CharacterController motor;
         public event System.Action<Interactable,bool,bool> InteractionSucceeded;
@@ -18,7 +20,7 @@ namespace ThrownTogether
         {
             Vector3 direction=new Vector3(input.x,0,input.y);
             direction=Vector3.ClampMagnitude(direction,1);
-            if (direction.sqrMagnitude>.002f) transform.rotation=Quaternion.LookRotation(direction);
+            if (direction.sqrMagnitude>.002f) { CancelWork(); transform.rotation=Quaternion.LookRotation(direction); }
             motor.Move((direction*speed+Vector3.down*3)*seconds);
         }
         public void FindFocus()

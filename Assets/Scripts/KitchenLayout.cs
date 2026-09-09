@@ -26,7 +26,7 @@ namespace ThrownTogether
         {
             if(!Apply(SessionOptions.Kitchen)) { SessionOptions.Kitchen=0; Apply(0); }
             var hud=GetComponent<RestaurantHud>();
-            if(hud!=null && hud.shift==null && SessionOptions.Training=="Tomato salad") hud.order.recipe=tomatoSalad;
+            if(hud!=null && hud.shift==null && SessionOptions.Training=="Garden salad") hud.order.recipe=tomatoSalad;
         }
     }
 }

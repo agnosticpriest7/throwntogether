@@ -6,6 +6,7 @@ namespace ThrownTogether
     public sealed class CustomerOrder : MonoBehaviour
     {
         public RecipeDefinition recipe;
+        public DishReturnStation dishReturn;
         public CarrySlot tableSlot;
         public Transform customerVisual;
         public OrderPhase Phase { get; private set; }
@@ -27,7 +28,7 @@ namespace ThrownTogether
             if (Phase != OrderPhase.Eating) return;
             eatingTime+=Mathf.Max(0,seconds);
             if (customerVisual != null) customerVisual.localPosition=visualPosition+Vector3.up*(RestaurantMenu.Display.reducedEffects ? 0 : Mathf.Sin(eatingTime*8)*.07f);
-            if (eatingTime >= 2) { Phase=OrderPhase.Complete; if (customerVisual != null) customerVisual.localPosition=visualPosition; }
+            if (eatingTime >= 2) { Phase=OrderPhase.Complete; if(dishReturn!=null) dishReturn.Return(tableSlot.Item); if (customerVisual != null) customerVisual.localPosition=visualPosition; }
         }
     }
 }

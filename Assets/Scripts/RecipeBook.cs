@@ -12,13 +12,15 @@ namespace ThrownTogether
         {
             if(recipe==null || recipe.ingredient==null) return "Recipe unavailable.";
             var lines=new List<string>{"Take "+recipe.ingredient.displayName+" from its crate."};
+            var previous=recipe.ingredient;
             foreach(var step in recipe.steps)
             {
                 if(step==null) continue;
+                if(step.ingredient!=previous) {lines.Add("Set the prepared food on a counter. Take "+step.ingredient.displayName+" from its crate.");previous=step.ingredient;}
                 string station=step.input==FoodState.Raw ? "Prep board":"Fryer";
-                lines.Add(station+": process for "+step.duration.ToString("0.#",CultureInfo.InvariantCulture)+" seconds, then pick up "+recipe.ingredient.NameFor(step.output)+".");
+                lines.Add(station+": "+(step.input==FoodState.Raw ? "press Use and stay still for " : "process for ")+step.duration.ToString("0.#",CultureInfo.InvariantCulture)+" seconds, then pick up "+step.ingredient.NameFor(step.output)+".");
             }
-            lines.Add("On an ordinary counter, combine the prepared food with a clean plate. Food or plate can go down first.");
+            lines.Add("On an ordinary counter, combine all the prepared ingredients with a clean plate. Add each ingredient separately; either order works.");
             lines.Add("Pick up the finished plate from the counter.");
             lines.Add("Serve at the pass with the bell when a customer orders "+recipe.displayName+".");
             for(int i=0;i<lines.Count;i++) lines[i]=(i+1)+". "+lines[i];

@@ -39,6 +39,64 @@ namespace ThrownTogether.Tests
             if(scene.IsValid() && scene.isLoaded) yield return SceneManager.UnloadSceneAsync(scene);
             SceneManager.SetActiveScene(original); foreach(var root in suspended) if(root!=null) root.SetActive(true);
         }
+        [UnityTest] public IEnumerator ManualPrepStallsOnMovementAndCanResumeWithoutLosingProgress()
+        {
+            var source=Interactable.Active.OfType<SourceStation>().First(s=>s.gameObject.scene==scene&&!s.plates&&s.ingredient.visualKind==IngredientVisualKind.Potato);
+            var prep=Interactable.Active.OfType<ProcessingStation>().Single(s=>s.gameObject.scene==scene&&s.requiresAttendance);
+            var fryer=Interactable.Active.OfType<ProcessingStation>().Single(s=>s.gameObject.scene==scene&&!s.requiresAttendance);
+            source.Interact(chef);Assert.That(prep.Interact(chef),Is.True);prep.Advance(.5f);float progress=prep.Progress;
+            chef.Move(Vector2.right,.05f);prep.Advance(20);Assert.That(prep.Progress,Is.EqualTo(progress));Assert.That(prep.Working,Is.False);
+            chef.Move(Vector2.zero,0);prep.Advance(20);Assert.That(prep.Progress,Is.EqualTo(progress),"Stopping alone does not restart an abandoned job");
+            Assert.That(prep.Interact(chef),Is.True);prep.Advance(1);Assert.That(prep.Busy,Is.False);Assert.That(prep.Interact(chef),Is.True);
+            Assert.That(fryer.Interact(chef),Is.True);chef.Move(Vector2.right,.05f);fryer.Advance(5);Assert.That(fryer.Busy,Is.False);Assert.That(fryer.slot.Item.Payload.state,Is.EqualTo(FoodState.Cooked));
+            yield return null;
+        }
+        [UnityTest] public IEnumerator DirtyDishReturnsWashesAndCanBeReusedWithoutDuplication()
+        {
+            var seat=hud.shift.seats[0];var source=Interactable.Active.OfType<SourceStation>().First(s=>s.gameObject.scene==scene&&!s.plates);
+            var dish=Object.Instantiate(source.itemPrefab);dish.Configure(new ItemPayload{isPlate=true,ingredient=seat.recipe.ingredient,state=seat.recipe.requiredState});
+            Assert.That(seat.Reserve(dish.Payload),Is.True);seat.Receive(dish);seat.Advance(2);hud.shift.Advance(0);
+            var rack=seat.dishReturn;Assert.That(rack.Count,Is.EqualTo(1));Assert.That(dish.Payload.dirty,Is.True);Assert.That(seat.tableSlot.Item,Is.Null);
+            Assert.That(rack.Interact(chef),Is.True);Assert.That(rack.Count,Is.Zero);Assert.That(rack.Interact(chef),Is.False);
+            Assert.That(ItemPayload.CanPlate(dish.Payload,ItemPayload.Food(source.ingredient)),Is.False);
+            var sink=Interactable.Active.OfType<WashingStation>().Single(s=>s.gameObject.scene==scene);
+            Assert.That(sink.Interact(chef),Is.True);sink.Advance(1);float progress=sink.Progress;chef.Move(Vector2.left,.05f);sink.Advance(10);Assert.That(sink.Progress,Is.EqualTo(progress));
+            Assert.That(sink.Interact(chef),Is.True);sink.Advance(2);Assert.That(sink.Busy,Is.False);Assert.That(sink.Interact(chef),Is.True);
+            Assert.That(chef.Hands.Item,Is.SameAs(dish));Assert.That(dish.Payload.EmptyPlate,Is.True);Assert.That(dish.Payload.dirty,Is.False);
+            Assert.That(sink.Interact(chef),Is.False,"Clean plates must not start another wash");
+            var prepared=ItemPayload.Food(source.ingredient);prepared.state=source.ingredient.platingState;Assert.That(ItemPayload.CanPlate(dish.Payload,prepared),Is.True);
+            yield return null;
+        }
+        [UnityTest] public IEnumerator SecondChefCanResumeAbandonedPrepButCannotDoubleItsProgress()
+        {
+            var one=InputSystem.AddDevice<Gamepad>();var two=InputSystem.AddDevice<Gamepad>();
+            try
+            {
+                hud.coop.BindPlayerOne(one);Assert.That(hud.coop.Join(two),Is.True);var second=hud.coop.PlayerTwo;second.GetComponent<ChefInput>().enabled=false;
+                var source=Interactable.Active.OfType<SourceStation>().First(s=>s.gameObject.scene==scene&&!s.plates);
+                var prep=Interactable.Active.OfType<ProcessingStation>().Single(s=>s.gameObject.scene==scene&&s.requiresAttendance);
+                source.Interact(chef);prep.Interact(chef);prep.Advance(.5f);Assert.That(prep.Interact(second),Is.False,"Only one worker owns the job");
+                chef.Move(Vector2.right,.05f);Assert.That(prep.Interact(second),Is.True);prep.Advance(1);Assert.That(prep.Busy,Is.False);Assert.That(prep.Interact(second),Is.True);Assert.That(second.Hands.Item,Is.Not.Null);
+            }
+            finally {InputSystem.RemoveDevice(one);InputSystem.RemoveDevice(two);}
+            yield return null;
+        }
+        [UnityTest] public IEnumerator UnavailableModesIgnoreActivationAndQuickPlayRemainsSelectable()
+        {
+            var menu=hud.GetComponent<RestaurantMenu>();var pad=InputSystem.AddDevice<Gamepad>();
+            var background=InputSystem.settings.backgroundBehavior;var editor=InputSystem.settings.editorInputBehaviorInPlayMode;
+            InputSystem.settings.backgroundBehavior=InputSettings.BackgroundBehavior.IgnoreFocus;
+            InputSystem.settings.editorInputBehaviorInPlayMode=InputSettings.EditorInputBehaviorInPlayMode.AllDeviceInputAlwaysGoesToGameView;
+            try
+            {
+                menu.OpenFrontEnd();Assert.That(menu.Selection,Is.EqualTo(1));
+                InputSystem.QueueStateEvent(pad,new UnityEngine.InputSystem.LowLevel.GamepadState().WithButton(UnityEngine.InputSystem.LowLevel.GamepadButton.DpadUp));InputSystem.Update();menu.Tick(true);
+                Assert.That(menu.Selection,Is.Zero);menu.ActivateSelection();Assert.That(menu.Page,Is.EqualTo("Title"),"Tutorial is unavailable");Assert.That(Time.timeScale,Is.Zero);
+                menu.OpenFrontEnd();menu.ActivateSelection();Assert.That(menu.Page,Is.EqualTo("Levels"));
+            }
+            finally {menu.Close();InputSystem.RemoveDevice(pad);InputSystem.settings.backgroundBehavior=background;InputSystem.settings.editorInputBehaviorInPlayMode=editor;}
+            yield return null;
+        }
         [UnityTest] public IEnumerator OpeningMenuCannotBackIntoUnselectedGameplay()
         {
             var menu=hud.GetComponent<RestaurantMenu>();
@@ -192,6 +250,7 @@ namespace ThrownTogether.Tests
                     shift.Advance(1000); Assert.That(seat.Phase,Is.EqualTo(OrderPhase.Waiting),"No expiry/failure timer");
                     var source=Interactable.Active.OfType<SourceStation>().First(s=>s.gameObject.scene==scene && !s.plates && s.ingredient==seat.recipe.ingredient);
                     var dish=Object.Instantiate(source.itemPrefab); dish.Configure(new ItemPayload{isPlate=true,ingredient=source.ingredient,state=seat.recipe.requiredState});
+                    foreach(var extra in seat.recipe.additionalIngredients) dish.Payload.additions.Add(new IngredientPortion{ingredient=extra.ingredient,state=extra.state});
                     Assert.That(seat.Reserve(dish.Payload),Is.True); seat.Receive(dish); seat.Advance(2); shift.Advance(0);
                 }
                 Assert.That(shift.Complete,Is.True); Assert.That(shift.CompletedCount,Is.EqualTo(count)); Assert.That(shift.seats.All(s=>!s.Active),Is.True);
@@ -203,7 +262,7 @@ namespace ThrownTogether.Tests
             Assert.That(hud.GetComponent<KitchenPresentation>(),Is.Not.Null);
             Assert.That(hud.GetComponent<PracticeGuide>().Active,Is.False);
             var previews=Object.FindObjectsByType<Carryable>().Where(c=>c.gameObject.scene==scene && c.name=="Pantry ingredient display").ToArray();
-            Assert.That(previews.Length,Is.EqualTo(12));
+            Assert.That(previews.Length,Is.EqualTo(16));
             foreach(var preview in previews) Assert.That(preview.GetComponentsInChildren<Collider>(),Is.Empty);
             foreach(var station in Interactable.Active.Where(s=>s.gameObject.scene==scene))
                 Assert.That(station.transform.Find("P1 target").GetComponentsInChildren<Collider>(),Is.Empty);
@@ -211,7 +270,7 @@ namespace ThrownTogether.Tests
         }
         [UnityTest] public IEnumerator EveryPracticeStartingPointCanCompleteTheRealCookingLoop()
         {
-            foreach(string training in new[]{"Guided full loop","Prep","Frying","Plating","Serving","Tomato salad"})
+            foreach(string training in new[]{"Guided full loop","Prep","Frying","Plating","Serving","Garden salad"})
             {
                 yield return SceneManager.UnloadSceneAsync(scene);
                 SessionOptions.Training=training;
@@ -229,8 +288,8 @@ namespace ThrownTogether.Tests
                 var fryer=stations.OfType<ProcessingStation>().Single(s=>s.recipe.input==FoodState.Cut);
                 var counter=stations.OfType<CounterStation>().First(s=>!(s is ProcessingStation));
                 var service=stations.OfType<ServiceStation>().Single();
-                if(training=="Guided full loop" || training=="Tomato salad") {Assert.That(chef.Hands.Item,Is.Null); Assert.That(source.Interact(chef),Is.True);}
-                if(training=="Guided full loop" || training=="Prep" || training=="Tomato salad")
+                if(training=="Guided full loop" || training=="Garden salad") {Assert.That(chef.Hands.Item,Is.Null); Assert.That(source.Interact(chef),Is.True);}
+                if(training=="Guided full loop" || training=="Prep" || training=="Garden salad")
                 {Assert.That(chef.Hands.Item.Payload.state,Is.EqualTo(FoodState.Raw)); Assert.That(prep.Interact(chef),Is.True); prep.Advance(1.5f); Assert.That(prep.Interact(chef),Is.True);}
                 if(training=="Guided full loop" || training=="Prep" || training=="Frying")
                 {Assert.That(chef.Hands.Item.Payload.state,Is.EqualTo(FoodState.Cut)); Assert.That(fryer.Interact(chef),Is.True); fryer.Advance(5); Assert.That(fryer.Interact(chef),Is.True);}
@@ -238,6 +297,11 @@ namespace ThrownTogether.Tests
                 {
                     Assert.That(chef.Hands.Item.Payload.state,Is.EqualTo(hud.order.recipe.requiredState)); Assert.That(counter.Interact(chef),Is.True);
                     Assert.That(plates.Interact(chef),Is.True); Assert.That(counter.Interact(chef),Is.True);
+                    if(training=="Garden salad")
+                    {
+                        var greens=stations.OfType<SourceStation>().Single(s=>!s.plates && s.ingredient==hud.order.recipe.additionalIngredients[0].ingredient);
+                        Assert.That(greens.Interact(chef),Is.True);Assert.That(prep.Interact(chef),Is.True);prep.Advance(1.5f);Assert.That(prep.Interact(chef),Is.True);Assert.That(counter.Interact(chef),Is.True);
+                    }
                     yield return null; Assert.That(guide.Instruction,Does.Contain("Pick up your finished plate"));
                     Assert.That(counter.Interact(chef),Is.True);
                 }

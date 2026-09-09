@@ -1,0 +1,26 @@
+using System.Collections.Generic;
+using UnityEngine;
+namespace ThrownTogether
+{
+    public sealed class DishReturnStation : Interactable
+    {
+        public Transform stack;
+        private readonly Queue<Carryable> dishes=new Queue<Carryable>();
+        public int Count => dishes.Count;
+        public override string Prompt(ChefController chef) => Count==0 ? "No dirty plates yet" : chef.Hands.Item!=null ? "Hands full — use a counter" : "Take dirty plate ("+Count+")";
+        public void Return(Carryable dish)
+        {
+            if(dish==null) return;
+            dish.Owner?.Release();dish.Payload.MakeDirty();dish.RefreshVisual();
+            dish.transform.SetParent(stack,false);dish.transform.localPosition=Vector3.up*(dishes.Count*.07f);
+            dishes.Enqueue(dish);
+        }
+        public override bool Interact(ChefController chef)
+        {
+            if(Count==0 || chef.Hands.Item!=null) return false;
+            var dish=dishes.Peek();if(!chef.Hands.TryTake(dish)) return false;
+            dishes.Dequeue();int i=0;foreach(var remaining in dishes) remaining.transform.localPosition=Vector3.up*(i++*.07f);
+            return true;
+        }
+    }
+}

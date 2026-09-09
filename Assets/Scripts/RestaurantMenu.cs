@@ -35,7 +35,7 @@ namespace ThrownTogether
         private int recipeIndex;
         private GUIStyle buttonStyle, textStyle;
         private readonly List<Row> rows=new List<Row>();
-        private sealed class Row { public string label; public Action select; public Action<int> adjust; }
+        private sealed class Row { public string label; public Action select; public Action<int> adjust; public bool enabled=true; }
         private void Awake()
         {
             hud=GetComponent<RestaurantHud>(); Instance=this;
@@ -86,15 +86,19 @@ namespace ThrownTogether
             hud.coop?.RefreshPlayerOneAssignment();
             foreach(var input in FindObjectsByType<ChefInput>(FindObjectsSortMode.None)) input.RequireActionRelease();
         }
-        private void SetPage(string page) { Page=page=="Main" && IsFrontEnd ? "Title":page; Selection=0; message=""; BuildRows(); }
+        private void SetPage(string page) { Page=page=="Main" && IsFrontEnd ? "Title":page; Selection=page=="Main" && IsFrontEnd || page=="Title" ? 1:0; message=""; BuildRows(); }
         private void Add(string label,Action select,Action<int> adjust=null) => rows.Add(new Row {label=label,select=select,adjust=adjust});
+        private void AddUnavailable(string label) { Add(label+" — coming later",()=>{}); rows[rows.Count-1].enabled=false; }
         private void BuildRows()
         {
             rows.Clear();
             if(Page=="Title")
             {
-                Add("Play a level",()=>ShowLevels(false));
-                Add("Practice",()=>ShowLevels(true));
+                AddUnavailable("Tutorial");
+                Add("Quick Play",()=>ShowLevels(false));
+                AddUnavailable("Career");
+                AddUnavailable("Trials");
+                AddUnavailable("Endless");
                 Add("Recipe book",OpenRecipeBook);
                 Add("Co-op setup",()=>SetPage("Co-op"));
                 Add("Settings",()=>SetPage("Settings")); return;
@@ -146,7 +150,7 @@ namespace ThrownTogether
             {
                 foreach(var step in new[]{"Prep","Frying","Plating","Serving"})
                 { var selected=step; Add(selected+" — start with the needed item",()=>StartTraining(selected)); }
-                Add("Tomato salad — guided cold prep",()=>StartTraining("Tomato salad"));
+                Add("Garden salad — guided cold prep",()=>StartTraining("Garden salad"));
                 Add("Back",()=>SetPage("Session")); return;
             }
             if(Page=="Confirm") { Add("Cancel — keep playing",()=>SetPage("Main")); Add("Confirm",()=>{var action=pending; Close(); action?.Invoke();}); return; }
@@ -189,7 +193,7 @@ namespace ThrownTogether
         private void Save() { message=hud.settings.Save() ? "Settings saved." : "Settings could not be saved; existing saved data was preserved."; }
         public void RequestRestart() => Confirm("Restart this mode? Current food/order progress will reset.",()=>hud.chef.GetComponent<ChefInput>().RestartSlice());
         private void Confirm(string text,Action action) { if(!IsOpen) Open(); pending=action; confirmation=text; SetPage("Confirm"); }
-        public void ActivateSelection() { rows[Mathf.Clamp(Selection,0,rows.Count-1)].select(); hud.audioFeedback?.Click(); if(IsOpen) BuildRows(); }
+        public void ActivateSelection() { if(!rows[Mathf.Clamp(Selection,0,rows.Count-1)].enabled) return; rows[Mathf.Clamp(Selection,0,rows.Count-1)].select(); hud.audioFeedback?.Click(); if(IsOpen) BuildRows(); }
         private void Update() => Tick(WebInputFocus.HasFocus);
         public void Tick(bool focused)
         {
@@ -229,11 +233,12 @@ namespace ThrownTogether
             GUI.Label(new Rect(260,73,760,60),Page=="Confirm" ? confirmation : IsFrontEnd ? "D-pad / stick: navigate • A: select • B: back\nChoose a kitchen and start cooking." : "Paused • D-pad / stick: navigate • A: select • B: back\nY / Escape: close • Xbox Menu belongs to Edge",text);
             for(int i=0;i<rows.Count;i++)
             {
+                GUI.enabled=rows[i].enabled;
                 GUI.backgroundColor=i==Selection ? new Color(.2f,.8f,.6f):Color.gray;
                 var rowRect=Page=="Recipes" ? new Rect(35,160+i*55,345,48):new Rect(260,145+i*47,760,42);
                 if(GUI.Button(rowRect,(i==Selection ? ">  ":"    ")+rows[i].label,style)) { Selection=i; ActivateSelection(); break; }
             }
-            GUI.backgroundColor=Color.white;
+            GUI.enabled=true; GUI.backgroundColor=Color.white;
             if(Page=="Levels") GUI.Label(new Rect(260,435,760,115),hud.GetComponent<KitchenLayout>().choices[Mathf.Min(Selection,2)].description,text);
             if(Page=="Recipes" && recipeBook!=null && recipeBook.recipes.Length>0)
             {

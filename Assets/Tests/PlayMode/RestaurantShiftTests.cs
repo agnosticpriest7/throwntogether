@@ -46,7 +46,13 @@ namespace ThrownTogether.Tests
                     if(ticket.recipe.requiredState==FoodState.Cooked) {Use(chef,fryer); fryer.Advance(5); Use(chef,fryer);}
                     else Assert.That(fryer.Interact(chef),Is.False,"Cold salad must not enter the fryer");
                     Assert.That(chef.Hands.Item.Payload.state,Is.EqualTo(ticket.recipe.requiredState));
-                    Use(chef,plating); Use(chef,plates); Use(chef,plating); Use(chef,plating);
+                    Use(chef,plating); Use(chef,plates); Use(chef,plating);
+                    foreach(var extra in ticket.recipe.additionalIngredients)
+                    {
+                        Use(chef,stations.OfType<SourceStation>().Single(s=>!s.plates && s.ingredient==extra.ingredient));
+                        Use(chef,prep);prep.Advance(1.5f);Use(chef,prep);Use(chef,plating);
+                    }
+                    Use(chef,plating);
                     Use(chef,service); Assert.That(ticket.Phase,Is.EqualTo(OrderPhase.Delivering));
                     yield return new WaitForSeconds(1.8f);
                     ticket.Advance(2); shift.Advance(.1f);

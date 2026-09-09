@@ -12,10 +12,14 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: cacc153c4bd5a834eae8c4576d3c1e5a, type: 3}
   m_Name: TomatoSalad
   m_EditorClassIdentifier: ThrownTogether.Runtime::ThrownTogether.DishRecipe
-  id: tomato-salad
-  displayName: Tomato Salad
-  description: Chop tomato, combine with a clean plate on a counter, and serve. No fryer.
+  id: garden-salad
+  displayName: Garden Salad
+  description: Chop lettuce and tomato, add both to a clean plate on a counter, then pick up and serve. No frying.
   ingredient: {fileID: 11400000, guid: d59fc79e3765848469ee63bebb057d38, type: 2}
   requiredState: 1
   steps:
   - {fileID: 11400000, guid: 92892ce930c1ecd4ea5bd1d0adf36947, type: 2}
+  - {fileID: 11400000, guid: 2c66a23a670adcd4abbb8aed0cc139a5, type: 2}
+  additionalIngredients:
+  - ingredient: {fileID: 11400000, guid: 89a386b274d272c4abf5920e4c16bd21, type: 2}
+    state: 1

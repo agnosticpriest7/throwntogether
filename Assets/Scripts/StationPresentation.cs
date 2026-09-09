@@ -27,7 +27,7 @@ namespace ThrownTogether
         private void Update()
         {
             if(station==null || pieces==null) return;
-            bool visible=station.Busy && !RestaurantMenu.Display.reducedEffects;
+            bool visible=station.Working && !RestaurantMenu.Display.reducedEffects;
             for(int i=0;i<pieces.Length;i++)
             {
                 pieces[i].gameObject.SetActive(visible);

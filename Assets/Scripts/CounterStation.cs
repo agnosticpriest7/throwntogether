@@ -18,7 +18,7 @@ namespace ThrownTogether
             {
                 var plate=slot.Item.Payload.isPlate ? slot.Item : chef.Hands.Item;
                 var food=slot.Item.Payload.isPlate ? chef.Hands.Item : slot.Item;
-                plate.Payload.ingredient=food.Payload.ingredient; plate.Payload.state=food.Payload.state;
+                plate.Payload.AddFood(food.Payload);
                 food.Owner.Release(); Destroy(food.gameObject);
                 // Assembly belongs to the counter regardless of which item arrived first.
                 if (plate.Owner != slot) slot.TryTake(plate);

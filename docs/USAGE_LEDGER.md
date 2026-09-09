@@ -44,3 +44,5 @@ Owner reports 0.3.0 priorities 1–3 consumed 6 percentage points (61% to 55% re
 
 ### 0.5.0 kitchen variety
 User last reported 48% remaining before music integration and asked for substantial further work. No updated account percentage or cost delta was provided for this batch; none is inferred. Completed the explicitly approved kitchen/recipe/co-op package, one successful Web build, 26 EditMode + 25 PlayMode + 13 browser/artifact checks. Editor gameplay tests needed one rerun to isolate background audio from listener teardown. Throwing, Windows distribution and progression remain deferred.
+
+2026-09-09 — Owner reports 40% of allowance remaining and authorizes dishwashing, attended cutting, Garden Salad, and main-menu mode placeholders. No account-wide usage measurement or cost estimate inferred.
