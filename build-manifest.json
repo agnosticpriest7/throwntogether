@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "sourceCommit": "c7e6342e46a5efb573c5ee64156b389d8e2e76d1",
-  "totalBytes": 48042325,
+  "sourceCommit": "723311ad969706fc7d27aeb26e1abe7e554cb850",
+  "totalBytes": 56245386,
   "files": [
     {
       "path": ".nojekyll",
@@ -11,32 +11,42 @@
     {
       "path": "build-info.json",
       "bytes": 269,
-      "sha256": "46a5c57f695d1d13414911203319552a336b4c6f0fa23fdb010fd6b756767766"
+      "sha256": "7b9340ecbb9820cd6a7bf6d5e19648416a6fbd1800670e64ffbbc1593737934a"
     },
     {
-      "path": "Build/124ee84a75a336432d522dbe756ceb75.data",
-      "bytes": 12663502,
-      "sha256": "b1b1b20fed24fec39bf2f074b7b55342332d992c8340de773dac3b3dfb74638d"
+      "path": "Build/2aab7cdc42a3a29ffedebe5d7d087285.framework.js",
+      "bytes": 334304,
+      "sha256": "cfcc917dfc4ff98d7a40e421d8432a28eb2619f6f9f1a12cbd38d986df515a41"
     },
     {
-      "path": "Build/6a6545450b7070963df5a46e9390aad0.wasm",
-      "bytes": 35020378,
-      "sha256": "f55be90af5a6b6b144ef0e9ec480c7bdad64071aad196fbe1e60bba798234a0d"
+      "path": "Build/3daa26420533c6682281b50e3c1f5824.data",
+      "bytes": 12666113,
+      "sha256": "440bdee4cb929e6fc62ec207f286d1ae3c0621ffd992d5fb2a2e9656f3ee5a44"
     },
     {
-      "path": "Build/735a95895c8c62b442f0ac93c25ac458.framework.js",
-      "bytes": 332908,
-      "sha256": "56fa356cb0f9ade45a8973382e95cc4f84cadc032edc1226e6246f73ba8e2a42"
-    },
-    {
-      "path": "Build/cde6997e6eedeca25c9ac3e74340a47b.loader.js",
+      "path": "Build/569e5256986f6a552005e73a0fa456cc.loader.js",
       "bytes": 20263,
-      "sha256": "39c19b381600a5ba10dc67f0d1fd342aad1e1a26dbc45718ba69dfa43388d08a"
+      "sha256": "a956222fe0552efa6ee965c51b14cc3ab098cbddfca745647a99668159f7643a"
+    },
+    {
+      "path": "Build/f234f55e132e2b99fc86aa6d0883fcf6.wasm",
+      "bytes": 35021876,
+      "sha256": "f2233fd371a24a3c6b569fa36c032fca9beda5d79b1e6ffb58903e8b14426348"
     },
     {
       "path": "index.html",
       "bytes": 3179,
-      "sha256": "5dd3fbc12d7055b7f449aa12f057f43d37a91159de99febe41e90ce6abba460d"
+      "sha256": "01ce9f0ef5e3cdbc6c0029173562513c8d8ee93ea487322efaa8aa71a827c3bd"
+    },
+    {
+      "path": "StreamingAssets/Music/first-service.ogg",
+      "bytes": 3733389,
+      "sha256": "7c5e10017adca617d8e1f4e832d90d66ce49bad4f4d62660c6fec9d7495484e5"
+    },
+    {
+      "path": "StreamingAssets/Music/one-more-order.ogg",
+      "bytes": 4464167,
+      "sha256": "21f291bf933a1e393a02adf3aca3e8e8d651c3afce4d05b77b58796d04121efb"
     },
     {
       "path": "web-shell.js",
