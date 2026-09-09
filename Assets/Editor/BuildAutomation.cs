@@ -90,10 +90,11 @@ namespace ThrownTogether.Editor
         private static Action PrepareWebPcmAudio()
         {
             string folder="Assets/GeneratedWebPcm_"+Guid.NewGuid().ToString("N");
-            var originals=new System.Collections.Generic.List<(AudioCue cue,AudioClip[] clips,TextAsset[] pcm)>();
+            var originals=new System.Collections.Generic.List<(string path,byte[] bytes)>();
             Action restore=()=>{
-                foreach(var original in originals) { original.cue.clips=original.clips; original.cue.pcmClips=original.pcm; EditorUtility.SetDirty(original.cue); }
-                AssetDatabase.SaveAssets(); AssetDatabase.DeleteAsset(folder);
+                // BuildPlayer may unload the asset objects; restore exact source bytes by path.
+                foreach(var original in originals) { File.WriteAllBytes(original.path,original.bytes); AssetDatabase.ImportAsset(original.path,ImportAssetOptions.ForceUpdate); }
+                AssetDatabase.DeleteAsset(folder);
             };
             try {
             Directory.CreateDirectory(folder);
@@ -101,7 +102,8 @@ namespace ThrownTogether.Editor
             {
                 var cue=AssetDatabase.LoadAssetAtPath<AudioCue>(AssetDatabase.GUIDToAssetPath(guid));
                 if(cue.clips==null || cue.clips.Length==0) continue;
-                originals.Add((cue,cue.clips,cue.pcmClips));
+                var cuePath=AssetDatabase.GetAssetPath(cue);
+                originals.Add((cuePath,File.ReadAllBytes(cuePath)));
                 var paths=cue.clips.Where(c=>c!=null).Select(c=>AssetDatabase.GetAssetPath(c)).ToArray();
                 var outputs=new string[paths.Length];
                 for(int i=0;i<paths.Length;i++)
