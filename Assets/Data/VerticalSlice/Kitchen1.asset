@@ -27,6 +27,6 @@ MonoBehaviour:
   - {x: 4.8, y: 0, z: 1}
   - {x: 3.6, y: 0, z: 5}
   - {x: 3, y: 0, z: -4.5}
-  - {x: 4.8, y: 0, z: -2.5}
+  - {x: 3.6, y: 0, z: -2.5}
   playerOneSpawn: {x: -4.3, y: 0.03, z: -1.5}
   playerTwoSpawn: {x: -4.3, y: 0.03, z: -3.6}

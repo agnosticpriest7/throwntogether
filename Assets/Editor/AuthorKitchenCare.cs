@@ -41,7 +41,7 @@ namespace ThrownTogether.Editor
                 if(rack==null) {var clone=Object.Instantiate(counter);clone.name="DISH RETURN";rack=clone.gameObject.AddComponent<DishReturnStation>();rack.stationName="DISH RETURN";rack.stack=clone.slot.transform;Object.DestroyImmediate(clone);}
                 foreach(var order in Object.FindObjectsByType<CustomerOrder>(FindObjectsSortMode.None)) {order.dishReturn=rack;EditorUtility.SetDirty(order);}
                 layout.anchors=layout.anchors.Take(9).Concat(new[]{greens.transform,sink.transform,rack.transform}).ToArray();
-                Vector3[][] extra={new[]{P(3.6f,4.6f),P(3,-4.5f),P(4.8f,-2.6f)},new[]{P(3.6f,5),P(3,-4.5f),P(4.8f,-2.5f)},new[]{P(-2.5f,-4.3f),P(1,-4.3f),P(4.8f,-2.5f)}};
+                Vector3[][] extra={new[]{P(3.6f,4.6f),P(3,-4.5f),P(3.6f,-2.6f)},new[]{P(3.6f,5),P(3,-4.5f),P(3.6f,-2.5f)},new[]{P(-2.5f,-4.3f),P(1,-4.3f),P(3.6f,-2.5f)}};
                 for(int i=0;i<layout.choices.Length;i++) {layout.choices[i].stations=layout.choices[i].stations.Take(9).Concat(extra[i]).ToArray();EditorUtility.SetDirty(layout.choices[i]);}
                 layout.Apply(0);EditorSceneManager.MarkSceneDirty(scene);EditorSceneManager.SaveScene(scene);
             }
