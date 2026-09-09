@@ -61,6 +61,7 @@ namespace ThrownTogether
         }
         private void OnGUI()
         {
+            if(RestaurantMenu.Instance!=null && RestaurantMenu.Instance.IsOpen) return;
             if(text==null) text=new GUIStyle(GUI.skin.label) { fontSize=16, wordWrap=true };
             var matrix=GUI.matrix;
             // Depth belongs to this GUI behaviour, unlike the shared matrix/color state.
@@ -104,7 +105,7 @@ namespace ThrownTogether
                 if(GUI.Button(new Rect(714,440,145,30),"Compact view")) detailsOpen=false;
                 if(GUI.Button(new Rect(870,440,145,30),"Audio settings")) audioOpen=!audioOpen;
                 if(audioOpen) DrawAudioSettings();
-                if(input != null && GUI.Button(new Rect(714,404,300,30),"Restart slice (clears Unity history)")) input.RestartSlice();
+                if(input != null && GUI.Button(new Rect(714,404,300,30),"Restart slice…")) RestaurantMenu.Instance.RequestRestart();
             }
             GUI.matrix=matrix;
         }

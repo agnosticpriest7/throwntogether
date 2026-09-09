@@ -47,5 +47,7 @@ Deployment uses an isolated repository under ignored `Builds/Publish-*`, with or
 
 Public test URL: **https://agnosticpriest7.github.io/throwntogether/**. Allow Pages a few minutes after publication, then refresh. `build-info.json` at that URL identifies the source commit. Xbox Edge/controller testing is a human follow-up, not implied by a successful deployment.
 
-### 0.2.0 playtest
-Start in practice, or click **Play restaurant shift** for six orders across fries and fried mushrooms. P1 uses keyboard/first gamepad; press A on a second gamepad to join P2. For keyboard + one pad, click **Keyboard P1 + pad P2** first. Menu belongs to Xbox Edge; use DEV's restart button or keyboard R to restart. DEV opens compactly, with detailed diagnostics and audio settings available separately. Two-controller Xbox support and the new PCM audio path require physical retesting.
+### 0.3.0 playtest
+The player starts with the menu open. **Y / Escape** opens or closes it; use **D-pad / left stick / arrow keys** to navigate, **A / Enter** to select and **B / Backspace** to go back. Menu pauses the kitchen. Restart (also R) and mode changes require confirmation; the three-line Menu button remains Xbox Edge's own control. Choose practice or the existing six-order fries/mushroom shift. Editor play starts unpaused for authoring; Y opens the same menu.
+
+The menu provides three text sizes, high contrast, reduced visual effects and five audio volumes. **Save settings** persists preferences locally; unsaved changes reset on scene reload. P1 uses keyboard/first gamepad; resume and press A on a second pad to join P2. Keyboard + one-pad mode and P2 leave are in the menu. P2 must put down held food before leaving; disconnect/reconnect retains it. Player labels, dish icons and ticket states supplement color. New controller-menu/TV behavior still needs a physical Xbox test.

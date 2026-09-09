@@ -8,18 +8,20 @@ namespace ThrownTogether
 
     public sealed class SettingsRepository
     {
-        public const int CurrentVersion=1;
-        [Serializable] private sealed class Envelope { public int schemaVersion; public AudioSettingsData audio; }
+        public const int CurrentVersion=2;
+        [Serializable] private sealed class Envelope { public int schemaVersion; public AudioSettingsData audio; public DisplaySettingsData display; }
         // Version 0 is a documented migration fixture, never a restaurant/progression save.
         [Serializable] private sealed class Legacy { public int schemaVersion; public float masterVolume=1; }
         private readonly ISettingsStorage storage;
         public AudioSettingsData Audio { get; private set; } = new AudioSettingsData();
+        public DisplaySettingsData Display { get; private set; } = new DisplaySettingsData();
         public SettingsLoadStatus Status { get; private set; }
         public bool CanSave => Status != SettingsLoadStatus.FutureVersion && Status != SettingsLoadStatus.Invalid && Status != SettingsLoadStatus.StorageUnavailable;
         public SettingsRepository(ISettingsStorage storage) { this.storage=storage; }
         public void Load()
         {
             Audio=new AudioSettingsData();
+            Display=new DisplaySettingsData();
             string json;
             try { json=storage.Read(); } catch(Exception) { Status=SettingsLoadStatus.StorageUnavailable; return; }
             if(string.IsNullOrEmpty(json)) { Status=SettingsLoadStatus.Defaults; return; }
@@ -30,10 +32,11 @@ namespace ThrownTogether
                 if(data.schemaVersion > CurrentVersion) { Status=SettingsLoadStatus.FutureVersion; return; }
                 if(data.schemaVersion == 0 && json.Contains("\"masterVolume\""))
                 { Audio.master=JsonUtility.FromJson<Legacy>(json).masterVolume; Status=SettingsLoadStatus.Migrated; }
-                else if(data.schemaVersion == CurrentVersion && json.Contains("\"audio\"") && data.audio != null)
-                { Audio=data.audio; Status=SettingsLoadStatus.Loaded; }
+                else if((data.schemaVersion == 1 || data.schemaVersion == CurrentVersion) && json.Contains("\"audio\"") && data.audio != null)
+                { Audio=data.audio; Display=data.display ?? new DisplaySettingsData(); Status=data.schemaVersion==CurrentVersion ? SettingsLoadStatus.Loaded : SettingsLoadStatus.Migrated; }
                 else { Status=SettingsLoadStatus.Invalid; return; }
                 Audio.Normalize();
+                Display.Normalize();
             }
             catch(ArgumentException) { Status=SettingsLoadStatus.Invalid; }
         }
@@ -41,7 +44,8 @@ namespace ThrownTogether
         {
             if(!CanSave) return false;
             Audio.Normalize();
-            try { storage.Write(JsonUtility.ToJson(new Envelope { schemaVersion=CurrentVersion, audio=Audio })); Status=SettingsLoadStatus.Loaded; return true; }
+            Display.Normalize();
+            try { storage.Write(JsonUtility.ToJson(new Envelope { schemaVersion=CurrentVersion, audio=Audio, display=Display })); Status=SettingsLoadStatus.Loaded; return true; }
             catch(Exception) { Status=SettingsLoadStatus.StorageUnavailable; return false; }
         }
     }

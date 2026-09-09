@@ -28,8 +28,22 @@ namespace ThrownTogether.Tests
             var store=new MemoryStorage { json="{\"schemaVersion\":0,\"masterVolume\":0.25}" };
             var r=new SettingsRepository(store); r.Load();
             Assert.That(r.Status,Is.EqualTo(SettingsLoadStatus.Migrated)); Assert.That(r.Audio.master,Is.EqualTo(.25f)); Assert.That(r.Audio.sfx,Is.EqualTo(1));
-            Assert.That(store.json,Does.Contain("masterVolume")); Assert.That(r.Save(),Is.True); Assert.That(store.json,Does.Contain("\"schemaVersion\":1"));
+            Assert.That(store.json,Does.Contain("masterVolume")); Assert.That(r.Save(),Is.True); Assert.That(store.json,Does.Contain("\"schemaVersion\":2"));
         }
+        [Test] public void VersionOnePreservesAudioAndAddsDisplayDefaults()
+        {
+            var store=new MemoryStorage {json="{\"schemaVersion\":1,\"audio\":{\"master\":0.3}}"};
+            var r=new SettingsRepository(store); r.Load();
+            Assert.That(r.Status,Is.EqualTo(SettingsLoadStatus.Migrated)); Assert.That(r.Audio.master,Is.EqualTo(.3f));
+            Assert.That(r.Display.textSize,Is.Zero); Assert.That(r.Display.highContrast,Is.False);
+            Assert.That(store.json,Does.Contain("\"schemaVersion\":1"));
+            r.Display.textSize=2; r.Display.highContrast=true; r.Display.reducedEffects=true;
+            Assert.That(r.Save(),Is.True); var restored=new SettingsRepository(store); restored.Load();
+            Assert.That(restored.Audio.master,Is.EqualTo(.3f)); Assert.That(restored.Display.textSize,Is.EqualTo(2));
+            Assert.That(restored.Display.highContrast && restored.Display.reducedEffects,Is.True);
+        }
+        [Test] public void DisplayTextSizeIsBounded()
+        { var d=new DisplaySettingsData {textSize=99}; d.Normalize(); Assert.That(d.TextScale,Is.EqualTo(1.3f).Within(.001f)); d.textSize=-10; d.Normalize(); Assert.That(d.TextScale,Is.EqualTo(1)); }
         [Test] public void AudioLevelsClampAndConvertToMixerDecibels()
         {
             var a=new AudioSettingsData { master=-1,music=2,sfx=float.NaN,ui=float.PositiveInfinity,ambience=.5f }; a.Normalize();

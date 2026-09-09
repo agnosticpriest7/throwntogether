@@ -32,3 +32,6 @@ Focused input-gate regression and read-only button diagnostics. Account-wide usa
 
 ### 0.2.0 approved gameplay batch
 Focused polish, local co-op and short restaurant-shift implementation after explicit owner authorization. No account-wide usage or project cost figures are available; no estimates recorded. No subagents used. Reused existing scenes/data and the local test/build/deploy pipeline.
+
+### 0.3.0 priorities 1–3
+Owner reported 61% remaining until September 14 and approved these three bounded batches; priority 4 is deferred. Reused existing data, meshes, IMGUI and pipeline; one combined Web candidate planned after Editor verification. No subagents used. Actual token/project cost is unavailable; the reported allowance is not an independently measured account-wide usage value.

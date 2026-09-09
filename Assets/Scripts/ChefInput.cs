@@ -22,7 +22,7 @@ namespace ThrownTogether
         public int UseSignals { get; private set; }
         public string LastUseSignal { get; private set; } = "None yet";
         public static bool BrowserOwnsMenu => Application.platform==RuntimePlatform.WebGLPlayer;
-        public static string RestartHint => BrowserOwnsMenu ? "R: restart (DEV button on controller)" : "R / Start: restart";
+        public static string RestartHint => "Y / Esc: menu • R: restart confirmation";
         public static InputAction CreateRestartAction(InputActionMap map, bool browserOwnsMenu)
         {
             var action=map.AddAction("Restart",InputActionType.Button);
@@ -66,6 +66,7 @@ namespace ThrownTogether
 #endif
         private void OnDestroy() => controls.Dispose();
         private void Update() => Tick(Time.deltaTime);
+        public void RequireActionRelease() { AwaitUseRelease=true; AwaitRestartRelease=true; }
         public void SetInputFocus(bool focused)
         {
             if(InputFocused==focused) return;
@@ -75,6 +76,7 @@ namespace ThrownTogether
         }
         public void Tick(float seconds)
         {
+            if(RestaurantMenu.GameplayBlocked) { RequireActionRelease(); return; }
 #if UNITY_WEBGL && !UNITY_EDITOR
             SetInputFocus(WebInputFocus.HasFocus);
 #endif
@@ -107,7 +109,7 @@ namespace ThrownTogether
                 if(!restart.IsPressed()) AwaitRestartRelease=false;
             }
             else if (restart.WasPressedThisFrame())
-                RestartSlice();
+            { if(RestaurantMenu.Instance!=null) RestaurantMenu.Instance.RequestRestart(); else RestartSlice(); }
         }
         public void RestartSlice()
         {

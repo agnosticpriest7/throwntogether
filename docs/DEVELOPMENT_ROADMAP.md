@@ -102,3 +102,6 @@ Next human gate: physical Xbox/controller/TV playtest using docs/DEVELOPMENT_NOT
 
 ## Authorized 0.2.0 checkpoint
 The owner approved playtest polish, optional active Player 2, and a short two-dish restaurant shift after physical Xbox first-service success. This supersedes the previous no-Vertical-Slice-2 checkpoint above. Scope: PCM Web audio compatibility, readable feedback/diagnostics, isolated co-op joining, and a separate six-order prototype shift with fries/mushrooms. No economy, employees or persistent restaurant progression is included. Physical co-op/audio/shift feedback is the next gate; do not automatically start subsequent roadmap phases.
+
+## Authorized 0.3.0 checkpoint
+Owner approved controller menus/TV accessibility, food/cooking/ticket feedback and co-op regression hardening. Current shift content is retained. Stop after verification/deployment; additional shift variety and summary expansion require the next owner's review. No economy, employee or new gameplay-system milestone begins automatically.

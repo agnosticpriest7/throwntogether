@@ -47,6 +47,62 @@ namespace ThrownTogether.Tests
             yield return null;
         }
         private Scene original, testScene;
+        [UnityTest] public IEnumerator MenuPausesGameplayAndCancelPreservesFood()
+        {
+            var menu=Object.FindObjectsByType<RestaurantMenu>().Single(m=>m.gameObject.scene==testScene);
+            var pad=InputSystem.AddDevice<Gamepad>(); var background=InputSystem.settings.backgroundBehavior;
+            var editorInput=InputSystem.settings.editorInputBehaviorInPlayMode;
+            InputSystem.settings.backgroundBehavior=InputSettings.BackgroundBehavior.IgnoreFocus;
+            InputSystem.settings.editorInputBehaviorInPlayMode=InputSettings.EditorInputBehaviorInPlayMode.AllDeviceInputAlwaysGoesToGameView;
+            var input=chef.GetComponent<ChefInput>();
+            try
+            {
+                Use(Find<SourceStation>("POTATOES")); var item=chef.Hands.Item;
+                input.BindDevices(pad); input.enabled=true;
+                InputSystem.QueueStateEvent(pad,new GamepadState().WithButton(GamepadButton.North)); InputSystem.Update(); menu.Tick();
+                Assert.That(menu.IsOpen,Is.True); Assert.That(Time.timeScale,Is.Zero);
+                var position=chef.transform.position;
+                InputSystem.QueueStateEvent(pad,new GamepadState {leftStick=Vector2.right}.WithButton(GamepadButton.South)); InputSystem.Update();
+                input.Tick(.5f); Assert.That(chef.transform.position,Is.EqualTo(position)); Assert.That(input.UseAttempts,Is.Zero);
+                Assert.That(chef.Hands.Item,Is.SameAs(item));
+                InputSystem.QueueStateEvent(pad,new GamepadState().WithButton(GamepadButton.DpadDown)); InputSystem.Update(); menu.Tick();
+                Assert.That(menu.Selection,Is.EqualTo(1),"D-pad navigates the menu");
+                InputSystem.QueueStateEvent(pad,new GamepadState().WithButton(GamepadButton.South)); InputSystem.Update(); menu.Tick();
+                Assert.That(menu.Page,Is.EqualTo("Confirm"),"A selects the mode-change confirmation");
+                InputSystem.QueueStateEvent(pad,new GamepadState().WithButton(GamepadButton.East)); InputSystem.Update(); menu.Tick();
+                Assert.That(menu.Page,Is.EqualTo("Main"),"B returns without changing scene");
+                menu.RequestRestart(); Assert.That(menu.Page,Is.EqualTo("Confirm")); Assert.That(menu.Selection,Is.Zero);
+                menu.ActivateSelection(); Assert.That(menu.Page,Is.EqualTo("Main")); Assert.That(chef.Hands.Item,Is.SameAs(item));
+                menu.Close(); Assert.That(Time.timeScale,Is.EqualTo(1));
+                InputSystem.QueueStateEvent(pad,new GamepadState().WithButton(GamepadButton.South)); InputSystem.Update();
+                yield return null; yield return null;
+                input.Tick(.1f); Assert.That(input.UseAttempts,Is.Zero,"Held menu A cannot become gameplay Use");
+                InputSystem.QueueStateEvent(pad,new GamepadState()); InputSystem.Update(); input.Tick(0);
+                Assert.That(input.AwaitUseRelease,Is.False);
+            }
+            finally {menu.Close(); InputSystem.RemoveDevice(pad); InputSystem.settings.backgroundBehavior=background; InputSystem.settings.editorInputBehaviorInPlayMode=editorInput;}
+        }
+        [UnityTest] public IEnumerator SharedPrepRejectsSecondInputAndPlayerCannotLeaveWithFood()
+        {
+            var session=Object.FindObjectsByType<LocalCoopSession>().Single(s=>s.gameObject.scene==testScene);
+            var one=InputSystem.AddDevice<Gamepad>(); var two=InputSystem.AddDevice<Gamepad>();
+            try
+            {
+                session.BindPlayerOne(one); Assert.That(session.Join(two),Is.True);
+                var second=session.PlayerTwo; second.GetComponent<ChefInput>().enabled=false;
+                Use(Find<SourceStation>("POTATOES")); second.Hands.TryTake(chef.Hands.Item);
+                Assert.That(session.LeavePlayerTwo(),Is.False); var secondItem=second.Hands.Item;
+                Use(Find<SourceStation>("POTATOES")); var prep=Find<ProcessingStation>("PREP");
+                Assert.That(prep.Interact(chef),Is.True); Assert.That(prep.Interact(second),Is.False);
+                Assert.That(second.Hands.Item,Is.SameAs(secondItem)); prep.Advance(1.5f);
+                Assert.That(prep.Interact(second),Is.False,"A chef holding food cannot take another chef's prepared item");
+                Assert.That(Find<CounterStation>("SPARE").Interact(second),Is.True);
+                Assert.That(session.LeavePlayerTwo(),Is.True); Assert.That(session.PlayerTwo,Is.Null);
+                Assert.That(session.Join(two),Is.True,"An empty-handed player can leave and join again");
+            }
+            finally {InputSystem.RemoveDevice(one); InputSystem.RemoveDevice(two);}
+            yield return null;
+        }
         [UnityTest]
         public IEnumerator TwoPlayersHaveIsolatedInputAndReconnectRetainsHeldItem()
         {
