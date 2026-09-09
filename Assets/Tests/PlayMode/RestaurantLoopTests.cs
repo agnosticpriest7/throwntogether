@@ -59,17 +59,18 @@ namespace ThrownTogether.Tests
             {
                 Use(Find<SourceStation>("POTATOES")); var item=chef.Hands.Item;
                 input.BindDevices(pad); input.enabled=true;
-                InputSystem.QueueStateEvent(pad,new GamepadState().WithButton(GamepadButton.North)); InputSystem.Update(); menu.Tick();
+                InputSystem.QueueStateEvent(pad,new GamepadState().WithButton(GamepadButton.North)); InputSystem.Update();
+                menu.Tick(false); Assert.That(menu.IsOpen,Is.False,"Unfocused menu ignores input"); menu.Tick(true);
                 Assert.That(menu.IsOpen,Is.True); Assert.That(Time.timeScale,Is.Zero);
                 var position=chef.transform.position;
                 InputSystem.QueueStateEvent(pad,new GamepadState {leftStick=Vector2.right}.WithButton(GamepadButton.South)); InputSystem.Update();
                 input.Tick(.5f); Assert.That(chef.transform.position,Is.EqualTo(position)); Assert.That(input.UseAttempts,Is.Zero);
                 Assert.That(chef.Hands.Item,Is.SameAs(item));
-                InputSystem.QueueStateEvent(pad,new GamepadState().WithButton(GamepadButton.DpadDown)); InputSystem.Update(); menu.Tick();
+                InputSystem.QueueStateEvent(pad,new GamepadState().WithButton(GamepadButton.DpadDown)); InputSystem.Update(); menu.Tick(true);
                 Assert.That(menu.Selection,Is.EqualTo(1),"D-pad navigates the menu");
-                InputSystem.QueueStateEvent(pad,new GamepadState().WithButton(GamepadButton.South)); InputSystem.Update(); menu.Tick();
+                InputSystem.QueueStateEvent(pad,new GamepadState().WithButton(GamepadButton.South)); InputSystem.Update(); menu.Tick(true);
                 Assert.That(menu.Page,Is.EqualTo("Confirm"),"A selects the mode-change confirmation");
-                InputSystem.QueueStateEvent(pad,new GamepadState().WithButton(GamepadButton.East)); InputSystem.Update(); menu.Tick();
+                InputSystem.QueueStateEvent(pad,new GamepadState().WithButton(GamepadButton.East)); InputSystem.Update(); menu.Tick(true);
                 Assert.That(menu.Page,Is.EqualTo("Main"),"B returns without changing scene");
                 menu.RequestRestart(); Assert.That(menu.Page,Is.EqualTo("Confirm")); Assert.That(menu.Selection,Is.Zero);
                 menu.ActivateSelection(); Assert.That(menu.Page,Is.EqualTo("Main")); Assert.That(chef.Hands.Item,Is.SameAs(item));

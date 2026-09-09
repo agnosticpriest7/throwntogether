@@ -98,10 +98,10 @@ namespace ThrownTogether
         public void RequestRestart() => Confirm("Restart this mode? Current food/order progress will reset.",()=>hud.chef.GetComponent<ChefInput>().RestartSlice());
         private void Confirm(string text,Action action) { if(!IsOpen) Open(); pending=action; confirmation=text; SetPage("Confirm"); }
         public void ActivateSelection() { rows[Mathf.Clamp(Selection,0,rows.Count-1)].select(); hud.audioFeedback?.Click(); if(IsOpen) BuildRows(); }
-        private void Update() => Tick();
-        public void Tick()
+        private void Update() => Tick(WebInputFocus.HasFocus);
+        public void Tick(bool focused)
         {
-            if(!WebInputFocus.HasFocus) return;
+            if(!focused) return;
             if(toggle.WasPressedThisFrame()) { if(IsOpen) Close(); else Open(); return; }
             if(!IsOpen) return;
             if(back.WasPressedThisFrame()) { if(Page=="Main") Close(); else SetPage("Main"); return; }
