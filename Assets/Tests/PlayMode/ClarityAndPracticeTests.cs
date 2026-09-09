@@ -110,6 +110,34 @@ namespace ThrownTogether.Tests
             }
             finally {menu.Close();}
         }
+        [UnityTest] public IEnumerator ChoosingKitchenRequiresWardrobeBeforeGameplay()
+        {
+            var menu=hud.GetComponent<RestaurantMenu>();
+            try
+            {
+                menu.OpenFrontEnd();menu.ShowLevels(false);menu.ActivateSelection();
+                Assert.That(menu.Page,Is.EqualTo("Your chef"));Assert.That(RestaurantMenu.GameplayBlocked,Is.True);
+                Assert.That(Time.timeScale,Is.Zero);Assert.That(SceneManager.GetActiveScene(),Is.EqualTo(scene));
+                yield return null;
+                Assert.That(hud.GetComponent<ChefWardrobePreview>().Image,Is.Not.Null);
+                menu.NavigateBack();Assert.That(menu.Page,Is.EqualTo("Levels"));
+            }
+            finally {menu.Close();}
+        }
+        [UnityTest] public IEnumerator SecondPlayerGetsTheirOwnBuildAndClothesOnJoin()
+        {
+            var pad=InputSystem.AddDevice<Gamepad>();var saved=ChefWardrobe.ForPlayer(1).Copy();
+            try
+            {
+                ChefWardrobe.ForPlayer(1).build=2;ChefWardrobe.ForPlayer(1).clothing=0;
+                hud.coop.UseKeyboardPlayerOne();Assert.That(hud.coop.Join(pad),Is.True);yield return null;
+                var visual=hud.coop.PlayerTwo.GetComponentInChildren<ChefAppearance>();
+                Assert.That(visual.appearance.build,Is.EqualTo(2));Assert.That(visual.appearance.clothing,Is.Zero);
+                Assert.That(visual.IsVisible("C_Torso2"),Is.True);Assert.That(visual.IsVisible("C_Bib2"),Is.False);
+                Assert.That(chef.GetComponentInChildren<ChefAppearance>().appearance.build,Is.EqualTo(ChefWardrobe.ForPlayer(0).build));
+            }
+            finally {ChefWardrobe.ForPlayer(1).build=saved.build;ChefWardrobe.ForPlayer(1).clothing=saved.clothing;InputSystem.RemoveDevice(pad);}
+        }
         [UnityTest] public IEnumerator PauseRecipeBookPreservesHeldItemAndSession()
         {
             var source=Interactable.Active.OfType<SourceStation>().First(s=>s.gameObject.scene==scene&&!s.plates);

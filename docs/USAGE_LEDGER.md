@@ -46,3 +46,7 @@ Owner reports 0.3.0 priorities 1–3 consumed 6 percentage points (61% to 55% re
 User last reported 48% remaining before music integration and asked for substantial further work. No updated account percentage or cost delta was provided for this batch; none is inferred. Completed the explicitly approved kitchen/recipe/co-op package, one successful Web build, 26 EditMode + 25 PlayMode + 13 browser/artifact checks. Editor gameplay tests needed one rerun to isolate background audio from listener teardown. Throwing, Windows distribution and progression remain deferred.
 
 2026-09-09 — Owner reports 40% of allowance remaining and authorizes dishwashing, attended cutting, Garden Salad, and main-menu mode placeholders. No account-wide usage measurement or cost estimate inferred.
+
+2026-09-09 — Owner approved the character style, initial clothing selection, and three body builds. Reused the chef controller, co-op flow, menu, and carry system. Created a Blender-authored modular prototype and Unity wardrobe. No subagents used. Actual token usage, account allowance delta, and cost are unavailable; no estimates recorded.
+
+2026-09-09: Owner authorized review, integration and publication of existing character work. Reused approved assets and existing tests/pipeline; no account-wide usage measurement available.

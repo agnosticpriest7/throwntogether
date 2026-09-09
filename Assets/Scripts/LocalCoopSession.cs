@@ -32,7 +32,7 @@ namespace ThrownTogether
             KeyboardPlayerOne=false; SessionOptions.KeyboardPlayerOne=false; RefreshPlayerOneAssignment();
         }
         public string Status => PlayerTwo==null ? "Solo | Press A on a second pad to join" :
-            PlayerTwoPad!=null && PlayerTwoPad.added ? "Local co-op | P1 mint / P2 coral" : "P2 disconnected — position and item retained; press A to reconnect";
+            PlayerTwoPad!=null && PlayerTwoPad.added ? "Local co-op | Two chefs ready" : "P2 disconnected — position and item retained; press A to reconnect";
         private void Start() { KeyboardPlayerOne=SessionOptions.KeyboardPlayerOne; BindPlayerOne(KeyboardPlayerOne ? null:Gamepad.all.FirstOrDefault()); }
         public void RefreshPlayerOneAssignment()
         {
@@ -52,9 +52,8 @@ namespace ThrownTogether
             {
                 PlayerTwo=Instantiate(chefPrefab,playerTwoSpawn.position,playerTwoSpawn.rotation);
                 PlayerTwo.name="Player 2";
-                var block=new MaterialPropertyBlock(); block.SetColor("_BaseColor",new Color(1,.38f,.3f));
-                var apron=PlayerTwo.transform.Find("Apron");
-                if(apron!=null) apron.GetComponent<Renderer>().SetPropertyBlock(block);
+                var appearance=PlayerTwo.GetComponentInChildren<ChefAppearance>();
+                if(appearance!=null) {appearance.playerIndex=1;appearance.Apply(ChefWardrobe.ForPlayer(1));}
                 if(audioFeedback!=null) PlayerTwo.InteractionSucceeded+=audioFeedback.ObserveInteraction;
             }
             PlayerTwoPad=pad;

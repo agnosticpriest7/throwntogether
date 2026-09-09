@@ -24,6 +24,11 @@
 
 ## Template
 
+### 2026-09-09 — Modular character style and three builds
+**Decision:** Kyle approved the broad, softly squared character prototype and requested clothing selection at the beginning plus slim and slightly heavier alternatives. The prototype exposes Slim, Standard, and Fuller builds, with independently chosen clothing and cosmetics.
+**Reason:** Let players express their identity before cooking starts.
+**Implications:** This explicitly expands the original single-body-build scope. All builds share the head, skeleton, movement, collision, and interaction reach. Clothing meshes fit each torso. Wardrobe choices are session-scoped for this prototype.
+
 ### YYYY-MM-DD — Decision
 **Decision:**  
 **Reason:**  

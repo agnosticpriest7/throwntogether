@@ -33,6 +33,10 @@ namespace ThrownTogether
         private bool practiceLevel;
         private RecipeBook recipeBook;
         private int recipeIndex;
+        private int wardrobePlayer, pendingKitchen;
+        private bool wardrobeBeforeLaunch;
+        private ChefWardrobePreview wardrobePreview;
+        private bool WardrobePage => Page=="Your chef" || Page=="Face" || Page=="Accessories";
         private GUIStyle buttonStyle, textStyle;
         private readonly List<Row> rows=new List<Row>();
         private sealed class Row { public string label; public Action select; public Action<int> adjust; public bool enabled=true; }
@@ -70,11 +74,36 @@ namespace ThrownTogether
         public void ShowLevels(bool practice) { practiceLevel=practice; SetPage("Levels"); }
         private void LaunchLevel(int index)
         {
+            pendingKitchen=index; wardrobeBeforeLaunch=true; ShowWardrobe();
+        }
+        private void FinishLaunch()
+        {
+            int index=pendingKitchen;
             SessionOptions.Kitchen=index; SessionOptions.Training="Free practice";
             IsFrontEnd=false; Close(); Load(practiceLevel ? "RestaurantDevelopment":"RestaurantShift");
         }
+        public void ShowWardrobe()
+        {
+            if(!IsOpen) Open();
+            if(wardrobePreview==null) wardrobePreview=gameObject.AddComponent<ChefWardrobePreview>();
+            SetPage("Your chef"); RefreshAppearance();
+        }
+        private void RefreshAppearance()
+        {
+            var choice=ChefWardrobe.ForPlayer(wardrobePlayer); choice.Normalize();
+            wardrobePreview?.Show(choice);
+            var chef=wardrobePlayer==0 ? hud.chef:hud.coop?.PlayerTwo;
+            chef?.GetComponentInChildren<ChefAppearance>()?.Apply(choice);
+        }
+        private void Choice(string label,string[] names,Func<int> read,Action<int> write)
+        {
+            Action<int> change=dir=>{write((read()+dir+names.Length)%names.Length);RefreshAppearance();};
+            Add(label+": "+names[read()]+"  < >",()=>change(1),change);
+        }
         public void NavigateBack()
         {
+            if(Page=="Face" || Page=="Accessories") {SetPage("Your chef");return;}
+            if(Page=="Your chef") {SetPage(wardrobeBeforeLaunch ? "Levels":"Main");return;}
             if(IsFrontEnd) SetPage("Title");
             else if(Page=="Main") Close(); else SetPage("Main");
         }
@@ -101,7 +130,37 @@ namespace ThrownTogether
                 AddUnavailable("Endless");
                 Add("Recipe book",OpenRecipeBook);
                 Add("Co-op setup",()=>SetPage("Co-op"));
+                Add("Choose your chef",()=>{wardrobeBeforeLaunch=false;ShowWardrobe();});
                 Add("Settings",()=>SetPage("Settings")); return;
+            }
+            if(WardrobePage)
+            {
+                var a=ChefWardrobe.ForPlayer(wardrobePlayer);
+                if(Page=="Your chef")
+                {
+                    Choice("Player",new[]{"Player 1","Player 2"},()=>wardrobePlayer,v=>wardrobePlayer=v);
+                    Choice("Build",ChefWardrobe.Builds,()=>a.build,v=>a.build=v);
+                    Choice("Clothing",ChefWardrobe.Clothes,()=>a.clothing,v=>a.clothing=v);
+                    Choice("Clothing color",ChefWardrobe.ClothColors,()=>a.clothingColor,v=>a.clothingColor=v);
+                    Choice("Body color",ChefWardrobe.Colors,()=>a.bodyColor,v=>a.bodyColor=v);
+                    Add("Face",()=>SetPage("Face")); Add("Hair and accessories",()=>SetPage("Accessories"));
+                    Add(wardrobeBeforeLaunch ? "Ready — start cooking":"Done",()=>{if(wardrobeBeforeLaunch) FinishLaunch();else SetPage("Main");});
+                    Add("Back",NavigateBack);
+                }
+                else if(Page=="Face")
+                {
+                    Choice("Eyes",ChefWardrobe.Eyes,()=>a.eyes,v=>a.eyes=v);
+                    Choice("Mouth",ChefWardrobe.Mouths,()=>a.mouth,v=>a.mouth=v);
+                    Add("Back",NavigateBack);
+                }
+                else
+                {
+                    Choice("Hair",new[]{"None","Swept tuft"},()=>a.hair,v=>a.hair=v);
+                    Choice("Headwear",ChefWardrobe.Hats,()=>a.headwear,v=>a.headwear=v);
+                    Choice("Glasses",new[]{"None","Round glasses"},()=>a.glasses,v=>a.glasses=v);
+                    Add("Back",NavigateBack);
+                }
+                return;
             }
             if(Page=="Levels")
             {
@@ -171,6 +230,7 @@ namespace ThrownTogether
             }
             Add("Play / Resume",Close);
             Add("Recipe book",OpenRecipeBook);
+            Add("Choose your chef",()=>{wardrobeBeforeLaunch=false;ShowWardrobe();});
             Add("Restart this mode",RequestRestart);
             Add("Kitchen, shift length and practice",()=>SetPage("Session"));
             if(hud.coop!=null) Add("Co-op setup and controller help",()=>SetPage("Co-op"));
@@ -235,10 +295,15 @@ namespace ThrownTogether
             {
                 GUI.enabled=rows[i].enabled;
                 GUI.backgroundColor=i==Selection ? new Color(.2f,.8f,.6f):Color.gray;
-                var rowRect=Page=="Recipes" ? new Rect(35,160+i*55,345,48):new Rect(260,145+i*47,760,42);
+                var rowRect=Page=="Recipes" ? new Rect(35,160+i*55,345,48):WardrobePage ? new Rect(65,145+i*47,670,42):new Rect(260,145+i*47,760,42);
                 if(GUI.Button(rowRect,(i==Selection ? ">  ":"    ")+rows[i].label,style)) { Selection=i; ActivateSelection(); break; }
             }
             GUI.enabled=true; GUI.backgroundColor=Color.white;
+            if(WardrobePage && wardrobePreview!=null && wardrobePreview.Image!=null)
+            {
+                GUI.DrawTexture(new Rect(780,145,360,450),wardrobePreview.Image,ScaleMode.ScaleToFit);
+                GUI.Label(new Rect(65,572,670,42),Page=="Accessories" ? "Hair is tucked away under headwear." : "Three builds. Same movement and reach.",text);
+            }
             if(Page=="Levels") GUI.Label(new Rect(260,435,760,115),hud.GetComponent<KitchenLayout>().choices[Mathf.Min(Selection,2)].description,text);
             if(Page=="Recipes" && recipeBook!=null && recipeBook.recipes.Length>0)
             {
@@ -251,7 +316,7 @@ namespace ThrownTogether
                 GUI.Label(new Rect(435,230,780,350),RecipeBook.Instructions(recipe),instructions);
             }
             if(Page=="Kitchen") GUI.Label(new Rect(260,370,760,135),hud.GetComponent<KitchenLayout>().choices[Mathf.Min(Selection,2)].description,text);
-            if(Page=="Co-op") GUI.Label(new Rect(200,390,880,145),"1. Xbox Edge: hold Menu, then Use game controls.\n2. Resume. First pad controls P1; A on another joins P2.\nP1 mint / P2 coral. A: use. Y: menu.\nDisconnected? Food stays safe. Reconnect that pad or press A on an unused one.",text);
+            if(Page=="Co-op") GUI.Label(new Rect(200,390,880,145),"1. Xbox Edge: hold Menu, then Use game controls.\n2. Resume. First pad controls P1; A on another joins P2.\nChoose both looks in Choose your chef. A: use. Y: menu.\nDisconnected? Food stays safe. Reconnect that pad or press A on an unused one.",text);
             GUI.Label(new Rect(240,545,800,70),message,text);
             if(Page=="Results")
             {
