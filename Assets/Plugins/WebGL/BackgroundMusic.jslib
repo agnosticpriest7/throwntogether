@@ -3,6 +3,8 @@ mergeInto(LibraryManager.library, {
     if (window.ttMusic) return;
     var tracks=[UTF8ToString(first),UTF8ToString(second)], index=0;
     var audio=new Audio();
+    audio.id='background-music'; audio.hidden=true;
+    document.body.appendChild(audio);
     audio.preload='metadata';
     audio.volume=window.ttMusicVolume === undefined ? 0.6 : window.ttMusicVolume;
     window.ttMusic=audio;

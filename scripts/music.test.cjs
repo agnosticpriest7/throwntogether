@@ -10,7 +10,7 @@ function setup(reject=false) {
     play(){if(reject)return Promise.reject({name:'NotAllowedError'});this.paused=false;return Promise.resolve();}
     pause(){this.paused=true;}
   }
-  const context={window:{},document:{hidden:false,addEventListener:(name,fn,options)=>{listeners[name]={fn,options};}},Audio,
+  const context={window:{},document:{body:{appendChild:()=>{}},hidden:false,addEventListener:(name,fn,options)=>{listeners[name]={fn,options};}},Audio,
     LibraryManager:{library},mergeInto:Object.assign,UTF8ToString:x=>x,console:{warn:(...args)=>warnings.push(args)}};
   vm.runInNewContext(fs.readFileSync('Assets/Plugins/WebGL/BackgroundMusic.jslib','utf8'),context);
   return {context,library,listeners,warnings,count:()=>count};

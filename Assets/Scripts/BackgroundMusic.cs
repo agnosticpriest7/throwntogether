@@ -18,6 +18,8 @@ namespace ThrownTogether
 #endif
         public static void Ensure()
         {
+            // Headless test/build processes have no listening user or stable audio listener.
+            if(Application.isBatchMode) return;
             if(instance!=null) return;
             var root=new GameObject("Background music");
             instance=root.AddComponent<BackgroundMusic>();
