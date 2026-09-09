@@ -28,3 +28,22 @@ Measured by summing file lengths under ignored Builds/Web, not Unity BuildReport
 Run scripts/test-build-deploy-web.ps1, record build-info.json, sum the resulting static file lengths, then visit the published build. Record browser/hardware, viewport/DPR, cache conditions and the canvas data-loader-ready-ms attribute. Focus the game and sample F3/DEV FPS in the same idle scene, keeping panel state consistent. If allocation analysis becomes necessary, make a separate profiling build; do not equate Editor allocations with Web allocations. Repeat on physical Xbox/Edge before using these figures as a console performance target.
 
 Final verification passed 4 browser-shell, 16 EditMode and 10 PlayMode tests. Unity MCP completed the original timed potato → prep → fryer → plate → customer loop with no new Console errors. Final browser settings verification changed SFX volume, saved, refreshed and confirmed the saved value; then restored/saved its original maximum value. Diagnostic visibility remained transient. No audible sound-balance, physical controller or TV testing was claimed.
+
+## 0.4.0 baseline — 2026-09-09
+
+Source `c7e6342e46a5efb573c5ee64156b389d8e2e76d1`, deployment `0ac5793ef4140394d5ff97ec24a01d7dd9f47c20`. Optimized Web build with the existing development diagnostics, unchanged compression/thread/cache settings.
+
+| Output | Bytes |
+|---|---:|
+| All nine static files, including the new manifest | 48,043,773 |
+| WebAssembly | 35,020,378 |
+| Data | 12,663,502 |
+| Framework JavaScript | 332,908 |
+| Loader JavaScript | 20,263 |
+| Artifact manifest | 1,448 |
+
+Increase over 0.3.0's recorded 48,006,254 bytes: **37,519 bytes (about 0.08%)**. The manifest inventories eight payload files totaling 48,042,325 bytes; its own 1,448 bytes are excluded from self-hashing. A Git archive of the actual deployment commit passes the same SHA-256 verification. Publication sets core.autocrlf=false in its isolated repository so Git cannot invalidate hashes by normalizing generated HTML/JavaScript line endings.
+
+Desktop in-app Chromium, 1280x720 viewport: idle shift diagnostics observed approximately **60 FPS**. Canvas CSS 1100.80x688.00, backing 3253x2033, DPR about 2.955. First visit in this review reached loader-ready at **3,007 ms**, a second warm visit at **377 ms**. Cache/network conditions were not controlled; these are navigation-to-loader-resolution samples, not cold-start promises, first-interactive-frame measurements or Xbox benchmarks. No sustained slowdowns were apparent during menu, guided practice and keyboard counter-plating checks.
+
+GC allocation recorder remains **unavailable in this player**, not zero. Static review: station meshes/materials are built once; target borders reuse their objects; food icon texture is cached. The existing IMGUI and optional guidance still construct strings, and opt-in guidance queries a small station set. No speculative optimization was applied. The pre-existing URP upscaling warning remains; no new browser/runtime errors were seen. Physical TV/controller readability and audio balance still need Kyle's review.

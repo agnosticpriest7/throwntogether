@@ -39,3 +39,5 @@ Verification outcome: one pre-build headless-focus test failure was corrected; t
 
 ### 0.4.0 approved overnight batch
 Owner reports 0.3.0 priorities 1–3 consumed 6 percentage points (61% to 55% remaining). Owner explicitly approved a larger bounded overnight batch, approximately four times that work, overriding the earlier narrow checkpoint. That is scope guidance, not a guaranteed cost or target to waste allowance. Current batch/account usage and final remaining allowance are unknown; no inferred usage, purchased credits or reset consumption. Reused existing scenes, mesh dependencies, data and pipeline. No subagents used.
+
+0.4.0 outcome: 22 EditMode / 23 PlayMode / nine Node checks passed; one successful Web build/deployment. Initial Editor fixture hang was corrected before batch building. A publisher line-ending safeguard was verified against the actual committed artifact without rebuilding unchanged runtime code. Remaining allowance/cost is unknown; no usage estimate is inferred. Stop at owner review.

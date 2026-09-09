@@ -39,6 +39,7 @@ $info=Get-Content "$static/build-info.json" -Raw | ConvertFrom-Json
 Write-Host "Prepared deployment $DeploymentCommit (source $($info.sourceCommit)) at $static"
 if(!$Publish) {Write-Host 'Inspection only. Add -Publish to restore this snapshot as a new gh-pages commit.'; return}
 Git $static @('init','-b','gh-pages') | Out-Host
+Git $static @('config','core.autocrlf','false') | Out-Host
 Git $static @('remote','add','origin',$origin) | Out-Host
 Git $static @('fetch','origin','gh-pages') | Out-Host
 Git $static @('reset','--mixed','FETCH_HEAD') | Out-Host
