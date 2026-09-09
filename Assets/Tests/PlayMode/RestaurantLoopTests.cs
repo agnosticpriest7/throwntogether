@@ -14,6 +14,38 @@ namespace ThrownTogether.Tests
 {
     public class RestaurantLoopTests
     {
+        [UnityTest]
+        public IEnumerator BrowserMenuNeverTriggersRestartButKeyboardAndNativeRestartRemainAvailable()
+        {
+            var background=InputSystem.settings.backgroundBehavior;
+            var editorInput=InputSystem.settings.editorInputBehaviorInPlayMode;
+            InputSystem.settings.backgroundBehavior=InputSettings.BackgroundBehavior.IgnoreFocus;
+            InputSystem.settings.editorInputBehaviorInPlayMode=InputSettings.EditorInputBehaviorInPlayMode.AllDeviceInputAlwaysGoesToGameView;
+            var pad=InputSystem.AddDevice<Gamepad>();
+            var keyboard=InputSystem.AddDevice<Keyboard>();
+            using var web=new InputActionMap("WebTest");
+            using var native=new InputActionMap("NativeTest");
+            var webRestart=ChefInput.CreateRestartAction(web,true);
+            var nativeRestart=ChefInput.CreateRestartAction(native,false);
+            web.Enable(); native.Enable();
+            try
+            {
+                InputSystem.QueueStateEvent(pad,new GamepadState().WithButton(GamepadButton.Start));
+                InputSystem.Update();
+                Assert.That(webRestart.WasPressedThisFrame(),Is.False,"Menu belongs to the browser");
+                Assert.That(nativeRestart.WasPressedThisFrame(),Is.True,"Native Start is unchanged");
+                InputSystem.QueueStateEvent(keyboard,new KeyboardState(Key.R));
+                InputSystem.Update();
+                Assert.That(webRestart.WasPressedThisFrame(),Is.True,"Web keyboard restart remains usable");
+            }
+            finally
+            {
+                InputSystem.RemoveDevice(pad); InputSystem.RemoveDevice(keyboard);
+                InputSystem.settings.backgroundBehavior=background;
+                InputSystem.settings.editorInputBehaviorInPlayMode=editorInput;
+            }
+            yield return null;
+        }
         private Scene original, testScene;
         private ChefController chef;
         private GameObject[] suspended;

@@ -21,6 +21,16 @@ namespace ThrownTogether
         public string LastUseResult { get; private set; } = "None yet";
         public int UseSignals { get; private set; }
         public string LastUseSignal { get; private set; } = "None yet";
+        public static bool BrowserOwnsMenu => Application.platform==RuntimePlatform.WebGLPlayer;
+        public static string RestartHint => BrowserOwnsMenu ? "R: restart (DEV button on controller)" : "R / Start: restart";
+        public static InputAction CreateRestartAction(InputActionMap map, bool browserOwnsMenu)
+        {
+            var action=map.AddAction("Restart",InputActionType.Button);
+            action.AddBinding("<Keyboard>/r");
+            // Edge needs Menu to enter/leave its native controller mode.
+            if(!browserOwnsMenu) action.AddBinding("<Gamepad>/start");
+            return action;
+        }
         public bool AcceptsDevice(InputDevice device) => device != null && device.added && (!controls.devices.HasValue || controls.devices.Value.Contains(device));
         private void Awake()
         {
@@ -33,7 +43,7 @@ namespace ThrownTogether
             move.AddCompositeBinding("2DVector").With("Up","<Keyboard>/upArrow").With("Down","<Keyboard>/downArrow").With("Left","<Keyboard>/leftArrow").With("Right","<Keyboard>/rightArrow");
             move.AddBinding("<Gamepad>/leftStick");
             use=controls.AddAction("Use",InputActionType.Button); use.AddBinding("<Keyboard>/e"); use.AddBinding("<Keyboard>/space"); use.AddBinding("<Gamepad>/buttonSouth");
-            restart=controls.AddAction("Restart",InputActionType.Button); restart.AddBinding("<Keyboard>/r"); restart.AddBinding("<Gamepad>/start");
+            restart=CreateRestartAction(controls,BrowserOwnsMenu);
             controls.actionTriggered += context => {
                 if (!context.performed) return;
                 LastActiveDevice=context.control.device;

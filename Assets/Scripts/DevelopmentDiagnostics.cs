@@ -92,6 +92,7 @@ namespace ThrownTogether
                     "\nFPS: "+fps.ToString("F0")+" | GC: "+gcSample;
                 GUI.Label(new Rect(34,112,630,475),details,text);
                 DrawAudioSettings();
+                if(input != null && GUI.Button(new Rect(714,404,300,30),"Restart slice (clears Unity history)")) input.RestartSlice();
             }
             GUI.matrix=matrix;
         }

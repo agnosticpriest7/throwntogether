@@ -29,7 +29,7 @@ namespace ThrownTogether
             GUI.matrix=Matrix4x4.TRS(Vector3.zero,Quaternion.identity,new Vector3(Screen.width/1280f,Screen.height/720f,1));
             GUI.Box(new Rect(20,14,1240,82),GUIContent.none);
             GUI.Label(new Rect(30,16,1220,34),"THROWN TOGETHER  /  FIRST SERVICE",title);
-            string status=order.Phase == OrderPhase.Waiting ? "ORDER: 1 PLATE OF FRIES" : order.Phase == OrderPhase.Delivering ? "DELIVERING FRIES…" : order.Phase == OrderPhase.Eating ? "CUSTOMER IS EATING…" : "ORDER COMPLETE!  Thanks, chef!   •   R / Start to play again";
+            string status=order.Phase == OrderPhase.Waiting ? "ORDER: 1 PLATE OF FRIES" : order.Phase == OrderPhase.Delivering ? "DELIVERING FRIES…" : order.Phase == OrderPhase.Eating ? "CUSTOMER IS EATING…" : "ORDER COMPLETE!  Thanks, chef!   •   "+ChefInput.RestartHint;
             GUI.Label(new Rect(30,53,1220,30),status,label);
             foreach(var station in Interactable.Active)
             {
@@ -45,7 +45,7 @@ namespace ThrownTogether
             string prompt=chef.Focus != null ? "[E / A] " + chef.Focus.Prompt(chef) : "Approach a station and face it";
             GUI.Label(new Rect(30,610,1220,30),prompt,label);
             GUI.Label(new Rect(30,644,1220,25),"CARRYING: " + (chef.Hands.Item == null ? "Nothing" : chef.Hands.Item.Payload.Label) + "    •    Move: WASD / arrows / left stick    •    Use: E / Space / A",small);
-            GUI.Label(new Rect(30,675,1220,22),"Potato → Prep → Fryer → Combine with a plate → Pickup     |     R / Start: restart",small);
+            GUI.Label(new Rect(30,675,1220,22),"Potato → Prep → Fryer → Combine with a plate → Pickup     |     "+ChefInput.RestartHint,small);
             GUI.matrix=previous; GUI.color=Color.white; GUI.backgroundColor=Color.white;
         }
     }
