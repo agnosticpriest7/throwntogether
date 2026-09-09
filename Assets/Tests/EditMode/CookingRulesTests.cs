@@ -5,6 +5,15 @@ namespace ThrownTogether.Tests
 {
     public class CookingRulesTests
     {
+        [Test]
+        public void CarryablePrefabReferencesEveryRuntimeVisualDependency()
+        {
+            var item=AssetDatabase.LoadAssetAtPath<UnityEngine.GameObject>("Assets/Prefabs/VerticalSlice/Carryable.prefab").GetComponent<Carryable>();
+            Assert.That(item.sphereMesh,Is.Not.Null);
+            Assert.That(item.cubeMesh,Is.Not.Null);
+            Assert.That(item.cylinderMesh,Is.Not.Null);
+            Assert.That(item.visualShader,Is.Not.Null);
+        }
         private T Data<T>(string name) where T:UnityEngine.Object => AssetDatabase.LoadAssetAtPath<T>("Assets/Data/VerticalSlice/"+name+".asset");
         [Test]
         public void CatalogMigrationPreservesRecipeAndApplianceCompatibility()

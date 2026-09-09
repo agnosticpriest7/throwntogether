@@ -44,3 +44,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 29b85e1d4c6f49f418d58c15b3036132, type: 3}
   m_Name: 
   m_EditorClassIdentifier: ThrownTogether.Runtime::ThrownTogether.Carryable
+  sphereMesh: {fileID: 10207, guid: 0000000000000000e000000000000000, type: 0}
+  cubeMesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
+  cylinderMesh: {fileID: 10206, guid: 0000000000000000e000000000000000, type: 0}
+  visualShader: {fileID: 4800000, guid: 933532a4fcc9baf4fa0491de14d08ed7, type: 3}

@@ -233,6 +233,8 @@ namespace ThrownTogether.Tests
             var source=Find<SourceStation>("POTATOES"); var prep=Find<ProcessingStation>("PREP"); var fryer=Find<ProcessingStation>("FRYER");
             var counter=Find<CounterStation>("PLATING"); var plates=Find<SourceStation>("PLATES"); var service=Find<ServiceStation>("PICKUP");
             Use(source); var potato=chef.Hands.Item; Assert.That(potato.Payload.state,Is.EqualTo(FoodState.Raw));
+            Assert.That(potato.GetComponentsInChildren<Collider>(true),Is.Empty,"Item visuals must not require stripped collider types");
+            Assert.That(potato.GetComponentInChildren<MeshFilter>().sharedMesh,Is.SameAs(source.itemPrefab.sphereMesh));
             Approach(source); Assert.That(chef.Use(),Is.False); Assert.That(chef.Hands.Item,Is.SameAs(potato));
             Approach(fryer); Assert.That(chef.Use(),Is.False); Assert.That(fryer.slot.Item,Is.Null);
             Approach(service); Assert.That(chef.Use(),Is.False);
