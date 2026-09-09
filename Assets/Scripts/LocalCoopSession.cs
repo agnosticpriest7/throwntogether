@@ -16,6 +16,9 @@ namespace ThrownTogether
         public bool KeyboardPlayerOne { get; private set; }
         public string LastEvent { get; private set; }="Solo ready";
         private bool p2Connected;
+        public bool PlayerOneDisconnected => PlayerOnePad!=null && !PlayerOnePad.added;
+        public string ConnectionHelp => PlayerOneDisconnected ? "P1 disconnected: reconnect your pad or press A on an unused pad. Keyboard still works." :
+            PlayerTwo!=null && (PlayerTwoPad==null || !PlayerTwoPad.added) ? "P2 disconnected: chef and food retained. Reconnect your pad or press A on an unused pad." : "";
         private static string DeviceName(Gamepad pad) => pad.displayName.Length>36 ? pad.displayName.Substring(0,36)+"…" : pad.displayName;
         public string DeviceSummary => "P1: "+(PlayerOnePad!=null && PlayerOnePad.added ? DeviceName(PlayerOnePad)+" + keyboard":"Keyboard (no assigned pad)")+
             "\nP2: "+(PlayerTwo==null ? "Not joined — resume and press A on an unused pad" : PlayerTwoPad!=null && PlayerTwoPad.added ? DeviceName(PlayerTwoPad) : "Disconnected — item retained")+"\n"+LastEvent;
@@ -23,6 +26,10 @@ namespace ThrownTogether
         {
             if(PlayerTwo!=null) return;
             KeyboardPlayerOne=true; BindPlayerOne(null);
+        }
+        public void UseControllerPlayerOne()
+        {
+            KeyboardPlayerOne=false; RefreshPlayerOneAssignment();
         }
         public string Status => PlayerTwo==null ? "Solo | Press A on a second pad to join" :
             PlayerTwoPad!=null && PlayerTwoPad.added ? "Local co-op | P1 mint / P2 coral" : "P2 disconnected — position and item retained; press A to reconnect";
@@ -69,7 +76,9 @@ namespace ThrownTogether
             if(playerOne==null) return;
             if(PlayerTwo!=null) {
                 bool connected=PlayerTwoPad!=null && PlayerTwoPad.added;
-                PlayerTwo.GetComponent<ChefInput>().enabled=connected;
+                var input=PlayerTwo.GetComponent<ChefInput>();
+                if(connected && !p2Connected) input.RequireActionRelease();
+                input.enabled=connected;
                 if(p2Connected!=connected) LastEvent=connected ? "P2 reconnected" : "P2 disconnected — chef and held item retained";
                 p2Connected=connected;
             }

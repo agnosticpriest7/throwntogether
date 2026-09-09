@@ -69,9 +69,9 @@ namespace ThrownTogether
             bool two=coop!=null && coop.PlayerTwo!=null;
             DrawPlayer(chef,"P1",new Color(.2f,1,.7f),20,two ? 612:1240);
             if(two) DrawPlayer(coop.PlayerTwo,"P2",new Color(1,.42f,.32f),648,612);
-            if(two && (coop.PlayerTwoPad==null || !coop.PlayerTwoPad.added))
+            if(coop!=null && !string.IsNullOrEmpty(coop.ConnectionHelp))
             {
-                Panel(new Rect(300,93,680,30)); GUI.Label(new Rect(300,93,680,30),"P2 disconnected — food retained. Press A on a controller to reconnect.",small);
+                Panel(new Rect(160,93,960,45)); GUI.Label(new Rect(170,93,940,45),coop.ConnectionHelp,small);
             }
             else if(Time.time<completedUntil)
             { Panel(new Rect(490,94,300,30)); GUI.Label(new Rect(490,94,300,30),"Dish served!",label); }

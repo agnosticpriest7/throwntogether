@@ -11,7 +11,7 @@ namespace ThrownTogether.Tests
 {
     public sealed class RestaurantShiftTests
     {
-        [UnityTest] public IEnumerator SoloChefCompletesBothDishesAndAllSixOrders()
+        [UnityTest] public IEnumerator SoloChefCompletesAllThreeDishesAndAllSixOrders()
         {
             var original=SceneManager.GetActiveScene();
             var suspended=Object.FindObjectsByType<RestaurantHud>().Any(h=>h.gameObject.scene==original)
@@ -36,15 +36,16 @@ namespace ThrownTogether.Tests
                 var plates=stations.OfType<SourceStation>().Single(s=>s.plates);
                 var service=stations.OfType<ServiceStation>().Single();
                 Assert.That(shift.seats.Count(s=>s.Active),Is.EqualTo(2));
-                Assert.That(shift.definition.orders.Select(r=>r.ingredient).Distinct().Count(),Is.EqualTo(2));
+                Assert.That(shift.definition.orders.Select(r=>r.ingredient).Distinct().Count(),Is.EqualTo(3));
                 for(int i=0;i<6;i++)
                 {
                     var ticket=shift.seats.First(s=>s.Active && s.Phase==OrderPhase.Waiting);
                     var source=stations.OfType<SourceStation>().Single(s=>!s.plates && s.ingredient==ticket.recipe.ingredient);
                     Use(chef,source); Assert.That(service.Interact(chef),Is.False,"Raw ingredients cannot fulfil a ticket");
                     Use(chef,prep); prep.Advance(1.5f); Use(chef,prep);
-                    Use(chef,fryer); fryer.Advance(5); Use(chef,fryer);
-                    Assert.That(chef.Hands.Item.Payload.state,Is.EqualTo(FoodState.Cooked));
+                    if(ticket.recipe.requiredState==FoodState.Cooked) {Use(chef,fryer); fryer.Advance(5); Use(chef,fryer);}
+                    else Assert.That(fryer.Interact(chef),Is.False,"Cold salad must not enter the fryer");
+                    Assert.That(chef.Hands.Item.Payload.state,Is.EqualTo(ticket.recipe.requiredState));
                     Use(chef,plating); Use(chef,plates); Use(chef,plating); Use(chef,plating);
                     Use(chef,service); Assert.That(ticket.Phase,Is.EqualTo(OrderPhase.Delivering));
                     yield return new WaitForSeconds(1.8f);

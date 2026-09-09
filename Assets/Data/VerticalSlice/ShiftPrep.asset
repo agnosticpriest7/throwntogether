@@ -18,3 +18,4 @@ MonoBehaviour:
   supportedProcesses:
   - {fileID: 11400000, guid: 053676bb01529b14cad60da95b8c76cc, type: 2}
   - {fileID: 11400000, guid: 2dc18f3118a7204409cef8c5d14852fb, type: 2}
+  - {fileID: 11400000, guid: 92892ce930c1ecd4ea5bd1d0adf36947, type: 2}

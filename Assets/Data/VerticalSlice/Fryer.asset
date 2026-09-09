@@ -17,3 +17,4 @@ MonoBehaviour:
   description: 'First-service vertical slice: Fryer.'
   supportedProcesses:
   - {fileID: 11400000, guid: 830e48340fe60a04d9bd300c2a09cacf, type: 2}
+  - {fileID: 11400000, guid: 91f245903a542cc40943381cb026bcdd, type: 2}

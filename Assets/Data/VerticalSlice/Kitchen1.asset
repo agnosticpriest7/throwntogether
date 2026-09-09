@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9eb43fb6680182e4e8b7821243c599c0, type: 3}
+  m_Name: Kitchen1
+  m_EditorClassIdentifier: ThrownTogether.Runtime::ThrownTogether.KitchenLayoutDefinition
+  id: kitchen-1
+  displayName: Prep Island
+  description: Shared central prep and plating island; supplies across the back, hot food on the right. Walk around the island and share counters.
+  stations:
+  - {x: -6, y: 0, z: 5}
+  - {x: -2.7, y: 0, z: 5}
+  - {x: 0.6, y: 0, z: 5}
+  - {x: -2.3, y: 0, z: 1}
+  - {x: 1, y: 0, z: -2.5}
+  - {x: -6, y: 0, z: -2.5}
+  - {x: 0.1, y: 0, z: 1}
+  - {x: -2.3, y: 0, z: -1.4}
+  - {x: 4.8, y: 0, z: 1}
+  playerOneSpawn: {x: -4.3, y: 0.03, z: -1.5}
+  playerTwoSpawn: {x: -4.3, y: 0.03, z: -3.6}

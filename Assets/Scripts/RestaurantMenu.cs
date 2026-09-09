@@ -65,6 +65,7 @@ namespace ThrownTogether
             rows.Clear();
             if(Page=="Session")
             {
+                Add("Kitchen: "+hud.GetComponent<KitchenLayout>().choices[SessionOptions.Kitchen].displayName,()=>SetPage("Kitchen"));
                 Add("Shift length: "+SessionOptions.ShiftLabel,()=>CycleLength(1),CycleLength);
                 Add("Start selected shift",()=>Confirm("Start "+SessionOptions.ShiftLabel+"? Current progress will reset.",()=>Load("RestaurantShift")));
                 Add("Guided full cooking loop",()=>StartTraining("Guided full loop"));
@@ -72,10 +73,29 @@ namespace ThrownTogether
                 Add("Free practice",()=>StartTraining("Free practice"));
                 Add("Back",()=>SetPage("Main")); return;
             }
+            if(Page=="Kitchen")
+            {
+                var layouts=hud.GetComponent<KitchenLayout>().choices;
+                for(int i=0;i<layouts.Length;i++)
+                {
+                    int index=i;
+                    Add(layouts[i].displayName,()=>Confirm("Switch to "+layouts[index].displayName+"? Current progress resets.",()=>{SessionOptions.Kitchen=index; Load(SceneManager.GetActiveScene().name);}));
+                }
+                Add("Back",()=>SetPage("Session")); return;
+            }
+            if(Page=="Co-op")
+            {
+                Add("Resume / ready to join",Close);
+                Add("Keyboard P1 + controller P2",()=>{if(hud.coop.PlayerTwo!=null) message="Put down P2's item and leave before changing setup."; else {hud.coop.UseKeyboardPlayerOne();message="Keyboard stays P1. Resume; press A on a pad for P2.";}});
+                Add("Controller P1 (keyboard also available)",()=>{hud.coop.UseControllerPlayerOne();message="Resume and press A on the first controller.";});
+                Add("Player 2 leave",()=>{if(hud.coop.PlayerTwo==null) message="Player 2 has not joined."; else if(hud.coop.PlayerTwo.Hands.Item!=null) message="Place P2's item on a counter before leaving."; else Confirm("Remove Player 2? The shift continues.",()=>hud.coop.LeavePlayerTwo());});
+                Add("Back",()=>SetPage("Main")); return;
+            }
             if(Page=="Practice")
             {
                 foreach(var step in new[]{"Prep","Frying","Plating","Serving"})
                 { var selected=step; Add(selected+" — start with the needed item",()=>StartTraining(selected)); }
+                Add("Tomato salad — guided cold prep",()=>StartTraining("Tomato salad"));
                 Add("Back",()=>SetPage("Session")); return;
             }
             if(Page=="Confirm") { Add("Cancel — keep playing",()=>SetPage("Main")); Add("Confirm",()=>{var action=pending; Close(); action?.Invoke();}); return; }
@@ -98,12 +118,8 @@ namespace ThrownTogether
             Add(hud.shift==null ? "Play restaurant shift" : "Return to practice",()=>Confirm("Change mode? Current food/order progress will reset.",()=>{SessionOptions.Training="Free practice"; Load(hud.shift==null ? "RestaurantShift":"RestaurantDevelopment");}));
             Add("Restart this mode",RequestRestart);
             Add("Text and accessibility",()=>SetPage("Display")); Add("Audio settings",()=>SetPage("Audio"));
-            if(hud.coop!=null)
-            {
-                if(hud.coop.PlayerTwo==null) Add(hud.coop.KeyboardPlayerOne ? "Keyboard P1 selected — A joins P2" : "Use keyboard P1 + one controller P2",()=>{hud.coop.UseKeyboardPlayerOne(); message="Resume, then press A on the controller to join P2.";});
-                else Add("Player 2 leave",()=>{ if(hud.coop.PlayerTwo.Hands.Item!=null) message="P2 must place their held item on a counter before leaving."; else Confirm("Remove Player 2? The current shift continues.",()=>hud.coop.LeavePlayerTwo()); });
-            }
-            Add("Shift length and guided practice",()=>SetPage("Session"));
+            if(hud.coop!=null) Add("Co-op setup and controller help",()=>SetPage("Co-op"));
+            Add("Kitchen, shift length and practice",()=>SetPage("Session"));
             Add("Session results",()=>SetPage("Results"));
             if(Page=="Results") { rows.Clear(); Add("Back",()=>SetPage("Main")); }
         }
@@ -164,6 +180,8 @@ namespace ThrownTogether
                 if(GUI.Button(new Rect(260,145+i*47,760,42),(i==Selection ? ">  ":"    ")+rows[i].label,style)) { Selection=i; ActivateSelection(); break; }
             }
             GUI.backgroundColor=Color.white;
+            if(Page=="Kitchen") GUI.Label(new Rect(260,370,760,135),hud.GetComponent<KitchenLayout>().choices[Mathf.Min(Selection,2)].description,text);
+            if(Page=="Co-op") GUI.Label(new Rect(200,390,880,145),"1. Xbox Edge: hold Menu, then Use game controls.\n2. Resume. First pad controls P1; A on another joins P2.\nP1 mint / P2 coral. A: use. Y: menu.\nDisconnected? Food stays safe. Reconnect that pad or press A on an unused one.",text);
             GUI.Label(new Rect(240,545,800,70),message,text);
             if(Page=="Results")
             {

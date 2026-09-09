@@ -74,3 +74,5 @@ The owner-confirmed co-op/food-shape build before this batch is deployment commi
 ```
 
 New builds include a SHA-256 artifact manifest. Publication verifies the files against it and rejects source files, compressed output, missing payloads or changed bytes. Generated manifests and restored snapshots stay under ignored Builds/ or on gh-pages.
+
+Latest variety build: use **Menu > Kitchen, shift length and practice > Kitchen** to switch between First Service, Prep Island and Split Line. Tomato Salad needs chopping and ordinary-counter plating, with no frying; try its guided loop under **Practice one step**. **Co-op setup and controller help** explains joining and recovery. Layout changes reset the current session only after confirmation.

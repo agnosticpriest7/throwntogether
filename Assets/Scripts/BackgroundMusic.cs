@@ -10,6 +10,7 @@ namespace ThrownTogether
     {
         private static BackgroundMusic instance;
         private static float volume=.6f;
+        public static bool AutomaticPlaybackEnabled { get; set; }=true;
         private AudioSource voice;
         private readonly string[] tracks={"first-service.ogg","one-more-order.ogg"};
 #if UNITY_WEBGL && !UNITY_EDITOR
@@ -19,7 +20,7 @@ namespace ThrownTogether
         public static void Ensure()
         {
             // Headless test/build processes have no listening user or stable audio listener.
-            if(Application.isBatchMode) return;
+            if(Application.isBatchMode || !AutomaticPlaybackEnabled) return;
             if(instance!=null) return;
             var root=new GameObject("Background music");
             instance=root.AddComponent<BackgroundMusic>();

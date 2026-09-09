@@ -5,6 +5,18 @@ namespace ThrownTogether.Tests
 {
     public class CookingRulesTests
     {
+        [TestCase(FoodState.Raw,false)]
+        [TestCase(FoodState.Cut,true)]
+        [TestCase(FoodState.Cooked,false)]
+        public void TomatoSaladOnlyAcceptsSlicedTomato(FoodState state,bool accepted)
+        {
+            var tomato=Data<IngredientDefinition>("Tomato");var item=ItemPayload.Food(tomato);item.state=state;
+            Assert.That(ItemPayload.CanPlate(ItemPayload.Plate(),item),Is.EqualTo(accepted));
+            item.isPlate=true;Assert.That(Data<RecipeDefinition>("TomatoSalad").Matches(item),Is.EqualTo(accepted));
+            item.isPlate=false;
+            Assert.That(Data<ProcessingRecipe>("FryPotato").Accepts(item),Is.False);
+            Assert.That(Data<ProcessingRecipe>("FryMushrooms").Accepts(item),Is.False);
+        }
         [Test]
         public void CarryablePrefabReferencesEveryRuntimeVisualDependency()
         {

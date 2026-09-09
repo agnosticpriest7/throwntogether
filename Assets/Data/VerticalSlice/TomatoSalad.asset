@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cacc153c4bd5a834eae8c4576d3c1e5a, type: 3}
+  m_Name: TomatoSalad
+  m_EditorClassIdentifier: ThrownTogether.Runtime::ThrownTogether.DishRecipe
+  id: tomato-salad
+  displayName: Tomato Salad
+  description: Chop tomato, combine with a clean plate on a counter, and serve. No fryer.
+  ingredient: {fileID: 11400000, guid: d59fc79e3765848469ee63bebb057d38, type: 2}
+  requiredState: 1
+  steps:
+  - {fileID: 11400000, guid: 92892ce930c1ecd4ea5bd1d0adf36947, type: 2}

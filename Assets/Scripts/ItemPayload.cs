@@ -13,6 +13,6 @@ namespace ThrownTogether
         public static ItemPayload Food(IngredientDefinition definition) => new ItemPayload { ingredient = definition };
         public static ItemPayload Plate() => new ItemPayload { isPlate = true };
         public static bool CanPlate(ItemPayload plate, ItemPayload food) => plate != null && plate.EmptyPlate &&
-            food != null && !food.isPlate && food.ingredient != null && food.state == FoodState.Cooked;
+            food != null && !food.isPlate && food.ingredient != null && food.state == food.ingredient.platingState;
     }
 }

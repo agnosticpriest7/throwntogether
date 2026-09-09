@@ -110,3 +110,8 @@ Owner approved controller menus/TV accessibility, food/cooking/ticket feedback a
 Owner approved the recommended batch: visual clarity and label removal, ordinary-counter plating, compact HUD/food/ticket feedback, short/standard/long shifts, expanded results, guided practice/checkpoints, co-op regressions, customer/service presentation, deployment restoration and performance checks. This reuses two recipes and the roomier kitchen. Stop after tests/build/deployment and owner review.
 
 Not included: alternate layouts, third recipe, dishwashing, throwing, new controller ping mapping, music, Windows packaging, economy, employees, persistent restaurant progression or another milestone. Those remain separate choices.
+
+## 0.5.0 approved variety batch
+- Added: selectable First Service / Prep Island / Split Line kitchens, Tomato Salad cold-prep recipe, guided salad practice, dedicated co-op help and reconnect coverage.
+- Acceptance: full regression suites, live Unity cooking verification and Web publication; physical kitchen flow/readability and Xbox reconnection remain owner playtests.
+- Deferred: throwing/catching, Windows distribution, economy, employees and restaurant progression. No automatic next milestone.

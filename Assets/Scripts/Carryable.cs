@@ -27,7 +27,23 @@ namespace ThrownTogether
             if (Payload.ingredient == null) return;
             var color = Payload.ingredient.ColorFor(Payload.state);
             var y = Payload.isPlate ? .13f : .08f;
-            if(Payload.ingredient.visualKind==IngredientVisualKind.Mushroom)
+            if(Payload.ingredient.visualKind==IngredientVisualKind.Tomato)
+            {
+                if(Payload.state==FoodState.Raw)
+                {
+                    Piece(PrimitiveType.Sphere,new Vector3(0,y+.08f,0),new Vector3(.52f,.43f,.52f),color);
+                    Piece(PrimitiveType.Cube,new Vector3(0,y+.30f,0),new Vector3(.32f,.035f,.075f),new Color(.15f,.48f,.12f));
+                    Piece(PrimitiveType.Cube,new Vector3(0,y+.30f,0),new Vector3(.075f,.035f,.32f),new Color(.15f,.48f,.12f));
+                }
+                else for(int i=0;i<3;i++)
+                {
+                    var p=new Vector3((i-1)*.18f,y+i*.035f,(i%2-.5f)*.16f);
+                    Piece(PrimitiveType.Cylinder,p,new Vector3(.39f,.035f,.39f),color);
+                    Piece(PrimitiveType.Cylinder,p+Vector3.up*.037f,new Vector3(.29f,.007f,.29f),new Color(1,.48f,.27f));
+                    Piece(PrimitiveType.Sphere,p+Vector3.up*.048f,new Vector3(.055f,.014f,.055f),new Color(1,.85f,.47f));
+                }
+            }
+            else if(Payload.ingredient.visualKind==IngredientVisualKind.Mushroom)
             {
                 if(Payload.state==FoodState.Raw)
                 {

@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9eb43fb6680182e4e8b7821243c599c0, type: 3}
+  m_Name: Kitchen2
+  m_EditorClassIdentifier: ThrownTogether.Runtime::ThrownTogether.KitchenLayoutDefinition
+  id: kitchen-2
+  displayName: Split Line
+  description: Ingredients down the left, hot prep across the back, plating below. Trade prepared dishes across the open middle; every station remains accessible solo.
+  stations:
+  - {x: -6, y: 0, z: 5}
+  - {x: -6, y: 0, z: 1.8}
+  - {x: -6, y: 0, z: -1.4}
+  - {x: -2.5, y: 0, z: 4.8}
+  - {x: 1, y: 0, z: 4.8}
+  - {x: -6, y: 0, z: -4}
+  - {x: -2.5, y: 0, z: -1.7}
+  - {x: 1, y: 0, z: -1.7}
+  - {x: 4.8, y: 0, z: 1}
+  playerOneSpawn: {x: -2.6, y: 0.03, z: 1}
+  playerTwoSpawn: {x: 0.6, y: 0.03, z: 1}

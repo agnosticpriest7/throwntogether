@@ -20,8 +20,17 @@ namespace ThrownTogether
             var previous=GUI.color;
             GUI.color=new Color(.77f,.84f,.87f); GUI.DrawTexture(new Rect(area.x,area.y+area.height*.39f,area.width,area.height*.56f),Disc);
             GUI.color=Color.white; GUI.DrawTexture(new Rect(area.x+area.width*.07f,area.y+area.height*.43f,area.width*.86f,area.height*.43f),Disc);
-            GUI.color=ingredient==null ? Color.white:ingredient.ColorFor(FoodState.Cooked);
-            if(ingredient!=null && ingredient.visualKind==IngredientVisualKind.Mushroom)
+            GUI.color=ingredient==null ? Color.white:ingredient.ColorFor(ingredient.platingState);
+            if(ingredient!=null && ingredient.visualKind==IngredientVisualKind.Tomato)
+            {
+                for(int i=0;i<3;i++)
+                {
+                    var r=new Rect(area.x+area.width*(.08f+i*.23f),area.y+area.height*(.25f+(i%2)*.16f),area.width*.4f,area.height*.27f);
+                    GUI.color=new Color(.93f,.13f,.06f); GUI.DrawTexture(r,Disc);
+                    GUI.color=new Color(1,.55f,.3f); GUI.DrawTexture(new Rect(r.x+r.width*.2f,r.y+r.height*.2f,r.width*.6f,r.height*.6f),Disc);
+                }
+            }
+            else if(ingredient!=null && ingredient.visualKind==IngredientVisualKind.Mushroom)
             {
                 for(int i=0;i<3;i++)
                 {

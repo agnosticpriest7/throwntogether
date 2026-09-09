@@ -18,12 +18,12 @@ namespace ThrownTogether
             hud=GetComponent<RestaurantHud>();
             if(hud.shift!=null || SessionOptions.Training=="Free practice") return;
             var stations=Interactable.Active.Where(s=>s.gameObject.scene==gameObject.scene).ToArray();
-            source=stations.OfType<SourceStation>().First(s=>!s.plates); plates=stations.OfType<SourceStation>().First(s=>s.plates);
+            source=stations.OfType<SourceStation>().First(s=>!s.plates && s.ingredient==hud.order.recipe.ingredient); plates=stations.OfType<SourceStation>().First(s=>s.plates);
             prep=stations.OfType<ProcessingStation>().First(s=>s.recipe.input==FoodState.Raw);
             fryer=stations.OfType<ProcessingStation>().First(s=>s.recipe.input==FoodState.Cut);
             counters=stations.OfType<CounterStation>().Where(s=>!(s is ProcessingStation)).ToArray(); service=stations.OfType<ServiceStation>().First();
             Active=true;
-            if(SessionOptions.Training!="Guided full loop")
+            if(SessionOptions.Training!="Guided full loop" && SessionOptions.Training!="Tomato salad")
             {
                 var item=Instantiate(source.itemPrefab);
                 var payload=ItemPayload.Food(source.ingredient);
@@ -46,12 +46,12 @@ namespace ThrownTogether
                 if(p.isPlate && !p.EmptyPlate) Hint(service,"Serve: take your plated dish to the pass with the bell. Press A / E.");
                 else if(p.EmptyPlate)
                 {
-                    var cooked=counters.FirstOrDefault(c=>c.slot.Item!=null && c.slot.Item.Payload.state==FoodState.Cooked && !c.slot.Item.Payload.isPlate);
-                    Hint(cooked ?? counters.FirstOrDefault(c=>c.slot.Item==null),"Plate: put the plate on an ordinary counter with cooked food. Either order works.");
+                    var cooked=counters.FirstOrDefault(c=>c.slot.Item!=null && ItemPayload.CanPlate(p,c.slot.Item.Payload));
+                    Hint(cooked ?? counters.FirstOrDefault(c=>c.slot.Item==null),"Plate: put the plate on an ordinary counter with prepared food. Either order works.");
                 }
                 else if(p.state==FoodState.Raw) Hint(prep,"Prep: face the wooden board, press A / E, then collect the cut ingredient when ready.");
-                else if(p.state==FoodState.Cut) Hint(fryer,"Fry: put the cut ingredient in the basket. Wait for the green ready light, then collect it.");
-                else Hint(counters.FirstOrDefault(c=>c.slot.Item!=null && c.slot.Item.Payload.EmptyPlate) ?? counters.FirstOrDefault(c=>c.slot.Item==null),"Plate: put cooked food on any empty counter, then add a clean plate to that same counter.");
+                else if(p.state==FoodState.Cut && p.ingredient.platingState==FoodState.Cooked) Hint(fryer,"Fry: put the cut ingredient in the basket. Wait for the green ready light, then collect it.");
+                else Hint(counters.FirstOrDefault(c=>c.slot.Item!=null && c.slot.Item.Payload.EmptyPlate) ?? counters.FirstOrDefault(c=>c.slot.Item==null),"Plate: put prepared food on any empty counter, then add a clean plate. Tomato salad needs no frying.");
                 return;
             }
             foreach(var c in counters)
@@ -61,10 +61,10 @@ namespace ThrownTogether
             foreach(var c in counters)
                 if(c.slot.Item!=null && !c.slot.Item.Payload.EmptyPlate)
                 {
-                    if(c.slot.Item.Payload.state==FoodState.Cooked && !c.slot.Item.Payload.isPlate) Hint(plates,"Take a clean plate from the stack, then return to the counter holding your cooked food.");
+                    if(ItemPayload.CanPlate(ItemPayload.Plate(),c.slot.Item.Payload)) Hint(plates,"Take a clean plate from the stack, then return to your prepared food.");
                     else Hint(c,"Collect the ingredient you left on this counter to continue."); return;
                 }
-            Hint(source,"Take a potato from the wooden crate. Face it until the mint border appears, then press A / E.");
+            Hint(source,"Take "+source.ingredient.displayName+" from its crate. Face the mint border, then press A / E.");
         }
         private void Hint(Interactable target,string instruction) { SuggestedTarget=target; Instruction=instruction; }
     }
