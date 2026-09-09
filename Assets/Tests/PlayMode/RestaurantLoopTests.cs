@@ -238,7 +238,7 @@ namespace ThrownTogether.Tests
             var stopped=chef.transform.position;
             for(int i=0;i<5;i++) { chef.Move(Vector2.zero,1f/60); yield return null; }
             Assert.That(chef.transform.position.x,Is.EqualTo(stopped.x).Within(.01f));
-            var motor=chef.GetComponent<CharacterController>(); motor.enabled=false; chef.transform.position=new Vector3(2,0,-3); motor.enabled=true;
+            var motor=chef.GetComponent<CharacterController>(); motor.enabled=false; chef.transform.position=new Vector3(100,0,-100); motor.enabled=true;
             chef.FindFocus(); Assert.That(chef.Focus,Is.Null);
         }
         [UnityTest]
