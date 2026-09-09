@@ -7,7 +7,7 @@ namespace ThrownTogether
         public IngredientDefinition ingredient;
         public Carryable itemPrefab;
         public bool plates;
-        public override string Prompt(ChefController chef) => chef.Hands.Item == null ? (plates ? "Take clean plate" : "Take potato") : "Hands full — use a counter";
+        public override string Prompt(ChefController chef) => chef.Hands.Item == null ? (plates ? "Take clean plate" : "Take "+ingredient.displayName.ToLowerInvariant()) : "Hands full — use a counter";
         public override bool Interact(ChefController chef)
         {
             if (chef.Hands.Item != null) return false;

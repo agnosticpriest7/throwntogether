@@ -20,6 +20,7 @@ namespace ThrownTogether.Editor
 
         private static void Build(BuildTarget target, string defaultOutput)
         {
+            Action restoreAudio=null;
             try
             {
                 if (EditorUtility.scriptCompilationFailed)
@@ -58,6 +59,7 @@ namespace ThrownTogether.Editor
                 output = Path.GetFullPath(Path.Combine(root, output));
                 if (target == BuildTarget.WebGL)
                 {
+                    restoreAudio=PrepareWebPcmAudio();
                     PlayerSettings.WebGL.compressionFormat = WebGLCompressionFormat.Disabled;
                     PlayerSettings.WebGL.decompressionFallback = false;
                     PlayerSettings.WebGL.threadsSupport = false;
@@ -83,6 +85,40 @@ namespace ThrownTogether.Editor
                 if (Application.isBatchMode) EditorApplication.Exit(1);
                 throw;
             }
+            finally { restoreAudio?.Invoke(); }
+        }
+        private static Action PrepareWebPcmAudio()
+        {
+            string folder="Assets/GeneratedWebPcm_"+Guid.NewGuid().ToString("N");
+            var originals=new System.Collections.Generic.List<(AudioCue cue,AudioClip[] clips,TextAsset[] pcm)>();
+            Action restore=()=>{
+                foreach(var original in originals) { original.cue.clips=original.clips; original.cue.pcmClips=original.pcm; EditorUtility.SetDirty(original.cue); }
+                AssetDatabase.SaveAssets(); AssetDatabase.DeleteAsset(folder);
+            };
+            try {
+            Directory.CreateDirectory(folder);
+            foreach(var guid in AssetDatabase.FindAssets("t:AudioCue"))
+            {
+                var cue=AssetDatabase.LoadAssetAtPath<AudioCue>(AssetDatabase.GUIDToAssetPath(guid));
+                if(cue.clips==null || cue.clips.Length==0) continue;
+                originals.Add((cue,cue.clips,cue.pcmClips));
+                var paths=cue.clips.Where(c=>c!=null).Select(c=>AssetDatabase.GetAssetPath(c)).ToArray();
+                var outputs=new string[paths.Length];
+                for(int i=0;i<paths.Length;i++)
+                {
+                    var bytes=File.ReadAllBytes(paths[i]);
+                    PcmWave.Decode(bytes,out _,out _); // Fail the build clearly if source format changes.
+                    outputs[i]=folder+"/"+AssetDatabase.AssetPathToGUID(paths[i])+".bytes";
+                    File.WriteAllBytes(outputs[i],bytes);
+                    AssetDatabase.ImportAsset(outputs[i]);
+                }
+                cue.pcmClips=outputs.Select(p=>AssetDatabase.LoadAssetAtPath<TextAsset>(p)).ToArray();
+                cue.clips=Array.Empty<AudioClip>();
+                EditorUtility.SetDirty(cue);
+            }
+            AssetDatabase.SaveAssets();
+            return restore;
+            } catch { restore(); throw; }
         }
     }
 }

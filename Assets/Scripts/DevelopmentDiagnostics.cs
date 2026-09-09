@@ -11,6 +11,7 @@ namespace ThrownTogether
     {
         [Serializable] private sealed class BuildStamp { public string commit; public string builtAtUtc; public string developmentVersion; }
         public bool Expanded { get; private set; }
+        private bool detailsOpen, audioOpen;
         private ChefController chef;
         private ChefInput input;
         private string version="Editor / unbuilt";
@@ -69,6 +70,15 @@ namespace ThrownTogether
             if(GUI.Button(new Rect(800,703,460,17),"DEV "+version+" | Pads: "+Gamepad.all.Count+" | F3 / click")) { Expanded=!Expanded; if(audioFeedback != null) audioFeedback.Click(); }
             if(Expanded)
             {
+                if(!detailsOpen)
+                {
+                    GUI.Box(new Rect(865,108,400,180),GUIContent.none);
+                    GUI.Label(new Rect(880,118,370,100),"DEV "+version+" | "+fps.ToString("F0")+" FPS\nPads: "+Gamepad.all.Count+" | Focus: "+WebInputFocus.HasFocus+
+                        "\nTarget: "+(chef.Focus!=null ? chef.Focus.stationName : "None")+"\nUse: "+input.UseAttempts+" | "+input.LastUseResult,text);
+                    if(GUI.Button(new Rect(880,228,175,30),"Detailed diagnostics")) detailsOpen=true;
+                    if(GUI.Button(new Rect(1065,228,175,30),"Audio / restart")) { detailsOpen=true; audioOpen=true; }
+                    GUI.matrix=matrix; return;
+                }
                 var color=GUI.color;
                 GUI.color=new Color(.035f,.055f,.07f,1);
                 GUI.DrawTexture(new Rect(24,105,650,490),Texture2D.whiteTexture);
@@ -91,7 +101,9 @@ namespace ThrownTogether
                     "\nHeld: "+(item==null ? "Nothing" : item.Label)+" | State: "+(item==null ? "—" : item.EmptyPlate ? "Empty plate" : item.state.ToString())+
                     "\nFPS: "+fps.ToString("F0")+" | GC: "+gcSample;
                 GUI.Label(new Rect(34,112,630,475),details,text);
-                DrawAudioSettings();
+                if(GUI.Button(new Rect(714,440,145,30),"Compact view")) detailsOpen=false;
+                if(GUI.Button(new Rect(870,440,145,30),"Audio settings")) audioOpen=!audioOpen;
+                if(audioOpen) DrawAudioSettings();
                 if(input != null && GUI.Button(new Rect(714,404,300,30),"Restart slice (clears Unity history)")) input.RestartSlice();
             }
             GUI.matrix=matrix;

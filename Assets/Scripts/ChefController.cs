@@ -43,6 +43,7 @@ namespace ThrownTogether
             bool hadItem=Hands.Item != null;
             bool plated=Focus is CounterStation counter && counter.CanCombine(this);
             bool used=Focus.Interact(this);
+            if(used) Feedback=Hands.Item!=null ? "Holding "+Hands.Item.Payload.Label : "Placed / started at "+Focus.stationName;
             if(used) InteractionSucceeded?.Invoke(Focus,hadItem,plated);
             return used;
         }

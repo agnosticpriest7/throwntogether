@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 55191178db2fb7148a9b2d84d6c70f9c, type: 3}
+  m_Name: FirstShift
+  m_EditorClassIdentifier: ThrownTogether.Runtime::ThrownTogether.ShiftDefinition
+  id: shift.first-night
+  displayName: First restaurant shift
+  description: 
+  orders:
+  - {fileID: 11400000, guid: 7066c20414f7b0c45a4b4a3cb897c6ce, type: 2}
+  - {fileID: 11400000, guid: 164be1909967713448de7c9338cf4d7e, type: 2}
+  - {fileID: 11400000, guid: 164be1909967713448de7c9338cf4d7e, type: 2}
+  - {fileID: 11400000, guid: 7066c20414f7b0c45a4b4a3cb897c6ce, type: 2}
+  - {fileID: 11400000, guid: 7066c20414f7b0c45a4b4a3cb897c6ce, type: 2}
+  - {fileID: 11400000, guid: 164be1909967713448de7c9338cf4d7e, type: 2}

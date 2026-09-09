@@ -29,3 +29,6 @@ Focused template/loader inspection, browser event regression tests and Web redep
 
 ### Xbox A-button investigation
 Focused input-gate regression and read-only button diagnostics. Account-wide usage and project cost remain unavailable; no estimates recorded.
+
+### 0.2.0 approved gameplay batch
+Focused polish, local co-op and short restaurant-shift implementation after explicit owner authorization. No account-wide usage or project cost figures are available; no estimates recorded. No subagents used. Reused existing scenes/data and the local test/build/deploy pipeline.

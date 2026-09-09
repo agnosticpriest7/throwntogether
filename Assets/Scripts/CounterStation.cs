@@ -6,7 +6,7 @@ namespace ThrownTogether
         public override string Status => stationName + (slot.Item != null ? "\n" + slot.Item.Payload.Label : "");
         public override string Prompt(ChefController chef)
         {
-            if (CanCombine(chef)) return "Plate the fries";
+            if (CanCombine(chef)) return "Plate the cooked food";
             if (chef.Hands.Item == null) return slot.Item != null ? "Pick up " + slot.Item.Payload.Label : "Counter empty";
             return slot.Item == null ? "Place " + chef.Hands.Item.Payload.Label : "Counter occupied";
         }

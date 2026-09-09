@@ -47,6 +47,45 @@ namespace ThrownTogether.Tests
             yield return null;
         }
         private Scene original, testScene;
+        [UnityTest]
+        public IEnumerator TwoPlayersHaveIsolatedInputAndReconnectRetainsHeldItem()
+        {
+            var background=InputSystem.settings.backgroundBehavior;
+            var editorInput=InputSystem.settings.editorInputBehaviorInPlayMode;
+            InputSystem.settings.backgroundBehavior=InputSettings.BackgroundBehavior.IgnoreFocus;
+            InputSystem.settings.editorInputBehaviorInPlayMode=InputSettings.EditorInputBehaviorInPlayMode.AllDeviceInputAlwaysGoesToGameView;
+            var one=InputSystem.AddDevice<Gamepad>(); var two=InputSystem.AddDevice<Gamepad>(); Gamepad replacement=null;
+            var session=Object.FindObjectsByType<LocalCoopSession>().Single(s=>s.gameObject.scene==testScene);
+            try
+            {
+                Assert.That(session.PlayerTwo,Is.Null);
+                session.BindPlayerOne(one); Assert.That(session.Join(two),Is.True);
+                Assert.That(session.Join(one),Is.False); Assert.That(session.Join(two),Is.False);
+                var second=session.PlayerTwo; var firstInput=chef.GetComponent<ChefInput>(); firstInput.enabled=true;
+                var secondInput=second.GetComponent<ChefInput>();
+                Assert.That(firstInput.AcceptsDevice(two),Is.False); Assert.That(secondInput.AcceptsDevice(one),Is.False);
+                var before=chef.transform.position; var secondBefore=second.transform.position;
+                InputSystem.QueueStateEvent(two,new GamepadState { leftStick=Vector2.right }); InputSystem.Update();
+                firstInput.Tick(.1f); secondInput.Tick(.1f);
+                Assert.That(chef.transform.position.x,Is.EqualTo(before.x).Within(.001f));
+                Assert.That(second.transform.position.x,Is.GreaterThan(secondBefore.x));
+                firstInput.enabled=false; secondInput.enabled=false;
+                Use(Find<SourceStation>("POTATOES")); var item=chef.Hands.Item;
+                Assert.That(second.Hands.TryTake(item),Is.True);
+                InputSystem.RemoveDevice(two); yield return null;
+                Assert.That(second.Hands.Item,Is.SameAs(item)); Assert.That(secondInput.enabled,Is.False);
+                replacement=InputSystem.AddDevice<Gamepad>(); Assert.That(session.Join(replacement),Is.True);
+                Assert.That(session.PlayerTwo,Is.SameAs(second)); Assert.That(second.Hands.Item,Is.SameAs(item));
+                Use(Find<SourceStation>("POTATOES")); var counter=Find<CounterStation>("SPARE");
+                Assert.That(counter.Interact(chef),Is.True); Assert.That(counter.Interact(second),Is.False);
+                Assert.That(second.Hands.Item,Is.SameAs(item));
+            }
+            finally
+            {
+                InputSystem.RemoveDevice(one); if(two.added) InputSystem.RemoveDevice(two); if(replacement!=null) InputSystem.RemoveDevice(replacement);
+                InputSystem.settings.backgroundBehavior=background; InputSystem.settings.editorInputBehaviorInPlayMode=editorInput;
+            }
+        }
         private ChefController chef;
         private GameObject[] suspended;
         [UnitySetUp]

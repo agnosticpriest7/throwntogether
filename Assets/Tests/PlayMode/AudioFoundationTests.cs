@@ -7,6 +7,13 @@ namespace ThrownTogether.Tests
 {
     public sealed class AudioFoundationTests
     {
+        [UnityTest] public IEnumerator PcmClipCanBeCreatedWithoutBrowserDecoder()
+        {
+            var bytes=System.IO.File.ReadAllBytes("Assets/Audio/Placeholders/pickup1.wav");
+            var clip=PcmWave.CreateClip(bytes,"PCM regression");
+            try { Assert.That(clip.samples,Is.GreaterThan(0)); Assert.That(clip.channels,Is.EqualTo(1)); yield return null; }
+            finally { Object.Destroy(clip); }
+        }
         [UnityTest] public IEnumerator MissingFeedbackDoesNotCreateVoicesOrErrorsOnRequest()
         {
             var root=new GameObject("Audio test"); var cue=ScriptableObject.CreateInstance<AudioCue>();

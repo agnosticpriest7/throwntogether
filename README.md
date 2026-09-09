@@ -46,3 +46,6 @@ The explicit scene list is `build-config.json`, currently only RestaurantDevelop
 Deployment uses an isolated repository under ignored `Builds/Publish-*`, with ordinary commits/pushes to **gh-pages** only. No generated files enter main. Retained staging folders/logs can be inspected after failures. Pages is configured automatically using `gh`; if permissions prevent this, select **Settings > Pages > Build and deployment > Source: Deploy from a branch > Branch: gh-pages > / (root) > Save**. No GitHub-hosted Unity compilation or license secret is needed.
 
 Public test URL: **https://agnosticpriest7.github.io/throwntogether/**. Allow Pages a few minutes after publication, then refresh. `build-info.json` at that URL identifies the source commit. Xbox Edge/controller testing is a human follow-up, not implied by a successful deployment.
+
+### 0.2.0 playtest
+Start in practice, or click **Play restaurant shift** for six orders across fries and fried mushrooms. P1 uses keyboard/first gamepad; press A on a second gamepad to join P2. For keyboard + one pad, click **Keyboard P1 + pad P2** first. Menu belongs to Xbox Edge; use DEV's restart button or keyboard R to restart. DEV opens compactly, with detailed diagnostics and audio settings available separately. Two-controller Xbox support and the new PCM audio path require physical retesting.

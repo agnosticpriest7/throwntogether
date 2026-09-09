@@ -8,6 +8,8 @@ namespace ThrownTogether
         public ChefController chef;
         public ProcessingStation prep, fryer;
         public CustomerOrder order;
+        public RestaurantShift shift;
+        private int completedOrders;
         public AudioCue pickup, place, chop, fryerStart, sizzle, complete, plate, success, uiClick;
         private bool prepBusy, fryerBusy;
         private OrderPhase phase;
@@ -19,7 +21,8 @@ namespace ThrownTogether
             if(frying != null) frying.Stop();
             prepBusy=false; fryerBusy=false;
         }
-        private void Interaction(Interactable station, bool hadItem, bool plated)
+        private void Interaction(Interactable station, bool hadItem, bool plated) => ObserveInteraction(station,hadItem,plated);
+        public void ObserveInteraction(Interactable station, bool hadItem, bool plated)
         {
             if(playback == null) return;
             if(station == prep && prep.Busy || station == fryer && fryer.Busy) return;
@@ -28,6 +31,7 @@ namespace ThrownTogether
         private void Update()
         {
             if(playback == null) return;
+            if(shift!=null && completedOrders!=shift.CompletedCount) { completedOrders=shift.CompletedCount; playback.Play(success); }
             if(prep != null && prep.Busy != prepBusy)
             { prepBusy=prep.Busy; playback.Play(prepBusy ? chop : complete); }
             if(fryer != null && fryer.Busy != fryerBusy)
@@ -36,7 +40,7 @@ namespace ThrownTogether
                 if(fryerBusy) { playback.Play(fryerStart); frying=playback.Play(sizzle); }
                 else { if(frying != null) frying.Stop(); frying=null; playback.Play(complete); }
             }
-            if(order != null && phase != order.Phase)
+            if(shift==null && order != null && phase != order.Phase)
             { phase=order.Phase; if(phase == OrderPhase.Complete) playback.Play(success); }
         }
         public void Click() { if(playback != null) playback.Play(uiClick); }
