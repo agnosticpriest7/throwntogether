@@ -128,7 +128,7 @@ namespace ThrownTogether
             if(!IsOpen) return;
             GUI.depth=-100;
             var matrix=GUI.matrix; GUI.matrix=Matrix4x4.Scale(new Vector3(Screen.width/1280f,Screen.height/720f,1));
-            GUI.color=new Color(0,0,0,Display.highContrast ? 1:.96f); GUI.DrawTexture(new Rect(0,0,1280,720),Texture2D.whiteTexture); GUI.color=Color.white;
+            GUI.color=Color.black; GUI.DrawTexture(new Rect(0,0,1280,720),Texture2D.whiteTexture); GUI.color=Color.white;
             if(buttonStyle==null) { buttonStyle=new GUIStyle(GUI.skin.button) {alignment=TextAnchor.MiddleLeft}; textStyle=new GUIStyle(GUI.skin.label) {fontSize=22,wordWrap=true,alignment=TextAnchor.MiddleCenter}; }
             var style=buttonStyle; style.fontSize=Mathf.RoundToInt(21*Display.TextScale); var text=textStyle;
             text.normal.textColor=Color.white; style.normal.textColor=Color.white; style.hover.textColor=Color.white; style.active.textColor=Color.white;
@@ -137,7 +137,7 @@ namespace ThrownTogether
             for(int i=0;i<rows.Count;i++)
             {
                 GUI.backgroundColor=i==Selection ? new Color(.2f,.8f,.6f):Color.gray;
-                if(GUI.Button(new Rect(260,145+i*52,760,46),(i==Selection ? "▶  ":"    ")+rows[i].label,style)) { Selection=i; ActivateSelection(); break; }
+                if(GUI.Button(new Rect(260,145+i*52,760,46),(i==Selection ? ">  ":"    ")+rows[i].label,style)) { Selection=i; ActivateSelection(); break; }
             }
             GUI.backgroundColor=Color.white;
             GUI.Label(new Rect(240,545,800,70),message,text);
