@@ -52,6 +52,7 @@ namespace ThrownTogether
         }
         private void Update()
         {
+            WebInputFocus.SampleGamepadHistory();
             if (Keyboard.current != null && Keyboard.current.f3Key.wasPressedThisFrame) Expanded=!Expanded;
             seconds+=Time.unscaledDeltaTime; frames++;
             if(gcRecorder.Valid) gcTotal+=gcRecorder.LastValue;
@@ -70,9 +71,9 @@ namespace ThrownTogether
             {
                 var color=GUI.color;
                 GUI.color=new Color(.035f,.055f,.07f,1);
-                GUI.DrawTexture(new Rect(24,105,650,425),Texture2D.whiteTexture);
+                GUI.DrawTexture(new Rect(24,105,650,490),Texture2D.whiteTexture);
                 GUI.color=color;
-                GUI.Box(new Rect(24,105,650,425),GUIContent.none);
+                GUI.Box(new Rect(24,105,650,490),GUIContent.none);
                 var pads=string.Join(", ",Gamepad.all.Select(p=>p.displayName+" #"+p.deviceId+" (P1: "+(input != null && input.AcceptsDevice(p) ? "yes" : "no")+")"));
                 var item=chef != null && chef.Hands.Item != null ? chef.Hands.Item.Payload : null;
                 var active=input != null ? input.LastActiveDevice : null;
@@ -85,10 +86,11 @@ namespace ThrownTogether
                     "\nUnity buttons: "+string.Join("; ",Gamepad.all.Select(p=>"#"+p.deviceId+" A="+p.buttonSouth.isPressed+" Menu="+p.startButton.isPressed))+
                     "\nUse action: "+(input == null ? "Missing" : input.UsePressed+" | release gates Use="+input.AwaitUseRelease+" Restart="+input.AwaitRestartRelease)+
                     "\nUse attempts: "+(input == null ? "—" : input.UseAttempts+" | "+input.LastUseResult)+
+                    "\nUse signals: "+(input == null ? "—" : input.UseSignals+" | "+input.LastUseSignal)+
                     "\nTarget: "+(chef != null && chef.Focus != null ? chef.Focus.stationName : "None")+
                     "\nHeld: "+(item==null ? "Nothing" : item.Label)+" | State: "+(item==null ? "—" : item.EmptyPlate ? "Empty plate" : item.state.ToString())+
                     "\nFPS: "+fps.ToString("F0")+" | GC: "+gcSample;
-                GUI.Label(new Rect(34,112,630,410),details,text);
+                GUI.Label(new Rect(34,112,630,475),details,text);
                 DrawAudioSettings();
             }
             GUI.matrix=matrix;

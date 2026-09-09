@@ -1,4 +1,21 @@
 mergeInto(LibraryManager.library, {
+  TT_SampleGamepadHistory: function () {
+    // Read-only sampling. Retain A evidence across browser mode/focus changes.
+    var history = Module.ttButtonHistory || (Module.ttButtonHistory = {count:0, last:"None yet", states:{}});
+    try {
+      var pads = navigator.getGamepads ? navigator.getGamepads() : [];
+      for(var i=0;i<pads.length;i++) {
+        var p=pads[i]; if(!p || !p.connected || p.mapping!=="standard") continue;
+        var b=p.buttons[0]; if(!b) continue;
+        var down=b.pressed || b.value>0.5;
+        if(down && !history.states[i]) {
+          history.count++;
+          history.last="A pressed="+b.pressed+" value="+b.value+" focus="+(document.hasFocus() && !document.hidden && document.activeElement===Module.canvas);
+        }
+        history.states[i]=down;
+      }
+    } catch(e) { history.last="Sampling error: "+e.name; }
+  },
   TT_HasInputFocus: function () {
     return document.hasFocus() && !document.hidden && document.activeElement === Module.canvas;
   },
@@ -12,6 +29,8 @@ mergeInto(LibraryManager.library, {
         return p.id.slice(0, 100) + " [" + (p.mapping || "non-standard mapping") + "] down=" + (down.length ? down.join(",") : "none");
       }).join("; ") : "None exposed; press a pad button with this page focused";
     } catch (e) { text = "Gamepad API blocked: " + e.name; }
+    var history=Module.ttButtonHistory;
+    if(history) text+=" | A samples="+history.count+" last: "+history.last;
     return stringToNewUTF8(text);
   }
 });

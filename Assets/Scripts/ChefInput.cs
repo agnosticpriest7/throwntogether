@@ -19,6 +19,8 @@ namespace ThrownTogether
         public bool UsePressed => use.IsPressed();
         public int UseAttempts { get; private set; }
         public string LastUseResult { get; private set; } = "None yet";
+        public int UseSignals { get; private set; }
+        public string LastUseSignal { get; private set; } = "None yet";
         public bool AcceptsDevice(InputDevice device) => device != null && device.added && (!controls.devices.HasValue || controls.devices.Value.Contains(device));
         private void Awake()
         {
@@ -32,7 +34,11 @@ namespace ThrownTogether
             move.AddBinding("<Gamepad>/leftStick");
             use=controls.AddAction("Use",InputActionType.Button); use.AddBinding("<Keyboard>/e"); use.AddBinding("<Keyboard>/space"); use.AddBinding("<Gamepad>/buttonSouth");
             restart=controls.AddAction("Restart",InputActionType.Button); restart.AddBinding("<Keyboard>/r"); restart.AddBinding("<Gamepad>/start");
-            controls.actionTriggered += context => { if (context.performed) LastActiveDevice=context.control.device; };
+            controls.actionTriggered += context => {
+                if (!context.performed) return;
+                LastActiveDevice=context.control.device;
+                if(context.action==use) { UseSignals++; LastUseSignal=context.control.path+" focus="+InputFocused+" gate="+AwaitUseRelease; }
+            };
         }
         // A future local join flow can restrict each instance to its assigned devices.
         public void BindDevices(params InputDevice[] devices)
@@ -73,7 +79,18 @@ namespace ThrownTogether
             else if(use.WasPressedThisFrame())
             {
                 UseAttempts++;
-                LastUseResult=chef.Use() ? "Accepted" : "Rejected (check target / item)";
+                LastUseResult="Entered interaction";
+                try
+                {
+                    bool accepted=chef.Use();
+                    LastUseResult=(accepted ? "Accepted" : "Rejected")+" at "+(chef.Focus != null ? chef.Focus.stationName : "None")+
+                        " | "+chef.Feedback+" | held="+(chef.Hands.Item != null ? chef.Hands.Item.Payload.Label : "Nothing");
+                }
+                catch(System.Exception exception)
+                {
+                    LastUseResult="Exception: "+exception.GetType().Name+" | "+exception.Message;
+                    throw;
+                }
             }
             if(AwaitRestartRelease)
             {

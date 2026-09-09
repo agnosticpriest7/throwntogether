@@ -82,6 +82,11 @@ namespace ThrownTogether.Tests
                 Assert.That(chef.Hands.Item,Is.Not.Null);
                 Assert.That(chef.Hands.Item.Payload.state,Is.EqualTo(FoodState.Raw));
                 Assert.That(input.LastActiveDevice,Is.SameAs(gamepad));
+                Assert.That(input.UseSignals,Is.EqualTo(1));
+                Assert.That(input.LastUseResult,Does.Contain("Accepted at "+Find<SourceStation>("POTATOES").stationName));
+                var result=input.LastUseResult;
+                input.SetInputFocus(false); input.SetInputFocus(true);
+                Assert.That(input.LastUseResult,Is.EqualTo(result),"Focus changes retain interaction evidence");
                 input.BindDevices(); Assert.That(input.AcceptsDevice(gamepad),Is.False,"Empty assignment disables device input");
                 input.BindDevices((InputDevice[])null);
                 Assert.That(input.AcceptsDevice(gamepad),Is.True,"Null restores single-player fallback");
