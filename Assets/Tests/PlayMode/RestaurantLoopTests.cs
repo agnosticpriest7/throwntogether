@@ -69,7 +69,7 @@ namespace ThrownTogether.Tests
                 InputSystem.QueueStateEvent(pad,new GamepadState().WithButton(GamepadButton.DpadDown)); InputSystem.Update(); menu.Tick(true);
                 Assert.That(menu.Selection,Is.EqualTo(1),"D-pad navigates the menu");
                 InputSystem.QueueStateEvent(pad,new GamepadState().WithButton(GamepadButton.South)); InputSystem.Update(); menu.Tick(true);
-                Assert.That(menu.Page,Is.EqualTo("Confirm"),"A selects the mode-change confirmation");
+                Assert.That(menu.Page,Is.EqualTo("Recipes"),"A opens the recipe book without using held food");
                 InputSystem.QueueStateEvent(pad,new GamepadState().WithButton(GamepadButton.East)); InputSystem.Update(); menu.Tick(true);
                 Assert.That(menu.Page,Is.EqualTo("Main"),"B returns without changing scene");
                 menu.RequestRestart(); Assert.That(menu.Page,Is.EqualTo("Confirm")); Assert.That(menu.Selection,Is.Zero);

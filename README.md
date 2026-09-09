@@ -41,20 +41,20 @@ Commit source changes first. Deployment also requires main to be pushed and equa
 
 The script builds a committed snapshot in ignored `Builds/Workspace`, leaving the canonical Editor open and main clean. Logs and test XML are in `Builds/PipelineLogs`; static output is in `Builds/Web`. Both test suites must pass before building. A failed test/build prevents publication. `-Mode Build` deliberately still runs tests. Concurrent runs are blocked; each Unity stage has a configurable 90-minute timeout.
 
-The explicit scene list is `build-config.json`: RestaurantDevelopment (practice) and RestaurantShift. It overrides the checked-in Build Settings scene list. The public build starts in practice and provides a button to enter the restaurant shift.
+The explicit scene list is `build-config.json`: RestaurantDevelopment (practice) and RestaurantShift. It overrides the checked-in Build Settings scene list. The public build opens a main menu. Play a level or Practice leads to First Service, Prep Island, or Split Line; choosing a kitchen starts a fresh session.
 
 Deployment uses an isolated repository under ignored `Builds/Publish-*`, with ordinary commits/pushes to **gh-pages** only. No generated files enter main. Retained staging folders/logs can be inspected after failures. Pages is configured automatically using `gh`; if permissions prevent this, select **Settings > Pages > Build and deployment > Source: Deploy from a branch > Branch: gh-pages > / (root) > Save**. No GitHub-hosted Unity compilation or license secret is needed.
 
 Public test URL: **https://agnosticpriest7.github.io/throwntogether/**. Allow Pages a few minutes after publication, then refresh. `build-info.json` at that URL identifies the source commit. Xbox Edge/controller testing is a human follow-up, not implied by a successful deployment.
 
 ### Controller and accessibility controls
-The player starts with the menu open. **Y / Escape** opens or closes it; use **D-pad / left stick / arrow keys** to navigate, **A / Enter** to select and **B / Backspace** to go back. Menu pauses the kitchen. Restart (also R) and mode changes require confirmation; the three-line Menu button remains Xbox Edge's own control. Choose free/guided practice or a 3/6/12-order fries/mushroom shift. Editor play starts unpaused for authoring; Y opens the same menu.
+The player starts at the main menu. Choose Play a level or Practice, then a kitchen. During gameplay, Recipe book is available from the pause menu; cooking and held items remain paused while browsing. **Y / Escape** opens or closes it; use **D-pad / left stick / arrow keys** to navigate, **A / Enter** to select and **B / Backspace** to go back. Menu pauses the kitchen. Restart (also R) and mode changes require confirmation; the three-line Menu button remains Xbox Edge's own control. Choose free/guided practice or a 3/6/12-order fries/mushroom/salad shift. Editor play starts unpaused for authoring; Y opens the same menu.
 
 The menu provides three text sizes, high contrast, reduced visual effects and five audio volumes. **Save settings** persists preferences locally; unsaved changes reset on scene reload. P1 uses keyboard/first gamepad; resume and press A on a second pad to join P2. Keyboard + one-pad mode and P2 leave are in the menu. P2 must put down held food before leaving; disconnect/reconnect retains it. Player prompts, dish shapes and ticket states supplement color. The latest visual/menu changes still need a physical Xbox/TV review.
 
 ## 0.4.0 overnight review
 
-The kitchen now uses visual station models instead of floating nameplates: ingredient crates, a chopping board and knife, fryer basket, plate stack, ordinary counters, and a service pass with a bell. A mint/coral floor border identifies each player's interaction target. Food shapes are larger; progress bars and steady ready lights replace station text panels. Menu > Text and accessibility retains larger text, high contrast and reduced effects.
+The kitchen now uses visual station models instead of floating nameplates: ingredient crates, a chopping board and knife, fryer basket, plate stack, ordinary counters, and a service pass with a bell. A mint/coral floor border identifies each player's interaction target. Food shapes are larger; progress bars and steady ready lights replace station text panels. Menu > Settings > Text and accessibility retains larger text, high contrast and reduced effects.
 
 **Plating:** place cooked food on either ordinary counter, then add a clean plate to the same counter. Plate-first also works. The finished dish stays **on the counter**; press A / E again to pick it up, then serve. No dedicated plating station is needed.
 

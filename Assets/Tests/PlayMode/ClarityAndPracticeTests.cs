@@ -39,6 +39,33 @@ namespace ThrownTogether.Tests
             if(scene.IsValid() && scene.isLoaded) yield return SceneManager.UnloadSceneAsync(scene);
             SceneManager.SetActiveScene(original); foreach(var root in suspended) if(root!=null) root.SetActive(true);
         }
+        [UnityTest] public IEnumerator OpeningMenuCannotBackIntoUnselectedGameplay()
+        {
+            var menu=hud.GetComponent<RestaurantMenu>();
+            try
+            {
+                menu.OpenFrontEnd();Assert.That(menu.Page,Is.EqualTo("Title"));Assert.That(Time.timeScale,Is.Zero);
+                menu.ShowLevels(false);Assert.That(menu.Page,Is.EqualTo("Levels"));menu.NavigateBack();Assert.That(menu.Page,Is.EqualTo("Title"));
+                menu.NavigateBack();Assert.That(menu.IsOpen && RestaurantMenu.GameplayBlocked,Is.True);
+                menu.OpenRecipeBook();Assert.That(menu.Page,Is.EqualTo("Recipes"));menu.NavigateBack();Assert.That(menu.Page,Is.EqualTo("Title"));
+                yield return null;Assert.That(Time.timeScale,Is.Zero);
+            }
+            finally {menu.Close();}
+        }
+        [UnityTest] public IEnumerator PauseRecipeBookPreservesHeldItemAndSession()
+        {
+            var source=Interactable.Active.OfType<SourceStation>().First(s=>s.gameObject.scene==scene&&!s.plates);
+            source.Interact(chef);var food=chef.Hands.Item;var menu=hud.GetComponent<RestaurantMenu>();
+            try
+            {
+                menu.OpenRecipeBook();float elapsed=hud.shift.ElapsedSeconds;
+                yield return null;yield return null;
+                Assert.That(menu.Page,Is.EqualTo("Recipes"));Assert.That(Time.timeScale,Is.Zero);Assert.That(hud.shift.ElapsedSeconds,Is.EqualTo(elapsed));Assert.That(chef.Hands.Item,Is.SameAs(food));
+                menu.NavigateBack();Assert.That(menu.Page,Is.EqualTo("Main"));Assert.That(menu.IsOpen,Is.True);
+                menu.Close();Assert.That(Time.timeScale,Is.EqualTo(1));Assert.That(chef.GetComponent<ChefInput>().AwaitUseRelease,Is.True);
+            }
+            finally {menu.Close();}
+        }
         [UnityTest] public IEnumerator EveryLayoutHasConnectedSpawnsAndReachableStations()
         {
             var layout=hud.GetComponent<KitchenLayout>();

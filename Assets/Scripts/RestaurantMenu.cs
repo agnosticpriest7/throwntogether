@@ -15,9 +15,11 @@ namespace ThrownTogether
         public static DisplaySettingsData Display => Instance?.hud?.settings?.Repository?.Display ?? defaults;
         private static readonly DisplaySettingsData defaults=new DisplaySettingsData();
         private static bool booted;
+        private static bool gateAfterLoad;
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-        private static void ResetStatics() { Instance=null; booted=false; }
+        private static void ResetStatics() { Instance=null; booted=false; gateAfterLoad=false; }
         public bool IsOpen { get; private set; }
+        public bool IsFrontEnd { get; private set; }
         public int Selection { get; private set; }
         public string Page { get; private set; }="Main";
         private RestaurantHud hud;
@@ -28,12 +30,16 @@ namespace ThrownTogether
         private Action pending;
         private string confirmation, message="";
         private bool navigationHeld;
+        private bool practiceLevel;
+        private RecipeBook recipeBook;
+        private int recipeIndex;
         private GUIStyle buttonStyle, textStyle;
         private readonly List<Row> rows=new List<Row>();
         private sealed class Row { public string label; public Action select; public Action<int> adjust; }
         private void Awake()
         {
             hud=GetComponent<RestaurantHud>(); Instance=this;
+            recipeBook=Resources.Load<RecipeBook>("RecipeBook");
             controls=new InputActionMap("Restaurant menu");
             toggle=controls.AddAction("Menu",InputActionType.Button); toggle.AddBinding("<Gamepad>/buttonNorth"); toggle.AddBinding("<Keyboard>/escape");
             navigate=controls.AddAction("Navigate",InputActionType.Value); navigate.AddBinding("<Gamepad>/dpad"); navigate.AddBinding("<Gamepad>/leftStick");
@@ -41,7 +47,16 @@ namespace ThrownTogether
             accept=controls.AddAction("Accept",InputActionType.Button); accept.AddBinding("<Gamepad>/buttonSouth"); accept.AddBinding("<Keyboard>/enter");
             back=controls.AddAction("Back",InputActionType.Button); back.AddBinding("<Gamepad>/buttonEast"); back.AddBinding("<Keyboard>/backspace");
         }
-        private void Start() { if(!booted && !Application.isEditor) Open(); booted=true; }
+        private void Start()
+        {
+            if(!booted && !Application.isEditor) OpenFrontEnd(); booted=true;
+            if(gateAfterLoad)
+            {
+                blockThroughFrame=Time.frameCount+1;
+                foreach(var input in FindObjectsByType<ChefInput>(FindObjectsSortMode.None)) input.RequireActionRelease();
+                gateAfterLoad=false;
+            }
+        }
         private void OnEnable() { Instance=this; controls.Enable(); }
         private void OnDisable() { Close(); controls.Disable(); }
         private void OnDestroy() { if(Instance==this) Instance=null; controls.Dispose(); }
@@ -49,6 +64,19 @@ namespace ThrownTogether
         {
             if(!IsOpen) { savedTimeScale=Time.timeScale; Time.timeScale=0; IsOpen=true; }
             SetPage("Main");
+        }
+        public void OpenFrontEnd() { IsFrontEnd=true; Open(); }
+        public void OpenRecipeBook() { if(!IsOpen) Open(); SetPage("Recipes"); }
+        public void ShowLevels(bool practice) { practiceLevel=practice; SetPage("Levels"); }
+        private void LaunchLevel(int index)
+        {
+            SessionOptions.Kitchen=index; SessionOptions.Training="Free practice";
+            IsFrontEnd=false; Close(); Load(practiceLevel ? "RestaurantDevelopment":"RestaurantShift");
+        }
+        public void NavigateBack()
+        {
+            if(IsFrontEnd) SetPage("Title");
+            else if(Page=="Main") Close(); else SetPage("Main");
         }
         public void Close()
         {
@@ -58,11 +86,34 @@ namespace ThrownTogether
             hud.coop?.RefreshPlayerOneAssignment();
             foreach(var input in FindObjectsByType<ChefInput>(FindObjectsSortMode.None)) input.RequireActionRelease();
         }
-        private void SetPage(string page) { Page=page; Selection=0; message=""; BuildRows(); }
+        private void SetPage(string page) { Page=page=="Main" && IsFrontEnd ? "Title":page; Selection=0; message=""; BuildRows(); }
         private void Add(string label,Action select,Action<int> adjust=null) => rows.Add(new Row {label=label,select=select,adjust=adjust});
         private void BuildRows()
         {
             rows.Clear();
+            if(Page=="Title")
+            {
+                Add("Play a level",()=>ShowLevels(false));
+                Add("Practice",()=>ShowLevels(true));
+                Add("Recipe book",OpenRecipeBook);
+                Add("Co-op setup",()=>SetPage("Co-op"));
+                Add("Settings",()=>SetPage("Settings")); return;
+            }
+            if(Page=="Levels")
+            {
+                var layouts=hud.GetComponent<KitchenLayout>().choices;
+                for(int i=0;i<layouts.Length;i++) {int index=i;Add(layouts[i].displayName,()=>LaunchLevel(index));}
+                if(!practiceLevel) Add("Shift length: "+SessionOptions.ShiftLabel,()=>CycleLength(1),CycleLength);
+                Add("Back",()=>SetPage("Title"));return;
+            }
+            if(Page=="Settings")
+            {Add("Audio",()=>SetPage("Audio"));Add("Text and accessibility",()=>SetPage("Display"));Add("Back",()=>SetPage("Main"));return;}
+            if(Page=="Recipes")
+            {
+                if(recipeBook!=null && recipeBook.recipes!=null) for(int i=0;i<recipeBook.recipes.Length;i++)
+                {int index=i;Add(recipeBook.recipes[i].displayName,()=>recipeIndex=index);}
+                Add("Back",()=>SetPage("Main"));return;
+            }
             if(Page=="Session")
             {
                 Add("Kitchen: "+hud.GetComponent<KitchenLayout>().choices[SessionOptions.Kitchen].displayName,()=>SetPage("Kitchen"));
@@ -85,7 +136,7 @@ namespace ThrownTogether
             }
             if(Page=="Co-op")
             {
-                Add("Resume / ready to join",Close);
+                Add(IsFrontEnd ? "Back to main menu":"Resume / ready to join",()=>{if(IsFrontEnd) SetPage("Title");else Close();});
                 Add("Keyboard P1 + controller P2",()=>{if(hud.coop.PlayerTwo!=null) message="Put down P2's item and leave before changing setup."; else {hud.coop.UseKeyboardPlayerOne();message="Keyboard stays P1. Resume; press A on a pad for P2.";}});
                 Add("Controller P1 (keyboard also available)",()=>{hud.coop.UseControllerPlayerOne();message="Resume and press A on the first controller.";});
                 Add("Player 2 leave",()=>{if(hud.coop.PlayerTwo==null) message="Player 2 has not joined."; else if(hud.coop.PlayerTwo.Hands.Item!=null) message="Place P2's item on a counter before leaving."; else Confirm("Remove Player 2? The shift continues.",()=>hud.coop.LeavePlayerTwo());});
@@ -115,12 +166,13 @@ namespace ThrownTogether
                 Add("Save settings",Save); Add("Back",()=>SetPage("Main")); return;
             }
             Add("Play / Resume",Close);
-            Add(hud.shift==null ? "Play restaurant shift" : "Return to practice",()=>Confirm("Change mode? Current food/order progress will reset.",()=>{SessionOptions.Training="Free practice"; Load(hud.shift==null ? "RestaurantShift":"RestaurantDevelopment");}));
+            Add("Recipe book",OpenRecipeBook);
             Add("Restart this mode",RequestRestart);
-            Add("Text and accessibility",()=>SetPage("Display")); Add("Audio settings",()=>SetPage("Audio"));
-            if(hud.coop!=null) Add("Co-op setup and controller help",()=>SetPage("Co-op"));
             Add("Kitchen, shift length and practice",()=>SetPage("Session"));
+            if(hud.coop!=null) Add("Co-op setup and controller help",()=>SetPage("Co-op"));
+            Add("Settings",()=>SetPage("Settings"));
             Add("Session results",()=>SetPage("Results"));
+            Add("Return to main menu",()=>Confirm("Leave this level? Starting another level resets progress.",OpenFrontEnd));
             if(Page=="Results") { rows.Clear(); Add("Back",()=>SetPage("Main")); }
         }
         private static void CycleLength(int direction)
@@ -142,9 +194,9 @@ namespace ThrownTogether
         public void Tick(bool focused)
         {
             if(!focused) return;
-            if(toggle.WasPressedThisFrame()) { if(IsOpen) Close(); else Open(); return; }
+            if(toggle.WasPressedThisFrame()) { if(IsOpen) {if(IsFrontEnd) NavigateBack(); else Close();} else Open(); return; }
             if(!IsOpen) return;
-            if(back.WasPressedThisFrame()) { if(Page=="Main") Close(); else SetPage("Main"); return; }
+            if(back.WasPressedThisFrame()) { NavigateBack(); return; }
             var axis=navigate.ReadValue<Vector2>();
             if(axis.sqrMagnitude<.25f) navigationHeld=false;
             else if(!navigationHeld || Time.unscaledTime>=nextNavigation)
@@ -157,6 +209,7 @@ namespace ThrownTogether
         }
         private static void Load(string name)
         {
+            gateAfterLoad=true;
 #if UNITY_EDITOR
             UnityEditor.SceneManagement.EditorSceneManager.LoadSceneInPlayMode("Assets/Scenes/"+name+".unity",new LoadSceneParameters(LoadSceneMode.Single));
 #else
@@ -172,14 +225,26 @@ namespace ThrownTogether
             if(buttonStyle==null) { buttonStyle=new GUIStyle(GUI.skin.button) {alignment=TextAnchor.MiddleLeft}; textStyle=new GUIStyle(GUI.skin.label) {fontSize=22,wordWrap=true,alignment=TextAnchor.MiddleCenter}; }
             var style=buttonStyle; style.fontSize=Mathf.RoundToInt(21*Display.TextScale); var text=textStyle;
             text.normal.textColor=Color.white; style.normal.textColor=Color.white; style.hover.textColor=Color.white; style.active.textColor=Color.white;
-            GUI.Label(new Rect(260,25,760,48),Page=="Main" ? "THROWN TOGETHER — MENU" : Page.ToUpperInvariant(),text);
-            GUI.Label(new Rect(260,73,760,60),Page=="Confirm" ? confirmation : "Paused • D-pad / stick: navigate • A: select • B: back\nY / Escape: close • Xbox Menu belongs to Edge",text);
+            GUI.Label(new Rect(260,25,760,48),Page=="Title" ? "THROWN TOGETHER" : Page=="Main" ? "PAUSED" : Page=="Levels" ? (practiceLevel ? "CHOOSE A PRACTICE KITCHEN":"CHOOSE YOUR LEVEL") : Page=="Recipes" ? "RECIPE BOOK" : Page.ToUpperInvariant(),text);
+            GUI.Label(new Rect(260,73,760,60),Page=="Confirm" ? confirmation : IsFrontEnd ? "D-pad / stick: navigate • A: select • B: back\nChoose a kitchen and start cooking." : "Paused • D-pad / stick: navigate • A: select • B: back\nY / Escape: close • Xbox Menu belongs to Edge",text);
             for(int i=0;i<rows.Count;i++)
             {
                 GUI.backgroundColor=i==Selection ? new Color(.2f,.8f,.6f):Color.gray;
-                if(GUI.Button(new Rect(260,145+i*47,760,42),(i==Selection ? ">  ":"    ")+rows[i].label,style)) { Selection=i; ActivateSelection(); break; }
+                var rowRect=Page=="Recipes" ? new Rect(35,160+i*55,345,48):new Rect(260,145+i*47,760,42);
+                if(GUI.Button(rowRect,(i==Selection ? ">  ":"    ")+rows[i].label,style)) { Selection=i; ActivateSelection(); break; }
             }
             GUI.backgroundColor=Color.white;
+            if(Page=="Levels") GUI.Label(new Rect(260,435,760,115),hud.GetComponent<KitchenLayout>().choices[Mathf.Min(Selection,2)].description,text);
+            if(Page=="Recipes" && recipeBook!=null && recipeBook.recipes.Length>0)
+            {
+                if(Selection<recipeBook.recipes.Length) recipeIndex=Selection;
+                var recipe=recipeBook.recipes[recipeIndex];
+                GUI.color=new Color(.12f,.17f,.18f);GUI.DrawTexture(new Rect(410,145,830,445),Texture2D.whiteTexture);GUI.color=Color.white;
+                FoodIcon.Draw(new Rect(438,158,70,60),recipe.ingredient);
+                GUI.Label(new Rect(520,154,690,60),recipe.displayName+(recipe.requiredState==FoodState.Cut ? " — no frying":""),text);
+                var instructions=new GUIStyle(text) {alignment=TextAnchor.UpperLeft,fontSize=Mathf.RoundToInt(18*Display.TextScale)};
+                GUI.Label(new Rect(435,230,780,350),RecipeBook.Instructions(recipe),instructions);
+            }
             if(Page=="Kitchen") GUI.Label(new Rect(260,370,760,135),hud.GetComponent<KitchenLayout>().choices[Mathf.Min(Selection,2)].description,text);
             if(Page=="Co-op") GUI.Label(new Rect(200,390,880,145),"1. Xbox Edge: hold Menu, then Use game controls.\n2. Resume. First pad controls P1; A on another joins P2.\nP1 mint / P2 coral. A: use. Y: menu.\nDisconnected? Food stays safe. Reconnect that pad or press A on an unused one.",text);
             GUI.Label(new Rect(240,545,800,70),message,text);

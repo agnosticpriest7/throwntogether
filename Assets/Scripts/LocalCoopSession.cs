@@ -25,15 +25,15 @@ namespace ThrownTogether
         public void UseKeyboardPlayerOne()
         {
             if(PlayerTwo!=null) return;
-            KeyboardPlayerOne=true; BindPlayerOne(null);
+            KeyboardPlayerOne=true; SessionOptions.KeyboardPlayerOne=true; BindPlayerOne(null);
         }
         public void UseControllerPlayerOne()
         {
-            KeyboardPlayerOne=false; RefreshPlayerOneAssignment();
+            KeyboardPlayerOne=false; SessionOptions.KeyboardPlayerOne=false; RefreshPlayerOneAssignment();
         }
         public string Status => PlayerTwo==null ? "Solo | Press A on a second pad to join" :
             PlayerTwoPad!=null && PlayerTwoPad.added ? "Local co-op | P1 mint / P2 coral" : "P2 disconnected — position and item retained; press A to reconnect";
-        private void Start() { BindPlayerOne(Gamepad.all.FirstOrDefault()); }
+        private void Start() { KeyboardPlayerOne=SessionOptions.KeyboardPlayerOne; BindPlayerOne(KeyboardPlayerOne ? null:Gamepad.all.FirstOrDefault()); }
         public void RefreshPlayerOneAssignment()
         {
             if(!KeyboardPlayerOne && (PlayerOnePad==null || !PlayerOnePad.added))

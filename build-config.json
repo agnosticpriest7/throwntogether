@@ -1,6 +1,4 @@
 {
   "scenes": ["Assets/Scenes/RestaurantDevelopment.unity", "Assets/Scenes/RestaurantShift.unity"],
-  "developmentVersion": "0.5.0-dev"
+  "developmentVersion": "0.5.1-dev"
 }
-
-
