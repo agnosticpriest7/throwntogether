@@ -93,3 +93,6 @@ The build used an isolated current-working-source snapshot in `C:/Projects/Throw
 - Appearance choices currently reset on application restart. There was no existing appearance persistence system; audio/display settings storage was left unchanged.
 - No progression, unlocks, alternate species, collision changes, or polished character-creation UI were introduced.
 - To get this onto the live site, continue through the established main-chat review/commit/push/test/build/deploy workflow when publication is requested. The normal wrapper requires committed clean main; this local candidate was built separately specifically to validate uncommitted work.
+
+## Subsequent integration status
+The owner authorized review, commit, push and publication in the main development chat. This handoff is retained as historical provenance. Runtime integration was published as 0.7.0-dev from 944bc4253d99055cdaccadc6cd465902861564a2; see DEVELOPMENT_NOTES.md for final verification. Editable source art remains preserved in the external Character Art folder.

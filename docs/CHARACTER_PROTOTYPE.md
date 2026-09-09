@@ -38,3 +38,6 @@ Human follow-up: inspect silhouettes and carried food at TV distance, compare th
 Editor visual checks covered the four example looks, three unclothed builds, the opening wardrobe preview, and a live chef moving and holding a clean plate at the actual gameplay camera angle. A close-up comparison additionally checked all three builds in bib aprons carrying actual Carryable plates through their existing carry slots; no obvious apron/arm clipping was seen in that pose. The latest Console check contained no warnings or errors.
 
 The isolated WebGL build succeeded at `Builds/CharacterPrototypeWeb`, using the current working source and the existing strict build method. The first restricted process could not connect to licensing; it was stopped and the successful retry ran with access to the existing local licensing service. The output has not been published or physically browser/controller-tested.
+
+## Integration and publication
+The main development chat subsequently authorized publication. Version 0.7.0-dev was reviewed in a desktop browser and deployed from 944bc4253d99055cdaccadc6cd465902861564a2 through the standard development pipeline; all 67 Unity tests and 13 browser/artifact checks passed again. See DEVELOPMENT_NOTES.md for deployment identity and remaining physical-playtest checks. The earlier unpublished candidate status above is historical.
