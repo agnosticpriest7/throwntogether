@@ -39,7 +39,7 @@ if ((Git @('rev-parse','--show-toplevel')).Replace('\','/') -ne $root.Replace('\
 if ((Git @('branch','--show-current')) -ne 'main') { throw 'Run from main.' }
 if ((Git @('remote','get-url','origin')) -notmatch '^https://github\.com/agnosticpriest7/throwntogether(?:\.git)?$') { throw 'Unexpected origin.' }
 Assert-Clean
-& node --test (Join-Path $root 'scripts/web-shell.test.cjs')
+& node --test (Join-Path $root 'scripts/web-shell.test.cjs') (Join-Path $root 'scripts/web-artifact.test.cjs')
 if ($LASTEXITCODE -ne 0) { throw 'Browser shell regression tests failed.' }
 $sha = Git @('rev-parse','HEAD')
 if ($Mode -eq 'Deploy') {
@@ -106,12 +106,16 @@ try {
     if (Get-ChildItem $output -Recurse -File | Where-Object Length -GE 100MB) { throw 'Output exceeds GitHub single-file limit.' }
     Set-Content -LiteralPath "$output/.nojekyll" -Value '' -NoNewline
     @{ sourceCommit=$sha; developmentVersion=(Get-Content "$root/build-config.json" -Raw | ConvertFrom-Json).developmentVersion; builtAtUtc=[DateTime]::UtcNow.ToString('o'); scenes=(Get-Content "$root/build-config.json" -Raw | ConvertFrom-Json).scenes } | ConvertTo-Json | Set-Content "$output/build-info.json"
+    & node (Join-Path $root 'scripts/check-web-build.cjs') --write $output
+    if ($LASTEXITCODE -ne 0) { throw 'Generated Web artifact verification failed.' }
     Write-Host "Web build: $output"
     Assert-Clean
     if ((Git @('rev-parse','HEAD')) -ne $sha) { throw 'Source commit changed during build.' }
     if ($Mode -eq 'Build') { return }
     Git @('fetch','origin') | Out-Host
     if ((Git @('rev-parse','origin/main')) -ne $sha) { throw 'Remote main changed during build.' }
+    & node (Join-Path $root 'scripts/check-web-build.cjs') --check $output
+    if ($LASTEXITCODE -ne 0) { throw 'Web output changed after verification.' }
     $legacy = Git @('ls-remote','origin','refs/heads/legacy/web-prototype','refs/tags/web-prototype-final','refs/tags/web-prototype-final^{}')
     # Dedicated temporary repository: canonical main never switches branches.
     $publish = Join-Path $builds ('Publish-' + [Guid]::NewGuid().ToString('N'))

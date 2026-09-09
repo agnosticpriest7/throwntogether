@@ -31,3 +31,8 @@ Use this for observations from actual playable builds, not speculative ideas.
 
 ### Xbox Edge physical feedback — native mode menu
 Reported by Kyle: development page remains in Browsing Controls; Unity Pads: 0; D-pad appears to arrive as keyboard arrows; left stick and face buttons do not reach Unity as gamepad input. The usual hold-Menu → Use game controls action could not be enabled on this page, although Kyle uses it on other games on the same Xbox. Exact Xbox/Edge versions were not provided. Shell compatibility changes are awaiting physical retest; unresolved.
+
+### 0.3.0 physical feedback and approved overnight follow-up
+Kyle reports co-op works great and distinct food shapes work great. Item/station nameplates and opaque panels obscure the chef; he requests recognizable objects without nameplates. He requests ordinary-counter plating instead of a dedicated plating station: put food down, then add a plate. Earlier room expansion was reported more comfortable. These are owner observations, not agent-performed physical tests.
+
+0.4.0 review focus: identify stations/food without labels, check visibility while holding each state, assemble in both orders on both counters, and assess the compact HUD at TV distance. Counter assembly now leaves the dish on the counter, requiring one pickup before serving. Confirm the updated interaction is intuitive in solo and co-op.

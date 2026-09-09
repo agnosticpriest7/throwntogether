@@ -26,7 +26,7 @@ namespace ThrownTogether
         {
             if (Phase != OrderPhase.Eating) return;
             eatingTime+=Mathf.Max(0,seconds);
-            if (customerVisual != null) customerVisual.localPosition=visualPosition+Vector3.up*Mathf.Sin(eatingTime*8)*.07f;
+            if (customerVisual != null) customerVisual.localPosition=visualPosition+Vector3.up*(RestaurantMenu.Display.reducedEffects ? 0 : Mathf.Sin(eatingTime*8)*.07f);
             if (eatingTime >= 2) { Phase=OrderPhase.Complete; if (customerVisual != null) customerVisual.localPosition=visualPosition; }
         }
     }

@@ -4611,7 +4611,7 @@ GameObject:
   - component: {fileID: 1875821568}
   - component: {fileID: 1875821567}
   m_Layer: 0
-  m_Name: PLATING COUNTER
+  m_Name: COUNTER
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -4629,7 +4629,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0176d0340d94f5e43b0fb018485ac671, type: 3}
   m_Name: 
   m_EditorClassIdentifier: ThrownTogether.Runtime::ThrownTogether.CounterStation
-  stationName: PLATING COUNTER
+  stationName: COUNTER
   slot: {fileID: 1977314873}
 --- !u!4 &1875821568
 Transform:

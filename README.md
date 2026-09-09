@@ -4,7 +4,7 @@ Development now uses Unity 6. Open this repository with **6000.6.0f1**, then ope
 
 The canonical local checkout is `C:\Projects\ThrownTogetherUnity\ThrownTogetherUnity`.
 
-Read `AGENTS.md` and the design and technical documents in `docs/` before development. Vertical Slice #1 provides one chef's potato → prep → fryer → plate → customer loop. Move with WASD/arrows/left stick; use stations with E/Space/controller A; restart with R/Start. See `docs/DEVELOPMENT_NOTES.md` for the complete flow, limitations and human playtest checklist.
+Read `AGENTS.md` and the design and technical documents in `docs/` before development. Vertical Slice #1 provides one chef's potato → prep → fryer → plate → customer loop. Move with WASD/arrows/left stick; use stations with E/Space/controller A; open the menu with Y/Escape and request restart with R (confirmation required). Xbox Edge Menu remains browser-owned. See `docs/DEVELOPMENT_NOTES.md` for the complete flow, limitations and human playtest checklist.
 
 ## Browser prototype archive
 
@@ -47,7 +47,30 @@ Deployment uses an isolated repository under ignored `Builds/Publish-*`, with or
 
 Public test URL: **https://agnosticpriest7.github.io/throwntogether/**. Allow Pages a few minutes after publication, then refresh. `build-info.json` at that URL identifies the source commit. Xbox Edge/controller testing is a human follow-up, not implied by a successful deployment.
 
-### 0.3.0 playtest
-The player starts with the menu open. **Y / Escape** opens or closes it; use **D-pad / left stick / arrow keys** to navigate, **A / Enter** to select and **B / Backspace** to go back. Menu pauses the kitchen. Restart (also R) and mode changes require confirmation; the three-line Menu button remains Xbox Edge's own control. Choose practice or the existing six-order fries/mushroom shift. Editor play starts unpaused for authoring; Y opens the same menu.
+### Controller and accessibility controls
+The player starts with the menu open. **Y / Escape** opens or closes it; use **D-pad / left stick / arrow keys** to navigate, **A / Enter** to select and **B / Backspace** to go back. Menu pauses the kitchen. Restart (also R) and mode changes require confirmation; the three-line Menu button remains Xbox Edge's own control. Choose free/guided practice or a 3/6/12-order fries/mushroom shift. Editor play starts unpaused for authoring; Y opens the same menu.
 
-The menu provides three text sizes, high contrast, reduced visual effects and five audio volumes. **Save settings** persists preferences locally; unsaved changes reset on scene reload. P1 uses keyboard/first gamepad; resume and press A on a second pad to join P2. Keyboard + one-pad mode and P2 leave are in the menu. P2 must put down held food before leaving; disconnect/reconnect retains it. Player labels, dish icons and ticket states supplement color. New controller-menu/TV behavior still needs a physical Xbox test.
+The menu provides three text sizes, high contrast, reduced visual effects and five audio volumes. **Save settings** persists preferences locally; unsaved changes reset on scene reload. P1 uses keyboard/first gamepad; resume and press A on a second pad to join P2. Keyboard + one-pad mode and P2 leave are in the menu. P2 must put down held food before leaving; disconnect/reconnect retains it. Player prompts, dish shapes and ticket states supplement color. The latest visual/menu changes still need a physical Xbox/TV review.
+
+## 0.4.0 overnight review
+
+The kitchen now uses visual station models instead of floating nameplates: ingredient crates, a chopping board and knife, fryer basket, plate stack, ordinary counters, and a service pass with a bell. A mint/coral floor border identifies each player's interaction target. Food shapes are larger; progress bars and steady ready lights replace station text panels. Menu > Text and accessibility retains larger text, high contrast and reduced effects.
+
+**Plating:** place cooked food on either ordinary counter, then add a clean plate to the same counter. Plate-first also works. The finished dish stays **on the counter**; press A / E again to pick it up, then serve. No dedicated plating station is needed.
+
+**Menu > Shift length and guided practice:** select short (3 dishes), standard (6), or long (12), then Start selected shift. These reuse the existing fries/mushroom sequence and two seats, with no order expiry or failure timer. Guided full loop teaches the same interactions. Practice one step starts with a raw, cut, cooked, or plated ingredient for prep, frying, plating, or serving. Checkpoint selection resets practice only after confirmation. Guidance follows P1; ordinary co-op remains available.
+
+Session results show elapsed play time and each player's accepted prep/fry/plate/serve actions. Paused menu time is excluded; counts are contributions, not points or an economy. Restart resets them. Completed sessions show a result card; Y / Escape provides replay and session choices.
+
+### Restore a previous Web build
+
+The owner-confirmed co-op/food-shape build before this batch is deployment commit `d31291d325bdbfabce7a0b6d975a53920310295c` (source `e88c1e537649b03e763c7a5c00b974eac47edabf`, version 0.3.0-dev). This is a rollback reference, not a claim that every feature was physically verified.
+
+```powershell
+# Download and validate the previous snapshot for inspection; does not publish.
+./scripts/restore-web-deployment.ps1 -DeploymentCommit d31291d325bdbfabce7a0b6d975a53920310295c
+# Explicitly restore it as a NEW gh-pages commit, leaving main unchanged.
+./scripts/restore-web-deployment.ps1 -DeploymentCommit d31291d325bdbfabce7a0b6d975a53920310295c -Publish
+```
+
+New builds include a SHA-256 artifact manifest. Publication verifies the files against it and rejects source files, compressed output, missing payloads or changed bytes. Generated manifests and restored snapshots stay under ignored Builds/ or on gh-pages.

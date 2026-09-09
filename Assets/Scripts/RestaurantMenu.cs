@@ -63,6 +63,21 @@ namespace ThrownTogether
         private void BuildRows()
         {
             rows.Clear();
+            if(Page=="Session")
+            {
+                Add("Shift length: "+SessionOptions.ShiftLabel,()=>CycleLength(1),CycleLength);
+                Add("Start selected shift",()=>Confirm("Start "+SessionOptions.ShiftLabel+"? Current progress will reset.",()=>Load("RestaurantShift")));
+                Add("Guided full cooking loop",()=>StartTraining("Guided full loop"));
+                Add("Practice one step",()=>SetPage("Practice"));
+                Add("Free practice",()=>StartTraining("Free practice"));
+                Add("Back",()=>SetPage("Main")); return;
+            }
+            if(Page=="Practice")
+            {
+                foreach(var step in new[]{"Prep","Frying","Plating","Serving"})
+                { var selected=step; Add(selected+" — start with the needed item",()=>StartTraining(selected)); }
+                Add("Back",()=>SetPage("Session")); return;
+            }
             if(Page=="Confirm") { Add("Cancel — keep playing",()=>SetPage("Main")); Add("Confirm",()=>{var action=pending; Close(); action?.Invoke();}); return; }
             if(Page=="Display")
             {
@@ -80,7 +95,7 @@ namespace ThrownTogether
                 Add("Save settings",Save); Add("Back",()=>SetPage("Main")); return;
             }
             Add("Play / Resume",Close);
-            Add(hud.shift==null ? "Play restaurant shift" : "Return to practice",()=>Confirm("Change mode? Current food/order progress will reset.",()=>Load(hud.shift==null ? "RestaurantShift":"RestaurantDevelopment")));
+            Add(hud.shift==null ? "Play restaurant shift" : "Return to practice",()=>Confirm("Change mode? Current food/order progress will reset.",()=>{SessionOptions.Training="Free practice"; Load(hud.shift==null ? "RestaurantShift":"RestaurantDevelopment");}));
             Add("Restart this mode",RequestRestart);
             Add("Text and accessibility",()=>SetPage("Display")); Add("Audio settings",()=>SetPage("Audio"));
             if(hud.coop!=null)
@@ -88,7 +103,16 @@ namespace ThrownTogether
                 if(hud.coop.PlayerTwo==null) Add(hud.coop.KeyboardPlayerOne ? "Keyboard P1 selected — A joins P2" : "Use keyboard P1 + one controller P2",()=>{hud.coop.UseKeyboardPlayerOne(); message="Resume, then press A on the controller to join P2.";});
                 else Add("Player 2 leave",()=>{ if(hud.coop.PlayerTwo.Hands.Item!=null) message="P2 must place their held item on a counter before leaving."; else Confirm("Remove Player 2? The current shift continues.",()=>hud.coop.LeavePlayerTwo()); });
             }
+            Add("Shift length and guided practice",()=>SetPage("Session"));
+            Add("Session results",()=>SetPage("Results"));
+            if(Page=="Results") { rows.Clear(); Add("Back",()=>SetPage("Main")); }
         }
+        private static void CycleLength(int direction)
+        {
+            int[] lengths={3,6,12}; int index=Array.IndexOf(lengths,SessionOptions.ShiftOrders);
+            SessionOptions.ShiftOrders=lengths[(index+direction+3)%3];
+        }
+        private void StartTraining(string training) => Confirm("Start "+training+"? Current progress will reset.",()=>{SessionOptions.Training=training; Load("RestaurantDevelopment");});
         private void Volume(string name,Func<float> read,Action<float> write)
         {
             Action<int> change=dir=>{write(Mathf.Round(Mathf.Clamp01(read()+dir*.1f)*10)/10); hud.settings.Apply();};
@@ -137,10 +161,17 @@ namespace ThrownTogether
             for(int i=0;i<rows.Count;i++)
             {
                 GUI.backgroundColor=i==Selection ? new Color(.2f,.8f,.6f):Color.gray;
-                if(GUI.Button(new Rect(260,145+i*52,760,46),(i==Selection ? ">  ":"    ")+rows[i].label,style)) { Selection=i; ActivateSelection(); break; }
+                if(GUI.Button(new Rect(260,145+i*47,760,42),(i==Selection ? ">  ":"    ")+rows[i].label,style)) { Selection=i; ActivateSelection(); break; }
             }
             GUI.backgroundColor=Color.white;
             GUI.Label(new Rect(240,545,800,70),message,text);
+            if(Page=="Results")
+            {
+                var summary=hud.GetComponent<SessionSummary>();
+                int completed=hud.shift!=null ? hud.shift.CompletedCount : hud.order.Phase==OrderPhase.Complete ? 1:0;
+                GUI.Label(new Rect(200,215,880,240),"Dishes completed: "+completed+"\nTime: "+TimeSpan.FromSeconds(summary.ElapsedSeconds).ToString(@"mm\:ss")+
+                    "\n\nP1  "+summary.PlayerOne.Description+"\nP2  "+summary.PlayerTwo.Description+"\n\nTeam contributions count successful actions, not points.",text);
+            }
             if(hud.coop!=null) GUI.Label(new Rect(180,620,920,75),hud.coop.DeviceSummary,text);
             GUI.matrix=matrix; GUI.depth=0;
         }

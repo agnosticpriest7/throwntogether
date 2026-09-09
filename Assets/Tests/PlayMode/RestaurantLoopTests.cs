@@ -327,7 +327,7 @@ namespace ThrownTogether.Tests
         public IEnumerator FullLoopRejectsInvalidInputsThenDeliversPlatedFries()
         {
             var source=Find<SourceStation>("POTATOES"); var prep=Find<ProcessingStation>("PREP"); var fryer=Find<ProcessingStation>("FRYER");
-            var counter=Find<CounterStation>("PLATING"); var plates=Find<SourceStation>("PLATES"); var service=Find<ServiceStation>("PICKUP");
+            var counter=Find<CounterStation>("COUNTER"); var plates=Find<SourceStation>("PLATES"); var service=Find<ServiceStation>("PICKUP");
             Use(source); var potato=chef.Hands.Item; Assert.That(potato.Payload.state,Is.EqualTo(FoodState.Raw));
             Assert.That(potato.GetComponentsInChildren<Collider>(true),Is.Empty,"Item visuals must not require stripped collider types");
             Assert.That(potato.GetComponentInChildren<MeshFilter>().sharedMesh,Is.SameAs(source.itemPrefab.sphereMesh));
@@ -345,6 +345,8 @@ namespace ThrownTogether.Tests
             Assert.That(potato.Payload.state,Is.EqualTo(FoodState.Cooked)); Use(fryer);
             Approach(service); Assert.That(chef.Use(),Is.False,"Unplated fries must not serve");
             Use(counter); Use(plates); Use(counter);
+            Assert.That(chef.Hands.Item,Is.Null,"Assembly leaves the finished plate on the counter");
+            Use(counter);
             Assert.That(chef.Hands.Item.Payload.isPlate,Is.True); Assert.That(service.order.recipe.Matches(chef.Hands.Item.Payload),Is.True);
             Assert.That(counter.slot.Item,Is.Null);
             Use(service); Assert.That(chef.Hands.Item,Is.Null); Assert.That(service.order.Phase,Is.EqualTo(OrderPhase.Delivering));
@@ -352,6 +354,9 @@ namespace ThrownTogether.Tests
             Assert.That(service.order.tableSlot.Item,Is.Not.Null);
             Assert.That(service.order.recipe.Matches(service.order.tableSlot.Item.Payload),Is.True);
             Assert.That(service.order.CanAccept(service.order.tableSlot.Item.Payload),Is.False);
+            var count=Object.FindObjectsByType<SessionSummary>().Single(s=>s.gameObject.scene==testScene).PlayerOne;
+            Assert.That(count.prep,Is.EqualTo(1)); Assert.That(count.fry,Is.EqualTo(1));
+            Assert.That(count.plates,Is.EqualTo(1)); Assert.That(count.served,Is.EqualTo(1));
         }
         [UnityTest]
         public IEnumerator InvalidSequenceNeverReservesOrCompletesOrder()

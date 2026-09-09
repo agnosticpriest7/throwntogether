@@ -13,30 +13,19 @@ namespace ThrownTogether
         public RestaurantShift shift;
         private GUIStyle label, small, title;
         private RestaurantMenu menu;
+        private PracticeGuide guide;
+        private SessionSummary summary;
         private int lastCompleted;
         private float completedUntil;
         private void Awake()
         {
             menu=gameObject.AddComponent<RestaurantMenu>();
+            gameObject.AddComponent<KitchenPresentation>();
+            summary=gameObject.AddComponent<SessionSummary>();
+            guide=gameObject.AddComponent<PracticeGuide>();
 #if UNITY_EDITOR || THROWNTOGETHER_DIAGNOSTICS
             gameObject.AddComponent<DevelopmentDiagnostics>();
 #endif
-        }
-        private void Start()
-        {
-            Carryable assets=null;
-            foreach(var source in FindObjectsByType<SourceStation>(FindObjectsSortMode.None))
-            {
-                if(source.gameObject.scene!=gameObject.scene) continue;
-                assets=source.itemPrefab;
-                if(source.plates) continue;
-                var preview=Instantiate(source.itemPrefab,source.transform);
-                preview.name="Ingredient display"; preview.transform.localPosition=new Vector3(0,1.65f,0);
-                preview.transform.localScale=Vector3.one*1.35f;
-                preview.Configure(new ItemPayload { ingredient=source.ingredient,state=FoodState.Raw });
-            }
-            if(assets!=null) foreach(var station in FindObjectsByType<ProcessingStation>(FindObjectsSortMode.None))
-                if(station.gameObject.scene==gameObject.scene) station.gameObject.AddComponent<StationPresentation>().Initialize(station,assets);
         }
         private void Update()
         {
@@ -46,83 +35,86 @@ namespace ThrownTogether
         }
         private void OnGUI()
         {
-            if (chef == null || order == null) return;
-            if (label == null)
+            if(chef==null || order==null || menu.IsOpen) return;
+            if(label==null)
             {
-                label=new GUIStyle(GUI.skin.label) { fontSize=21, alignment=TextAnchor.MiddleCenter, fontStyle=FontStyle.Bold };
-                small=new GUIStyle(label) { fontSize=17 };
-                title=new GUIStyle(label) { fontSize=26 };
+                label=new GUIStyle(GUI.skin.label) { alignment=TextAnchor.MiddleCenter,fontStyle=FontStyle.Bold,wordWrap=true };
+                small=new GUIStyle(label); title=new GUIStyle(label);
             }
-            label.fontSize=Mathf.RoundToInt(18*RestaurantMenu.Display.TextScale);
+            label.fontSize=Mathf.RoundToInt(19*RestaurantMenu.Display.TextScale);
             small.fontSize=Mathf.RoundToInt(15*RestaurantMenu.Display.TextScale);
-            label.wordWrap=true; small.wordWrap=true;
-            label.normal.textColor=Color.white; small.normal.textColor=Color.white; title.normal.textColor=Color.white;
+            title.fontSize=Mathf.RoundToInt(22*RestaurantMenu.Display.TextScale);
+            label.normal.textColor=small.normal.textColor=title.normal.textColor=Color.white;
             var previous=GUI.matrix;
-            GUI.matrix=Matrix4x4.TRS(Vector3.zero,Quaternion.identity,new Vector3(Screen.width/1280f,Screen.height/720f,1));
-            Panel(new Rect(20,14,1240,94));
-            GUI.Label(new Rect(30,16,1000,34),shift==null ? "THROWN TOGETHER / PRACTICE" : "THROWN TOGETHER / RESTAURANT SHIFT",title);
-            if(GUI.Button(new Rect(1050,20,190,28),"Y / Esc — Menu")) menu.Open();
-            if(shift==null) DrawTicket(order,new Rect(250,50,780,54),1);
-            if(shift!=null)
+            GUI.matrix=Matrix4x4.Scale(new Vector3(Screen.width/1280f,Screen.height/720f,1));
+            Panel(new Rect(20,12,1240,76));
+            if(shift==null) DrawTicket(order,new Rect(32,19,740,61),1);
+            else
             {
-                if(shift.Complete) GUI.Label(new Rect(30,51,1220,45),"SHIFT COMPLETE • "+shift.CompletedCount+" dishes • "+System.TimeSpan.FromSeconds(shift.ElapsedSeconds).ToString(@"mm\:ss"),label);
-                else for(int i=0;i<shift.seats.Length;i++) DrawTicket(shift.seats[i],new Rect(30+i*600,50,590,54),i+1);
-                GUI.Label(new Rect(1040,108,210,25),lastCompleted+" / "+shift.definition.orders.Length+" served",small);
+                for(int i=0;i<shift.seats.Length;i++) DrawTicket(shift.seats[i],new Rect(32+i*385,19,375,61),i+1);
             }
+            int total=shift!=null ? shift.TotalOrders:1;
+            GUI.Label(new Rect(800,20,250,30),lastCompleted+" / "+total+" served",label);
+            GUI.Label(new Rect(800,49,250,26),System.TimeSpan.FromSeconds(summary.ElapsedSeconds).ToString(@"mm\:ss"),small);
+            if(GUI.Button(new Rect(1060,29,182,39),"Y / Esc: Menu")) menu.Open();
             foreach(var station in Interactable.Active)
             {
-                if (station == null || station.gameObject.scene!=gameObject.scene) continue;
-                var p=gameplayCamera.WorldToViewportPoint(station.transform.position+Vector3.up*1.6f);
-                float stationWidth=shift!=null && station is SourceStation ? 145 : 188;
-                var rect=new Rect(p.x*1280-stationWidth/2,(1-p.y)*720-54,stationWidth,50);
-                bool p1=station==chef.Focus, p2=coop!=null && coop.PlayerTwo!=null && station==coop.PlayerTwo.Focus;
-                GUI.backgroundColor=p1 ? new Color(.15f,.9f,.65f) : p2 ? new Color(1,.38f,.3f) : Color.black;
-                Panel(rect); GUI.Label(rect,StationLabel(station),small);
-                if(p1 || p2) GUI.Label(new Rect(rect.x,rect.y-20,rect.width,22),(p1 ? "P1 " : "")+(p2 ? "P2" : ""),small);
-                if (station.Progress>=0) { GUI.color=new Color(.3f,1,.65f); GUI.DrawTexture(new Rect(rect.x,rect.yMax,rect.width*station.Progress,7),Texture2D.whiteTexture); GUI.color=Color.white; }
+                if(station==null || station.gameObject.scene!=gameObject.scene || station.Progress<0) continue;
+                var p=gameplayCamera.WorldToViewportPoint(station.transform.position+new Vector3(0,1.27f,-.63f));
+                var rect=new Rect(p.x*1280-37,(1-p.y)*720,74,8);
+                GUI.color=new Color(.07f,.1f,.1f); GUI.DrawTexture(rect,Texture2D.whiteTexture);
+                GUI.color=new Color(1,.75f,.2f); rect.width*=station.Progress; GUI.DrawTexture(rect,Texture2D.whiteTexture); GUI.color=Color.white;
             }
-            GUI.backgroundColor=Color.black;
-            DrawChefBadge(chef,"P1"); if(coop!=null && coop.PlayerTwo!=null) DrawChefBadge(coop.PlayerTwo,"P2");
-            Panel(new Rect(20,590,1240,110));
-            DrawPlayer(chef,"P1",30,coop!=null && coop.PlayerTwo!=null ? 600 : 1220);
-            if(coop!=null && coop.PlayerTwo!=null) DrawPlayer(coop.PlayerTwo,"P2",650,600);
-            GUI.Label(new Rect(30,676,1220,23),(coop!=null ? coop.Status : "Solo")+" | Y / Esc: menu",small);
-            if(Time.time<completedUntil) { Panel(new Rect(450,115,380,32)); GUI.Label(new Rect(450,115,380,32),"DISH SERVED ✓",label); }
+            // Identity is carried by apron colors and target borders; no floating panels cover chefs.
+            bool two=coop!=null && coop.PlayerTwo!=null;
+            DrawPlayer(chef,"P1",new Color(.2f,1,.7f),20,two ? 612:1240);
+            if(two) DrawPlayer(coop.PlayerTwo,"P2",new Color(1,.42f,.32f),648,612);
+            if(two && (coop.PlayerTwoPad==null || !coop.PlayerTwoPad.added))
+            {
+                Panel(new Rect(300,93,680,30)); GUI.Label(new Rect(300,93,680,30),"P2 disconnected — food retained. Press A on a controller to reconnect.",small);
+            }
+            else if(Time.time<completedUntil)
+            { Panel(new Rect(490,94,300,30)); GUI.Label(new Rect(490,94,300,30),"Dish served!",label); }
+            if(guide.Active)
+            {
+                Panel(new Rect(170,555,940,55)); GUI.Label(new Rect(180,555,920,55),guide.Instruction,label);
+                if(guide.SuggestedTarget!=null)
+                {
+                    var p=gameplayCamera.WorldToViewportPoint(guide.SuggestedTarget.transform.position+Vector3.up*2.05f);
+                    GUI.color=new Color(1,.83f,.25f); GUI.Label(new Rect(p.x*1280-20,(1-p.y)*720-25,40,30),"v",title); GUI.color=Color.white;
+                }
+            }
+            bool complete=shift!=null ? shift.Complete : order.Phase==OrderPhase.Complete;
+            if(complete)
+            {
+                Panel(new Rect(340,170,600,285));
+                GUI.Label(new Rect(355,178,570,45),shift!=null ? "SHIFT COMPLETE":"FIRST SERVICE COMPLETE",title);
+                GUI.Label(new Rect(355,230,570,45),lastCompleted+" dishes  |  "+System.TimeSpan.FromSeconds(summary.ElapsedSeconds).ToString(@"mm\:ss"),label);
+                GUI.Label(new Rect(355,285,570,85),"P1  "+summary.PlayerOne.Description+"\nP2  "+summary.PlayerTwo.Description,small);
+                GUI.Label(new Rect(355,380,570,40),"Y / Esc: replay, choose a shift or practice",label);
+            }
             GUI.matrix=previous; GUI.color=Color.white; GUI.backgroundColor=Color.white;
         }
-        private void DrawPlayer(ChefController player,string id,float x,float width)
+        private void DrawPlayer(ChefController player,string id,Color color,float x,float width)
         {
-            string prompt=player.Focus!=null ? "[A / E] "+player.Focus.Prompt(player) : "Approach and face a station";
-            GUI.Label(new Rect(x,593,width,37),id+" • "+prompt,label);
-            GUI.Label(new Rect(x,632,width,25),"Holding: "+(player.Hands.Item==null ? "Nothing" : player.Hands.Item.Payload.Label),label);
-            GUI.Label(new Rect(x,658,width,20),string.IsNullOrEmpty(player.Feedback) ? "Move: WASD / stick • Use: E / Space / A" : player.Feedback,small);
+            Panel(new Rect(x,624,width,68));
+            GUI.color=color; GUI.DrawTexture(new Rect(x,624,5,68),Texture2D.whiteTexture); GUI.color=Color.white;
+            string prompt=player.Focus!=null ? "A / E: "+player.Focus.Prompt(player):"Face a station to interact";
+            GUI.Label(new Rect(x+12,628,width-24,29),id+"  "+prompt,label);
+            GUI.Label(new Rect(x+12,657,width-24,29),player.Hands.Item==null ? "Hands empty" : player.Hands.Item.Payload.Label,small);
         }
         private static void Panel(Rect rect)
         {
-            GUI.color=RestaurantMenu.Display.highContrast ? Color.black : new Color(.04f,.08f,.11f,.94f);
+            GUI.color=RestaurantMenu.Display.highContrast ? Color.black:new Color(.035f,.055f,.07f,.88f);
             GUI.DrawTexture(rect,Texture2D.whiteTexture); GUI.color=Color.white;
-        }
-        private static string StationLabel(Interactable station)
-        {
-            if(station is SourceStation source) return source.plates ? "Plates" : source.ingredient.displayName;
-            if(station is ProcessingStation process) return (process.recipe.input==FoodState.Raw ? "Prep":"Fryer")+
-                (process.Busy ? "\nWorking "+Mathf.RoundToInt(process.Progress*100)+"%" : process.slot.Item!=null ? "\nREADY":"");
-            if(station is ServiceStation) return "Service pickup"+(station.Progress>=0 ? "\nDelivering":"");
-            if(station is CounterStation counter) return (station.stationName=="PLATING COUNTER" ? "Plating":"Spare counter")+
-                (counter.slot.Item==null ? "" : "\n"+(counter.slot.Item.Payload.isPlate ? counter.slot.Item.Payload.EmptyPlate ? "Clean plate":"Plated dish" : counter.slot.Item.Payload.state.ToString()));
-            return station.stationName;
         }
         private void DrawTicket(CustomerOrder ticket,Rect rect,int number)
         {
-            if(!ticket.Active) { GUI.Label(rect,"No remaining ticket",label); return; }
-            FoodIcon.Draw(new Rect(rect.x+12,rect.y+5,40,40),ticket.recipe.ingredient);
-            string state=ticket.Phase==OrderPhase.Waiting ? "WAITING" : ticket.Phase==OrderPhase.Delivering ? "DELIVERING →" : ticket.Phase==OrderPhase.Eating ? "EATING" : "SERVED ✓";
-            GUI.Label(new Rect(rect.x+60,rect.y,rect.width-65,rect.height),"#"+number+" "+ticket.recipe.displayName+"\n"+state,label);
-        }
-        private void DrawChefBadge(ChefController player,string name)
-        {
-            var p=gameplayCamera.WorldToViewportPoint(player.transform.position+Vector3.up*2.1f);
-            var rect=new Rect(p.x*1280-24,(1-p.y)*720-12,48,24); Panel(rect); GUI.Label(rect,name,small);
+            if(!ticket.Active) { GUI.Label(rect,"Seat "+number+" — finished",small); return; }
+            FoodIcon.Draw(new Rect(rect.x+8,rect.y+6,48,48),ticket.recipe.ingredient);
+            string state=ticket.Phase==OrderPhase.Waiting ? "TO COOK" : ticket.Phase==OrderPhase.Delivering ? "ON THE WAY" : ticket.Phase==OrderPhase.Eating ? "ENJOYING":"SERVED";
+            GUI.Label(new Rect(rect.x+65,rect.y,rect.width-65,32),ticket.recipe.displayName,label);
+            GUI.Label(new Rect(rect.x+65,rect.y+32,rect.width-65,26),"Seat "+number+"  /  "+state,small);
         }
     }
 }

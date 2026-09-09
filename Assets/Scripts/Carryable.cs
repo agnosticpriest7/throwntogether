@@ -17,8 +17,13 @@ namespace ThrownTogether
             if (material != null) Destroy(material);
             visuals = new GameObject("Item visual").transform;
             visuals.SetParent(transform, false);
+            visuals.localScale=Vector3.one*1.35f;
             material = new Material(visualShader);
-            if (Payload.isPlate) Piece(PrimitiveType.Cylinder, Vector3.zero, new Vector3(.65f,.045f,.65f), Color.white);
+            if (Payload.isPlate)
+            {
+                Piece(PrimitiveType.Cylinder, Vector3.zero, new Vector3(.82f,.035f,.82f), new Color(.78f,.84f,.88f));
+                Piece(PrimitiveType.Cylinder, new Vector3(0,.025f,0), new Vector3(.71f,.026f,.71f), Color.white);
+            }
             if (Payload.ingredient == null) return;
             var color = Payload.ingredient.ColorFor(Payload.state);
             var y = Payload.isPlate ? .13f : .08f;
@@ -26,8 +31,9 @@ namespace ThrownTogether
             {
                 if(Payload.state==FoodState.Raw)
                 {
-                    Piece(PrimitiveType.Cylinder,new Vector3(0,y,0),new Vector3(.16f,.15f,.16f),new Color(.9f,.84f,.7f));
-                    Piece(PrimitiveType.Sphere,new Vector3(0,y+.18f,0),new Vector3(.58f,.24f,.58f),color);
+                    Piece(PrimitiveType.Cylinder,new Vector3(0,y,0),new Vector3(.16f,.18f,.16f),new Color(.9f,.84f,.7f));
+                    Piece(PrimitiveType.Sphere,new Vector3(0,y+.16f,0),new Vector3(.52f,.065f,.52f),new Color(.46f,.34f,.22f));
+                    Piece(PrimitiveType.Sphere,new Vector3(0,y+.25f,0),new Vector3(.58f,.28f,.58f),color);
                 }
                 else for(int i=0;i<4;i++)
                 {

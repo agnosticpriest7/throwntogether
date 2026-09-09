@@ -14,7 +14,8 @@ namespace ThrownTogether.Tests
         [UnityTest] public IEnumerator SoloChefCompletesBothDishesAndAllSixOrders()
         {
             var original=SceneManager.GetActiveScene();
-            var suspended=original.GetRootGameObjects().Where(r=>r.activeSelf).ToArray();
+            var suspended=Object.FindObjectsByType<RestaurantHud>().Any(h=>h.gameObject.scene==original)
+                ? original.GetRootGameObjects().Where(r=>r.activeSelf).ToArray() : new GameObject[0];
             foreach(var root in suspended) root.SetActive(false);
 #if UNITY_EDITOR
             yield return EditorSceneManager.LoadSceneAsyncInPlayMode("Assets/Scenes/RestaurantShift.unity",new LoadSceneParameters(LoadSceneMode.Additive));
@@ -31,7 +32,7 @@ namespace ThrownTogether.Tests
                 var stations=Interactable.Active.Where(s=>s.gameObject.scene==scene).ToArray();
                 var prep=stations.OfType<ProcessingStation>().Single(s=>s.recipe.input==FoodState.Raw);
                 var fryer=stations.OfType<ProcessingStation>().Single(s=>s.recipe.input==FoodState.Cut);
-                var plating=stations.OfType<CounterStation>().Single(s=>s.stationName=="PLATING COUNTER");
+                var plating=stations.OfType<CounterStation>().Single(s=>s.stationName=="COUNTER");
                 var plates=stations.OfType<SourceStation>().Single(s=>s.plates);
                 var service=stations.OfType<ServiceStation>().Single();
                 Assert.That(shift.seats.Count(s=>s.Active),Is.EqualTo(2));
@@ -44,7 +45,7 @@ namespace ThrownTogether.Tests
                     Use(chef,prep); prep.Advance(1.5f); Use(chef,prep);
                     Use(chef,fryer); fryer.Advance(5); Use(chef,fryer);
                     Assert.That(chef.Hands.Item.Payload.state,Is.EqualTo(FoodState.Cooked));
-                    Use(chef,plating); Use(chef,plates); Use(chef,plating);
+                    Use(chef,plating); Use(chef,plates); Use(chef,plating); Use(chef,plating);
                     Use(chef,service); Assert.That(ticket.Phase,Is.EqualTo(OrderPhase.Delivering));
                     yield return new WaitForSeconds(1.8f);
                     ticket.Advance(2); shift.Advance(.1f);

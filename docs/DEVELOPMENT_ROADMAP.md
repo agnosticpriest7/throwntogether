@@ -105,3 +105,8 @@ The owner approved playtest polish, optional active Player 2, and a short two-di
 
 ## Authorized 0.3.0 checkpoint
 Owner approved controller menus/TV accessibility, food/cooking/ticket feedback and co-op regression hardening. Current shift content is retained. Stop after verification/deployment; additional shift variety and summary expansion require the next owner's review. No economy, employee or new gameplay-system milestone begins automatically.
+
+## Authorized 0.4.0 overnight checkpoint
+Owner approved the recommended batch: visual clarity and label removal, ordinary-counter plating, compact HUD/food/ticket feedback, short/standard/long shifts, expanded results, guided practice/checkpoints, co-op regressions, customer/service presentation, deployment restoration and performance checks. This reuses two recipes and the roomier kitchen. Stop after tests/build/deployment and owner review.
+
+Not included: alternate layouts, third recipe, dishwashing, throwing, new controller ping mapping, music, Windows packaging, economy, employees, persistent restaurant progression or another milestone. Those remain separate choices.
