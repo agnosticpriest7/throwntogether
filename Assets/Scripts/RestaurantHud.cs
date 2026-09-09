@@ -46,7 +46,7 @@ namespace ThrownTogether
             {
                 if (station == null) continue;
                 var p=gameplayCamera.WorldToViewportPoint(station.transform.position+Vector3.up*1.6f);
-                float stationWidth=shift!=null && station is SourceStation ? 110 : 188;
+                float stationWidth=shift!=null && station is SourceStation ? 130 : 188;
                 var rect=new Rect(p.x*1280-stationWidth/2,(1-p.y)*720-54,stationWidth,44);
                 bool p1=station==chef.Focus, p2=coop!=null && coop.PlayerTwo!=null && station==coop.PlayerTwo.Focus;
                 GUI.backgroundColor=p1 ? new Color(.15f,.9f,.65f) : p2 ? new Color(1,.38f,.3f) : Color.black;
