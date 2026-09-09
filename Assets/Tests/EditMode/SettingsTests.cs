@@ -5,6 +5,8 @@ namespace ThrownTogether.Tests
 {
     public sealed class SettingsTests
     {
+        [Test] public void NewMusicSettingsStartAtSixtyPercent()
+        { Assert.That(new AudioSettingsData().music,Is.EqualTo(.6f)); }
         private sealed class MemoryStorage : ISettingsStorage
         { public string json; public string Read()=>json; public void Write(string value)=>json=value; }
         [Test] public void SettingsRoundTripPreservesAllChannels()

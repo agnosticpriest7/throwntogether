@@ -9,11 +9,12 @@ namespace ThrownTogether
         public SettingsRepository Repository { get; private set; }
         private void Awake() { Repository=new SettingsRepository(new PlayerPrefsSettingsStorage()); Repository.Load(); }
         // Mixer exposed parameters must be applied after Awake/OnEnable.
-        private void Start() => Apply();
+        private void Start() { BackgroundMusic.Ensure(); Apply(); }
         public bool Apply()
         {
             if(mixer == null || Repository == null) return false;
             var data=Repository.Audio; data.Normalize();
+            BackgroundMusic.SetVolume(data.master * data.music);
             bool valid=mixer.SetFloat("MasterVolume",AudioSettingsData.Decibels(data.master));
             valid &= mixer.SetFloat("MusicVolume",AudioSettingsData.Decibels(data.music));
             valid &= mixer.SetFloat("SFXVolume",AudioSettingsData.Decibels(data.sfx));
