@@ -140,6 +140,36 @@ namespace ThrownTogether.Tests
             yield return null;
         }
         [UnityTest]
+        public IEnumerator HeldMenuAfterFocusRegainDoesNotBlockSouthButtonUse()
+        {
+            var background=InputSystem.settings.backgroundBehavior;
+            var editorInput=InputSystem.settings.editorInputBehaviorInPlayMode;
+            InputSystem.settings.backgroundBehavior=InputSettings.BackgroundBehavior.IgnoreFocus;
+            InputSystem.settings.editorInputBehaviorInPlayMode=InputSettings.EditorInputBehaviorInPlayMode.AllDeviceInputAlwaysGoesToGameView;
+            var pad=InputSystem.AddDevice<Gamepad>();
+            var input=chef.GetComponent<ChefInput>(); input.BindDevices(pad); input.enabled=true;
+            try
+            {
+                Approach(Find<SourceStation>("POTATOES"));
+                input.SetInputFocus(false);
+                InputSystem.QueueStateEvent(pad,new GamepadState()); InputSystem.Update();
+                input.SetInputFocus(true);
+                InputSystem.QueueStateEvent(pad,new GamepadState().WithButton(GamepadButton.Start));
+                InputSystem.Update(); input.Tick(1f/60);
+                Assert.That(chef.Hands.Item,Is.Null,"Regaining focus must not act or restart");
+                InputSystem.QueueStateEvent(pad,new GamepadState().WithButton(GamepadButton.Start).WithButton(GamepadButton.South));
+                InputSystem.Update(); input.Tick(1f/60);
+                Assert.That(chef.Hands.Item,Is.Not.Null,"A released independently of Menu must remain usable");
+                Assert.That(chef.Hands.Item.Payload.state,Is.EqualTo(FoodState.Raw));
+            }
+            finally
+            {
+                input.enabled=false; InputSystem.RemoveDevice(pad);
+                InputSystem.settings.backgroundBehavior=background; InputSystem.settings.editorInputBehaviorInPlayMode=editorInput;
+            }
+            yield return null;
+        }
+        [UnityTest]
         public IEnumerator SoloFallbackRecognizesNewControllerAfterRemoval()
         {
             var input=chef.GetComponent<ChefInput>(); input.BindDevices((InputDevice[])null);

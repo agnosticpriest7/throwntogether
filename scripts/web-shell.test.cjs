@@ -1,6 +1,18 @@
 const test=require('node:test');
 const assert=require('node:assert/strict');
 const shell=require('../Assets/WebGLTemplates/Development/web-shell.js');
+test('browser button diagnostics report standard indices without changing input',()=>{
+  const vm=require('node:vm'),fs=require('node:fs');
+  const library={};
+  const pad={id:'Test controller',mapping:'standard',connected:true,buttons:Array.from({length:17},()=>({pressed:false}))};
+  pad.buttons[0].pressed=true; pad.buttons[9].pressed=true;
+  vm.runInNewContext(fs.readFileSync(require('node:path').join(__dirname,'../Assets/Plugins/WebGL/WebInputFocus.jslib'),'utf8'),{
+    LibraryManager:{library},mergeInto:Object.assign,stringToNewUTF8:text=>text,navigator:{getGamepads:()=>[null,pad]}
+  });
+  assert.equal(library.TT_BrowserGamepads(),'Test controller [standard] down=0,9');
+  pad.buttons.forEach(b=>b.pressed=false);
+  assert.match(library.TT_BrowserGamepads(),/down=none$/);
+});
 test('resize/fullscreen geometry preserves original aspect and fits viewport',()=>{
   for(const [w,h] of [[1280,720],[1920,1080],[3840,2160],[720,1280],[800,600]]) {
     const size=shell.fit(w,h,32);

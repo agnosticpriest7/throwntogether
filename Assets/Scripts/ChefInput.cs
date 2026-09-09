@@ -14,7 +14,11 @@ namespace ThrownTogether
         public InputDevice LastActiveDevice { get; private set; }
         public bool InputFocused { get; private set; } = true;
         public bool HasExplicitDeviceAssignment => controls.devices.HasValue;
-        private bool awaitButtonRelease;
+        public bool AwaitUseRelease { get; private set; }
+        public bool AwaitRestartRelease { get; private set; }
+        public bool UsePressed => use.IsPressed();
+        public int UseAttempts { get; private set; }
+        public string LastUseResult { get; private set; } = "None yet";
         public bool AcceptsDevice(InputDevice device) => device != null && device.added && (!controls.devices.HasValue || controls.devices.Value.Contains(device));
         private void Awake()
         {
@@ -50,7 +54,7 @@ namespace ThrownTogether
         {
             if(InputFocused==focused) return;
             InputFocused=focused;
-            if(!focused) { controls.Disable(); awaitButtonRelease=true; }
+            if(!focused) { controls.Disable(); AwaitUseRelease=true; AwaitRestartRelease=true; }
             else if(isActiveAndEnabled) controls.Enable();
         }
         public void Tick(float seconds)
@@ -60,13 +64,22 @@ namespace ThrownTogether
 #endif
             if(!InputFocused) return;
             chef.Move(move.ReadValue<Vector2>(),seconds);
-            if(awaitButtonRelease)
+            // Each action must release independently: a browser-held Menu signal
+            // must not prevent the player from using an unrelated button.
+            if(AwaitUseRelease)
             {
-                if(!use.IsPressed() && !restart.IsPressed()) awaitButtonRelease=false;
-                return;
+                if(!use.IsPressed()) AwaitUseRelease=false;
             }
-            if (use.WasPressedThisFrame()) chef.Use();
-            if (restart.WasPressedThisFrame())
+            else if(use.WasPressedThisFrame())
+            {
+                UseAttempts++;
+                LastUseResult=chef.Use() ? "Accepted" : "Rejected (check target / item)";
+            }
+            if(AwaitRestartRelease)
+            {
+                if(!restart.IsPressed()) AwaitRestartRelease=false;
+            }
+            else if (restart.WasPressedThisFrame())
                 RestartSlice();
         }
         public void RestartSlice()

@@ -26,3 +26,6 @@ Narrow audio/settings/identity foundation with original generated WAVs, regressi
 
 ### Xbox Edge native controller-mode investigation
 Focused template/loader inspection, browser event regression tests and Web redeployment following Kyle's physical report. No input remapping or new milestone. Account-wide usage and project cost remain unavailable; no estimates recorded.
+
+### Xbox A-button investigation
+Focused input-gate regression and read-only button diagnostics. Account-wide usage and project cost remain unavailable; no estimates recorded.
