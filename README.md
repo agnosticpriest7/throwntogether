@@ -41,7 +41,7 @@ Commit source changes first. Deployment also requires main to be pushed and equa
 
 The script builds a committed snapshot in ignored `Builds/Workspace`, leaving the canonical Editor open and main clean. Logs and test XML are in `Builds/PipelineLogs`; static output is in `Builds/Web`. Both test suites must pass before building. A failed test/build prevents publication. `-Mode Build` deliberately still runs tests. Concurrent runs are blocked; each Unity stage has a configurable 90-minute timeout.
 
-The explicit scene list is `build-config.json`, currently only RestaurantDevelopment. It overrides the checked-in Build Settings scene list. The public build is the tiny first-service gameplay slice.
+The explicit scene list is `build-config.json`: RestaurantDevelopment (practice) and RestaurantShift. It overrides the checked-in Build Settings scene list. The public build starts in practice and provides a button to enter the restaurant shift.
 
 Deployment uses an isolated repository under ignored `Builds/Publish-*`, with ordinary commits/pushes to **gh-pages** only. No generated files enter main. Retained staging folders/logs can be inspected after failures. Pages is configured automatically using `gh`; if permissions prevent this, select **Settings > Pages > Build and deployment > Source: Deploy from a branch > Branch: gh-pages > / (root) > Save**. No GitHub-hosted Unity compilation or license secret is needed.
 
