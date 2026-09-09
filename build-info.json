@@ -1,8 +1,8 @@
 {
-  "builtAtUtc": "2026-09-09T00:51:23.9776407Z",
-  "sourceCommit": "4a10ffa8e3f81bfc97156528c9c543daa3dc2424",
+  "sourceCommit": "d9dc17bf67442f8be249437a8bb0297f87758e7a",
+  "developmentVersion": "0.1.0-dev",
   "scenes": [
     "Assets/Scenes/RestaurantDevelopment.unity"
   ],
-  "developmentVersion": "0.1.0-dev"
+  "builtAtUtc": "2026-09-09T02:30:10.2286660Z"
 }
