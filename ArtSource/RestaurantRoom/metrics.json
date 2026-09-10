@@ -1,0 +1,81 @@
+{
+  "palette": {
+    "Wood": "B58B5C",
+    "WoodLight": "CEA778",
+    "WoodDark": "795B40",
+    "Cream": "D8D0BC",
+    "Trim": "536F73",
+    "Dark": "34484C",
+    "Fabric": "AE584B",
+    "FabricLight": "C87864",
+    "Glass": "85B2BF",
+    "GlassLight": "B8D4D4",
+    "Brass": "B49459",
+    "Glow": "FFE1A5"
+  },
+  "modules": {
+    "DiningTable": {
+      "triangles": 1260,
+      "materials": 4,
+      "dimensions": [
+        1.6000001430511475,
+        1.4000000953674316,
+        1.2725000381469727
+      ]
+    },
+    "DiningChair": {
+      "triangles": 1188,
+      "materials": 3,
+      "dimensions": [
+        0.8400000333786011,
+        0.809999942779541,
+        1.3550000190734863
+      ]
+    },
+    "WallPanel": {
+      "triangles": 540,
+      "materials": 4,
+      "dimensions": [
+        1.940000057220459,
+        0.30550000071525574,
+        1.3700000047683716
+      ]
+    },
+    "WallLow": {
+      "triangles": 540,
+      "materials": 4,
+      "dimensions": [
+        1.940000057220459,
+        0.30550000071525574,
+        0.75
+      ]
+    },
+    "WindowWall": {
+      "triangles": 1512,
+      "materials": 7,
+      "dimensions": [
+        1.940000057220459,
+        0.4699999988079071,
+        1.3700000047683716
+      ]
+    },
+    "EntranceCutaway": {
+      "triangles": 972,
+      "materials": 4,
+      "dimensions": [
+        2.200000047683716,
+        0.41999998688697815,
+        0.5799999237060547
+      ]
+    },
+    "WallSconce": {
+      "triangles": 376,
+      "materials": 3,
+      "dimensions": [
+        0.3199999928474426,
+        0.3699999749660492,
+        0.42499998211860657
+      ]
+    }
+  }
+}

@@ -95,6 +95,27 @@ namespace ThrownTogether.Tests
             }
             motor.enabled=true;yield return null;
         }
+        [UnityTest] public IEnumerator DiningAndCutawayArtPreservesTablesAndCustomerVisibility()
+        {
+            var room=scene.GetRootGameObjects().Single(g=>g.name=="Restaurant room art");
+            Assert.That(room.GetComponentsInChildren<Collider>(),Is.Empty);
+            Assert.That(room.GetComponentsInChildren<Transform>().Count(t=>t.name=="WindowWall"),Is.EqualTo(3));
+            var lights=room.GetComponentsInChildren<Light>();Assert.That(lights.Length,Is.EqualTo(2));
+            foreach(var light in lights){Assert.That(light.shadows,Is.EqualTo(LightShadows.None));Assert.That(light.range,Is.LessThanOrEqualTo(4));}
+            foreach(var order in Object.FindObjectsByType<CustomerOrder>().Where(o=>o.gameObject.scene==scene))
+            {
+                var table=order.tableSlot.transform.parent;
+                var original=table.Find("Table");var art=table.Find("Dining table art");
+                Assert.That(original.GetComponent<Renderer>().enabled,Is.False);
+                Assert.That(original.GetComponent<Collider>().enabled,Is.True);
+                var bounds=art.GetComponentInChildren<Renderer>().bounds;var physics=original.GetComponent<Collider>().bounds;
+                Assert.That(bounds.size.x,Is.EqualTo(physics.size.x).Within(.01f));Assert.That(bounds.size.z,Is.EqualTo(physics.size.z).Within(.01f));Assert.That(bounds.max.y,Is.EqualTo(physics.max.y).Within(.01f));
+                var chair=order.customerVisual.Find("Dining chair art");Assert.That(chair,Is.Not.Null);Assert.That(chair.GetComponentsInChildren<Collider>(),Is.Empty);
+                Assert.That(order.customerVisual.Find("Chair").GetComponent<Renderer>().enabled,Is.False);
+                var recipe=order.recipe;order.ResetOrder(null);Assert.That(chair.gameObject.activeInHierarchy,Is.False);order.ResetOrder(recipe);Assert.That(chair.gameObject.activeInHierarchy,Is.True);
+            }
+            yield return null;
+        }
         [UnityTest] public IEnumerator ManualPrepStallsOnMovementAndCanResumeWithoutLosingProgress()
         {
             var source=Interactable.Active.OfType<SourceStation>().First(s=>s.gameObject.scene==scene&&!s.plates&&s.ingredient.visualKind==IngredientVisualKind.Potato);

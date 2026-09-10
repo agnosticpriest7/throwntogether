@@ -40,3 +40,5 @@
 2026-09-10 — Kyle approved starting with the floor and an original First Service rearrangement inspired by the reference. This supersedes the prior preserve-layout restriction for First Service only. Preserve room/chef dimensions and gameplay parameters; no full prop-art conversion bundled into this pass.
 
 2026-09-10 — Kyle approved appliance refinement, cohesive modular counters and ingredient storage from the visual priority list. Preserve current layouts, player dimensions and gameplay. Use original Blender geometry and retain the earlier visual study; broader restaurant decoration and gameplay work remain deferred.
+
+2026-09-10 — Kyle approved visual priorities 4–6: dining furniture, walls/windows/entrance and lighting/material polish. Keep room/gameplay layout, customer behavior, camera and all interaction parameters. Entrance is visual only; broader customer animation, decoration/exterior and gameplay systems remain deferred.
