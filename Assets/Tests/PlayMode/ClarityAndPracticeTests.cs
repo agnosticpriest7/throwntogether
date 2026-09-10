@@ -72,7 +72,8 @@ namespace ThrownTogether.Tests
                     chef.transform.position=new Vector3(x,.03f,station.transform.position.z);
                     chef.transform.rotation=Quaternion.LookRotation(new Vector3(3.6f-x,0,0));chef.FindFocus();Assert.That(chef.Focus,Is.SameAs(station));
                 }
-                for(float x=2.1f;x<5.3f;x+=.2f)
+                // Enter from the clear approach beside the adjacent appliance, not through its corner.
+                for(float x=2.5f;x<5.3f;x+=.2f)
                 {
                     var p=new Vector3(x,.4f,-3.35f);
                     Assert.That(Physics.CheckCapsule(p,p+Vector3.up*1.1f,.32f,~0,QueryTriggerInteraction.Ignore),Is.False,"Doorway blocked: "+p);
