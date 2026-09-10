@@ -8,5 +8,6 @@ namespace ThrownTogether
     {
         public GameObject visual;
         public bool includesPantryDisplay;
+        public bool includesServiceDisplay;
     }
 }

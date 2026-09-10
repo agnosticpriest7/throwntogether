@@ -116,6 +116,26 @@ namespace ThrownTogether.Tests
             }
             yield return null;
         }
+        [UnityTest] public IEnumerator AuthoredServiceDisplayAvoidsDuplicateDressingAndKeepsFoodSpaceClear()
+        {
+            var stations=Object.FindObjectsByType<Interactable>().Where(s=>s.gameObject.scene==scene&&(s is ServiceStation||s is DishReturnStation)).ToArray();
+            Assert.That(stations.Length,Is.EqualTo(2));
+            foreach(var station in stations)
+            {
+                Assert.That(station.GetComponent<StationArt>().includesServiceDisplay,Is.True);
+                var visual=station.transform.Find("Service presentation art");Assert.That(visual,Is.Not.Null);
+                Assert.That(visual.GetComponentsInChildren<Collider>(),Is.Empty);
+                Assert.That(visual.GetComponentsInChildren<Carryable>(),Is.Empty,"Decorations must not contain fake food");
+                var bounds=visual.GetComponentInChildren<Renderer>().bounds;
+                Assert.That(bounds.size.x,Is.LessThanOrEqualTo(1.91f));
+                Assert.That(bounds.max.y-station.transform.position.y,Is.LessThan(1.60f),"No overhead shelf hiding the food");
+                Assert.That(station.transform.Find("Pass shelf"),Is.Null);
+                Assert.That(station.transform.Find("Service bell"),Is.Null);
+                Assert.That(station.transform.Find("Return tray rim"),Is.Null);
+                Assert.That(station.transform.Find("P1 target"),Is.Not.Null,"Authored dressing must preserve targeting feedback");
+            }
+            yield return null;
+        }
         [UnityTest] public IEnumerator ManualPrepStallsOnMovementAndCanResumeWithoutLosingProgress()
         {
             var source=Interactable.Active.OfType<SourceStation>().First(s=>s.gameObject.scene==scene&&!s.plates&&s.ingredient.visualKind==IngredientVisualKind.Potato);

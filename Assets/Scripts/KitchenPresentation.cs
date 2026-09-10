@@ -84,6 +84,7 @@ namespace ThrownTogether
             }
             if(station is DishReturnStation)
             {
+                if(authored && station.GetComponent<StationArt>().includesServiceDisplay) return;
                 Tint(t,"Cabinet",new Color(.35f,.29f,.24f));
                 for(int side=-1;side<=1;side+=2) Box(t,"Return tray rim",new Vector3(side*.7f,1.35f,0),new Vector3(.07f,.25f,1.1f),steel);
                 Box(t,"Return tray back",new Vector3(0,1.35f,.55f),new Vector3(1.45f,.25f,.07f),steel);
@@ -151,6 +152,7 @@ namespace ThrownTogether
             }
             if(station is ServiceStation)
             {
+                if(authored && station.GetComponent<StationArt>().includesServiceDisplay) return;
                 Tint(t,"Cabinet",new Color(.54f,.23f,.18f));
                 for(int side=-1;side<=1;side+=2) Box(t,"Pass post",new Vector3(side*.81f,1.60f,.57f),new Vector3(.09f,.9f,.09f),steel);
                 Box(t,"Pass shelf",new Vector3(0,2.04f,.51f),new Vector3(1.88f,.07f,.36f),steel);

@@ -1,0 +1,20 @@
+{
+  "ServicePass": {
+    "triangles": 2176,
+    "materials": 5,
+    "dimensions": [
+      1.7999999523162842,
+      1.375,
+      0.36200010776519775
+    ]
+  },
+  "DishReturnRack": {
+    "triangles": 1152,
+    "materials": 3,
+    "dimensions": [
+      1.5499999523162842,
+      1.2200000286102295,
+      0.24592173099517822
+    ]
+  }
+}
