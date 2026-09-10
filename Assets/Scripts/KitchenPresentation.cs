@@ -9,6 +9,8 @@ namespace ThrownTogether
         private Material material;
         private Carryable assets;
         private Marker[] markers;
+        private SourceStation plateSupply;
+        private Transform[] plateStock;
         private sealed class Marker { public Interactable station; public GameObject one, two, ready; }
         private readonly Color wood=new Color(.66f,.43f,.24f), steel=new Color(.65f,.75f,.78f);
         private void Start()
@@ -95,7 +97,9 @@ namespace ThrownTogether
                 if(source.plates)
                 {
                     Tint(t,"Cabinet",new Color(.35f,.45f,.54f));
-                    for(int i=0;i<3;i++) Part(t,"Stacked ceramic",assets.cylinderMesh,new Vector3(.23f,1.48f+i*.07f,0),new Vector3(.9f,.025f,.9f),i%2==0 ? Color.white:steel);
+                    foreach(var renderer in t.GetComponentsInChildren<Renderer>()) if(renderer.name=="Plate stack") renderer.enabled=false;
+                    plateSupply=source;plateStock=new Transform[SourceStation.PlateCapacity];
+                    for(int i=0;i<plateStock.Length;i++) plateStock[i]=Part(t,"Available clean plate",assets.plateMesh??assets.cylinderMesh,new Vector3(0,1.25f+i*.065f,0),assets.plateMesh!=null?Vector3.one:new Vector3(.9f,.025f,.9f),Color.white);
                     return;
                 }
                 HideDecoration(t,"Potato crate");
@@ -162,6 +166,7 @@ namespace ThrownTogether
         }
         private void LateUpdate()
         {
+            if(plateStock!=null && plateSupply!=null) for(int i=0;i<plateStock.Length;i++) plateStock[i].gameObject.SetActive(i<plateSupply.CleanPlatesRemaining);
             if(markers==null) return;
             foreach(var m in markers)
             {

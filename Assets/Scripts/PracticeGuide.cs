@@ -25,7 +25,9 @@ namespace ThrownTogether
             Active=true;
             if(SessionOptions.Training!="Guided full loop" && SessionOptions.Training!="Garden salad")
             {
-                var item=Instantiate(source.itemPrefab);
+                Carryable item;
+                if(SessionOptions.Training=="Serving") { plates.Interact(hud.chef); item=hud.chef.Hands.Item; }
+                else item=Instantiate(source.itemPrefab);
                 var payload=ItemPayload.Food(source.ingredient);
                 if(SessionOptions.Training=="Frying") payload.state=FoodState.Cut;
                 if(SessionOptions.Training=="Plating" || SessionOptions.Training=="Serving") payload.state=FoodState.Cooked;

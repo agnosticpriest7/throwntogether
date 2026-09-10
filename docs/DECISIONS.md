@@ -50,3 +50,5 @@
 2026-09-10 — Kyle resumed for visual priorities 9–10: seated customer art/animation and order-bubble/HUD clarity. Preserve customer rules and gameplay. Automatic approval review requires explicit authorization before this candidate is committed/pushed/deployed.
 
 2026-09-10 — Kyle approved restrained decoration and exterior framing, completing the visual priority list. Keep details subordinate to kitchen readability; preserve gameplay footprint/camera. Original small signs and greenery, cutaway awning, sidewalk and mat; no new playable exterior or gameplay feature.
+
+2026-09-10 — Kyle approved a kitchen/dining divider, accessible service/return counters on both sides, a connecting doorway for future serving, and a total pool of five reusable plates to require washing. Dining expansion allowed if needed; current footprint fits after shifting tables. Three-order short shifts retain their existing order count and can finish without washing.

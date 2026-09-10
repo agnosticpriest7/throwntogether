@@ -374,6 +374,8 @@ namespace ThrownTogether.Tests
             var spawn=chef.transform.position;
             Use(Find<SourceStation>("POTATOES")); Use(Find<ProcessingStation>("PREP"));
             Assert.That(Find<ProcessingStation>("PREP").Busy,Is.True);
+            Use(Find<SourceStation>("PLATES"));
+            Assert.That(Find<SourceStation>("PLATES").CleanPlatesRemaining,Is.EqualTo(4));
             chef.GetComponent<ChefInput>().RestartSlice();
             yield return null;
             testScene=SceneManager.GetActiveScene();
@@ -384,6 +386,7 @@ namespace ThrownTogether.Tests
             Assert.That(Vector3.Distance(chef.transform.position,spawn),Is.LessThan(.1f));
             Assert.That(chef.Hands.Item,Is.Null);
             Assert.That(Find<ServiceStation>("PICKUP").order.Phase,Is.EqualTo(OrderPhase.Waiting));
+            Assert.That(Find<SourceStation>("PLATES").CleanPlatesRemaining,Is.EqualTo(5));
             Assert.That(Find<ServiceStation>("PICKUP").order.tableSlot.Item,Is.Null);
             foreach(var station in Interactable.Active.OfType<CounterStation>().Where(x=>x.gameObject.scene==testScene)) Assert.That(station.slot.Item,Is.Null);
             foreach(var station in Interactable.Active.OfType<ProcessingStation>().Where(x=>x.gameObject.scene==testScene)) Assert.That(station.Busy,Is.False);

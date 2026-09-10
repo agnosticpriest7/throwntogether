@@ -39,6 +39,48 @@ namespace ThrownTogether.Tests
             if(scene.IsValid() && scene.isLoaded) yield return SceneManager.UnloadSceneAsync(scene);
             SceneManager.SetActiveScene(original); foreach(var root in suspended) if(root!=null) root.SetActive(true);
         }
+        [UnityTest] public IEnumerator FivePlatePoolRequiresWashingAndReusesTheSamePlate()
+        {
+            var supply=Interactable.Active.OfType<SourceStation>().Single(s=>s.gameObject.scene==scene&&s.plates);
+            Assert.That(supply.CleanPlatesRemaining,Is.EqualTo(5));
+            var plates=new System.Collections.Generic.List<Carryable>();
+            for(int i=0;i<5;i++){Assert.That(supply.Interact(chef),Is.True);plates.Add(chef.Hands.Release());}
+            Assert.That(plates.Distinct().Count(),Is.EqualTo(5));Assert.That(supply.CleanPlatesRemaining,Is.Zero);
+            Assert.That(supply.Interact(chef),Is.False);Assert.That(chef.Hands.Item,Is.Null);
+            var rack=Interactable.Active.OfType<DishReturnStation>().Single(s=>s.gameObject.scene==scene);
+            var sink=Interactable.Active.OfType<WashingStation>().Single(s=>s.gameObject.scene==scene);
+            rack.Return(plates[0]);Assert.That(rack.Interact(chef),Is.True);
+            Assert.That(supply.Interact(chef),Is.False,"Dirty plate cannot refill clean supply");
+            Assert.That(sink.Interact(chef),Is.True);sink.Advance(3);Assert.That(sink.Interact(chef),Is.True);
+            Assert.That(chef.Hands.Item,Is.SameAs(plates[0]));Assert.That(supply.Interact(chef),Is.True);
+            Assert.That(supply.CleanPlatesRemaining,Is.EqualTo(1));Assert.That(supply.Interact(chef),Is.True);
+            Assert.That(chef.Hands.Item,Is.SameAs(plates[0]));Assert.That(supply.CleanPlatesRemaining,Is.Zero);
+            chef.Hands.Release();foreach(var plate in plates)Object.Destroy(plate.gameObject);
+            yield return null;
+        }
+        [UnityTest] public IEnumerator DividerKeepsBothPassSidesAndDoorwayAccessibleAcrossLayouts()
+        {
+            var layout=hud.GetComponent<KitchenLayout>();var motor=chef.GetComponent<CharacterController>();
+            foreach(int index in new[]{0,1,2})
+            {
+                Assert.That(layout.Apply(index),Is.True);motor.enabled=false;Physics.SyncTransforms();
+                foreach(var station in Interactable.Active.Where(s=>s.gameObject.scene==scene&&(s is ServiceStation||s is DishReturnStation)))
+                foreach(float x in new[]{2.25f,4.95f})
+                {
+                    var p=new Vector3(x,.4f,station.transform.position.z);
+                    Assert.That(Physics.CheckCapsule(p,p+Vector3.up*1.1f,.32f,~0,QueryTriggerInteraction.Ignore),Is.False,"Pass approach blocked: "+p);
+                    chef.transform.position=new Vector3(x,.03f,station.transform.position.z);
+                    chef.transform.rotation=Quaternion.LookRotation(new Vector3(3.6f-x,0,0));chef.FindFocus();Assert.That(chef.Focus,Is.SameAs(station));
+                }
+                for(float x=2.1f;x<5.3f;x+=.2f)
+                {
+                    var p=new Vector3(x,.4f,-3.35f);
+                    Assert.That(Physics.CheckCapsule(p,p+Vector3.up*1.1f,.32f,~0,QueryTriggerInteraction.Ignore),Is.False,"Doorway blocked: "+p);
+                }
+                Assert.That(Physics.CheckCapsule(new Vector3(3.6f,.4f,4),new Vector3(3.6f,1.5f,4),.32f),Is.True,"Divider must block walking through the wall");
+                motor.enabled=true;yield return null;
+            }
+        }
         [UnityTest] public IEnumerator FinishingDetailsStayOutsideGameplayAndUseBoundedVisuals()
         {
             var root=scene.GetRootGameObjects().Single(g=>g.name=="Restaurant finishing details");
@@ -427,7 +469,7 @@ namespace ThrownTogether.Tests
                 Assert.That(counter.slot.Item.Payload.ingredient,Is.SameAs(source.ingredient));
                 Assert.That(counter.slot.Item.Owner,Is.SameAs(counter.slot));
                 Assert.That(counter.Interact(chef),Is.True);
-                Object.Destroy(chef.Hands.Release().gameObject);
+                chef.Hands.Item.Configure(ItemPayload.Plate());Assert.That(plateSource.Interact(chef),Is.True);
             }
             yield return null;
         }
@@ -547,4 +589,3 @@ namespace ThrownTogether.Tests
         }
     }
 }
-

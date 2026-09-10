@@ -39,6 +39,12 @@ namespace ThrownTogether.Tests
                 Assert.That(shift.definition.orders.Select(r=>r.ingredient).Distinct().Count(),Is.EqualTo(3));
                 for(int i=0;i<6;i++)
                 {
+                    if(plates.CleanPlatesRemaining==0)
+                    {
+                        Assert.That(plates.Interact(chef),Is.False,"Sixth plate cannot be minted");
+                        Use(chef,stations.OfType<DishReturnStation>().Single());
+                        var sink=stations.OfType<WashingStation>().Single();Use(chef,sink);sink.Advance(3);Use(chef,sink);Use(chef,plates);
+                    }
                     var ticket=shift.seats.First(s=>s.Active && s.Phase==OrderPhase.Waiting);
                     var source=stations.OfType<SourceStation>().Single(s=>!s.plates && s.ingredient==ticket.recipe.ingredient);
                     Use(chef,source); Assert.That(service.Interact(chef),Is.False,"Raw ingredients cannot fulfil a ticket");
