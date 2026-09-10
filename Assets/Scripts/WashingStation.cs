@@ -25,7 +25,7 @@ namespace ThrownTogether
         {
             if(!Working || seconds<=0) return;
             elapsed+=seconds;if(elapsed<duration) return;
-            slot.Item.Configure(ItemPayload.Plate());Busy=false;attendance.Release();
+            slot.Item.Configure(ItemPayload.Plate());Busy=false;attendance.Release();ShowSuccess(true);
         }
     }
 }

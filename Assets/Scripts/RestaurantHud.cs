@@ -62,6 +62,7 @@ namespace ThrownTogether
                 GUI.color=new Color(.07f,.1f,.1f); GUI.DrawTexture(rect,Texture2D.whiteTexture);
                 GUI.color=new Color(1,.75f,.2f); rect.width*=station.Progress; GUI.DrawTexture(rect,Texture2D.whiteTexture); GUI.color=Color.white;
             }
+            DrawSuccessCues();
             // Identity is carried by apron colors and target borders; no floating panels cover chefs.
             bool two=coop!=null && coop.PlayerTwo!=null;
             DrawPlayer(chef,"P1",new Color(.2f,1,.7f),two?20:240,two ? 612:800);
@@ -91,6 +92,36 @@ namespace ThrownTogether
                 GUI.Label(new Rect(355,380,570,40),"Y / Esc: replay, choose a shift or practice",label);
             }
             GUI.matrix=previous; GUI.color=Color.white; GUI.backgroundColor=Color.white;
+        }
+        private void DrawSuccessCues()
+        {
+            foreach(var station in Interactable.Active)
+            {
+                if(station==null || station.gameObject.scene!=gameObject.scene || station.SuccessOpacity<=0) continue;
+                var p=gameplayCamera.WorldToViewportPoint(station.transform.position+Vector3.up*1.3f);
+                if(p.z<=0 || p.x<0 || p.x>1 || p.y<0 || p.y>1) continue;
+                float x=p.x*1280, y=(1-p.y)*720;
+                GUI.color=RestaurantMenu.Display.highContrast ? new Color(1,1,1,station.SuccessOpacity) : new Color(.55f,1,.78f,station.SuccessOpacity);
+                if(station.SuccessCheck)
+                {
+                    // Two strokes avoid relying on a font's Unicode checkmark glyph.
+                    var matrix=GUI.matrix;
+                    GUIUtility.RotateAroundPivot(45,new Vector2(x-5,y-20));
+                    GUI.DrawTexture(new Rect(x-5,y-20,9,3),Texture2D.whiteTexture);
+                    GUI.matrix=matrix;
+                    GUIUtility.RotateAroundPivot(-45,new Vector2(x,y-14));
+                    GUI.DrawTexture(new Rect(x,y-14,19,3),Texture2D.whiteTexture);
+                    GUI.matrix=matrix;
+                }
+                else
+                {
+                    GUI.DrawTexture(new Rect(x-24,y-12,48,2),Texture2D.whiteTexture);
+                    GUI.DrawTexture(new Rect(x-24,y+12,48,2),Texture2D.whiteTexture);
+                    GUI.DrawTexture(new Rect(x-24,y-12,2,26),Texture2D.whiteTexture);
+                    GUI.DrawTexture(new Rect(x+22,y-12,2,26),Texture2D.whiteTexture);
+                }
+            }
+            GUI.color=Color.white;
         }
         private void DrawPlayer(ChefController player,string id,Color color,float x,float width)
         {

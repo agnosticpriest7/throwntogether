@@ -190,6 +190,30 @@ namespace ThrownTogether.Tests
             }
             yield return null;
         }
+        [UnityTest] public IEnumerator SuccessCuesRequireSuccessExpireAndRespectReducedEffects()
+        {
+            var source=Interactable.Active.OfType<SourceStation>().First(s=>s.gameObject.scene==scene&&!s.plates);
+            var motor=chef.GetComponent<CharacterController>();motor.enabled=false;
+            chef.transform.position=source.transform.position+Vector3.back*1.2f;
+            chef.transform.rotation=Quaternion.identity;motor.enabled=true;
+            bool reduced=RestaurantMenu.Display.reducedEffects;
+            try
+            {
+                RestaurantMenu.Display.reducedEffects=true;
+                Assert.That(chef.Use(),Is.True);Assert.That(chef.Focus,Is.SameAs(source));
+                var held=chef.Hands.Item;
+                Assert.That(source.SuccessOpacity,Is.EqualTo(1));Assert.That(source.SuccessCheck,Is.False);
+                yield return new WaitForSeconds(.2f);
+                Assert.That(source.SuccessOpacity,Is.EqualTo(1),"Reduced effects has no fade or motion");
+                yield return new WaitForSeconds(.3f);
+                Assert.That(source.SuccessOpacity,Is.Zero);
+                Assert.That(chef.Use(),Is.False);Assert.That(source.SuccessOpacity,Is.Zero);
+                Assert.That(chef.Hands.Item,Is.SameAs(held));
+                source.ShowSuccess(true);Assert.That(source.SuccessCheck,Is.True);
+                source.enabled=false;Assert.That(source.SuccessOpacity,Is.Zero);source.enabled=true;
+            }
+            finally { RestaurantMenu.Display.reducedEffects=reduced; }
+        }
         [UnityTest] public IEnumerator ManualPrepStallsOnMovementAndCanResumeWithoutLosingProgress()
         {
             var source=Interactable.Active.OfType<SourceStation>().First(s=>s.gameObject.scene==scene&&!s.plates&&s.ingredient.visualKind==IngredientVisualKind.Potato);
@@ -199,6 +223,7 @@ namespace ThrownTogether.Tests
             chef.Move(Vector2.right,.05f);prep.Advance(20);Assert.That(prep.Progress,Is.EqualTo(progress));Assert.That(prep.Working,Is.False);
             chef.Move(Vector2.zero,0);prep.Advance(20);Assert.That(prep.Progress,Is.EqualTo(progress),"Stopping alone does not restart an abandoned job");
             Assert.That(prep.Interact(chef),Is.True);prep.Advance(1);Assert.That(prep.Busy,Is.False);Assert.That(prep.Interact(chef),Is.True);
+            Assert.That(prep.SuccessCheck,Is.True);Assert.That(prep.SuccessOpacity,Is.GreaterThan(0));
             Assert.That(fryer.Interact(chef),Is.True);chef.Move(Vector2.right,.05f);fryer.Advance(5);Assert.That(fryer.Busy,Is.False);Assert.That(fryer.slot.Item.Payload.state,Is.EqualTo(FoodState.Cooked));
             yield return null;
         }
@@ -213,6 +238,7 @@ namespace ThrownTogether.Tests
             var sink=Interactable.Active.OfType<WashingStation>().Single(s=>s.gameObject.scene==scene);
             Assert.That(sink.Interact(chef),Is.True);sink.Advance(1);float progress=sink.Progress;chef.Move(Vector2.left,.05f);sink.Advance(10);Assert.That(sink.Progress,Is.EqualTo(progress));
             Assert.That(sink.Interact(chef),Is.True);sink.Advance(2);Assert.That(sink.Busy,Is.False);Assert.That(sink.Interact(chef),Is.True);
+            Assert.That(sink.SuccessCheck,Is.True);Assert.That(sink.SuccessOpacity,Is.GreaterThan(0));
             Assert.That(chef.Hands.Item,Is.SameAs(dish));Assert.That(dish.Payload.EmptyPlate,Is.True);Assert.That(dish.Payload.dirty,Is.False);
             Assert.That(sink.Interact(chef),Is.False,"Clean plates must not start another wash");
             var prepared=ItemPayload.Food(source.ingredient);prepared.state=source.ingredient.platingState;Assert.That(ItemPayload.CanPlate(dish.Payload,prepared),Is.True);

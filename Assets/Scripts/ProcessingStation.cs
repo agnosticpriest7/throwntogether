@@ -45,6 +45,7 @@ namespace ThrownTogether
             elapsed+=seconds;
             if (elapsed < activeRecipe.duration) return;
             slot.Item.Payload.state=activeRecipe.output; slot.Item.RefreshVisual(); Busy=false;attendance.Release();
+            if(requiresAttendance) ShowSuccess(true);
         }
     }
 }

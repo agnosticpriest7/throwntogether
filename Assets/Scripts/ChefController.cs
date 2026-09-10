@@ -42,10 +42,13 @@ namespace ThrownTogether
             FindFocus();
             if (Focus == null) { Feedback="Move closer and face a station"; feedbackUntil=Time.time+1.5f; return false; }
             Feedback=Focus.Prompt(this); feedbackUntil=Time.time+1.5f;
-            bool hadItem=Hands.Item != null;
+            var previousItem=Hands.Item;
+            bool hadItem=previousItem != null;
             bool plated=Focus is CounterStation counter && counter.CanCombine(this);
             bool used=Focus.Interact(this);
             if(used) Feedback=Hands.Item!=null ? "Holding "+Hands.Item.Payload.Label : "Placed / started at "+Focus.stationName;
+            if(used && (previousItem!=Hands.Item || plated || Focus is ServiceStation))
+                Focus.ShowSuccess(Focus is ServiceStation);
             if(used) InteractionSucceeded?.Invoke(Focus,hadItem,plated);
             return used;
         }
