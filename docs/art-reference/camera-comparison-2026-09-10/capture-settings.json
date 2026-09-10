@@ -1,0 +1,111 @@
+{
+    "scene": "Assets/VisualDirection/VisualDirectionTest.unity",
+    "sourceSceneSha256": "87dc574298d2b8c0e42c20c31ebe88c1bd605b6cc5147bb68ea48f3a2179bfb8",
+    "unityVersion": "6000.6.0f1",
+    "method": "Isolated Unity Camera.Render; not live Unity MCP or physical co-op verification",
+    "invariants": "Same scene, assets, lights, materials, chef scales, station transforms and colliders; no scene saved",
+    "views": [
+        {
+            "name": "A-normal",
+            "position": {
+                "x": -0.25,
+                "y": 16.83304214477539,
+                "z": -11.471529006958008
+            },
+            "euler": {
+                "x": 55.00000762939453,
+                "y": 0.0,
+                "z": 0.0
+            },
+            "orthographicSize": 6.5,
+            "orthographic": true,
+            "width": 1920,
+            "height": 1080
+        },
+        {
+            "name": "A-expansion",
+            "position": {
+                "x": -0.25,
+                "y": 16.83304214477539,
+                "z": -11.471529006958008
+            },
+            "euler": {
+                "x": 55.00000762939453,
+                "y": 0.0,
+                "z": 0.0
+            },
+            "orthographicSize": 9.75,
+            "orthographic": true,
+            "width": 1920,
+            "height": 1080
+        },
+        {
+            "name": "B-normal",
+            "position": {
+                "x": -0.25,
+                "y": 14.592137336730957,
+                "z": -14.142133712768555
+            },
+            "euler": {
+                "x": 45.000003814697266,
+                "y": 0.0,
+                "z": 0.0
+            },
+            "orthographicSize": 5.75,
+            "orthographic": true,
+            "width": 1920,
+            "height": 1080
+        },
+        {
+            "name": "B-expansion",
+            "position": {
+                "x": -0.25,
+                "y": 14.592137336730957,
+                "z": -14.142133712768555
+            },
+            "euler": {
+                "x": 45.000003814697266,
+                "y": 0.0,
+                "z": 0.0
+            },
+            "orthographicSize": 8.625,
+            "orthographic": true,
+            "width": 1920,
+            "height": 1080
+        },
+        {
+            "name": "C-normal",
+            "position": {
+                "x": -0.25,
+                "y": 11.921528816223145,
+                "z": -16.383041381835938
+            },
+            "euler": {
+                "x": 34.999996185302734,
+                "y": 0.0,
+                "z": 0.0
+            },
+            "orthographicSize": 5.25,
+            "orthographic": true,
+            "width": 1920,
+            "height": 1080
+        },
+        {
+            "name": "C-expansion",
+            "position": {
+                "x": -0.25,
+                "y": 11.921528816223145,
+                "z": -16.383041381835938
+            },
+            "euler": {
+                "x": 34.999996185302734,
+                "y": 0.0,
+                "z": 0.0
+            },
+            "orthographicSize": 7.875,
+            "orthographic": true,
+            "width": 1920,
+            "height": 1080
+        }
+    ]
+}

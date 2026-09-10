@@ -39,6 +39,54 @@ namespace ThrownTogether.Tests
             if(scene.IsValid() && scene.isLoaded) yield return SceneManager.UnloadSceneAsync(scene);
             SceneManager.SetActiveScene(original); foreach(var root in suspended) if(root!=null) root.SetActive(true);
         }
+        [UnityTest] public IEnumerator CameraTrialKeepsFloorWorktopsAndCustomersInViewAcrossLayouts()
+        {
+            var camera=hud.gameplayCamera;float size=camera.orthographicSize,aspect=camera.aspect;
+            Assert.That(camera.orthographic,Is.True);
+            var layout=hud.GetComponent<KitchenLayout>();
+            try
+            {
+                camera.aspect=16f/10; // Match the actual Web shell canvas ratio.
+                foreach(float factor in new[]{1f,Mathf.Sqrt(1.5f)})
+                {
+                    camera.orthographicSize=size*factor;
+                    foreach(string name in new[]{"Kitchen floor","Dining floor"})
+                    {
+                        var floor=scene.GetRootGameObjects().Single(g=>g.name==name).GetComponent<Collider>().bounds;
+                        foreach(float x in new[]{floor.min.x,floor.max.x})
+                        foreach(float z in new[]{floor.min.z,floor.max.z})
+                        {
+                            var point=camera.WorldToViewportPoint(new Vector3(x,0,z));
+                            Assert.That(point.z,Is.InRange(camera.nearClipPlane,camera.farClipPlane));
+                            Assert.That(point.x,Is.InRange(.02f,.98f));
+                            Assert.That(point.y,Is.InRange(.14f,.91f),"Playable floor must stay above the bottom HUD");
+                        }
+                    }
+                    for(int index=0;index<layout.choices.Length;index++)
+                    {
+                        Assert.That(layout.Apply(index),Is.True);yield return null;
+                        foreach(var station in Interactable.Active.Where(s=>s.gameObject.scene==scene))
+                        {
+                            var point=camera.WorldToViewportPoint(station.transform.position+Vector3.up*1.3f);
+                            Assert.That(point.x,Is.InRange(.04f,.96f));Assert.That(point.y,Is.InRange(.14f,.90f));
+                            foreach(var ticket in hud.shift.seats)
+                            {
+                                var seat=camera.WorldToViewportPoint(ticket.customerVisual.position+Vector3.up*1.7f);
+                                var card=OrderBubbleLayout.ForSeat(new Vector2(seat.x*1280,(1-seat.y)*720),1);
+                                Assert.That(card.Contains(new Vector2(point.x*1280,(1-point.y)*720)),Is.False,"Order card obscures "+station.stationName);
+                            }
+                        }
+                    }
+                    foreach(var ticket in hud.shift.seats)
+                    {
+                        var face=camera.WorldToViewportPoint(ticket.customerVisual.position+Vector3.up*1.7f);
+                        Assert.That(face.x,Is.InRange(.04f,.96f));Assert.That(face.y,Is.InRange(.14f,.90f));
+                    }
+                }
+            }
+            finally {camera.orthographicSize=size;camera.aspect=aspect;layout.Apply(0);}
+            LogAssert.NoUnexpectedReceived();
+        }
         [UnityTest] public IEnumerator FivePlatePoolRequiresWashingAndReusesTheSamePlate()
         {
             var supply=Interactable.Active.OfType<SourceStation>().Single(s=>s.gameObject.scene==scene&&s.plates);

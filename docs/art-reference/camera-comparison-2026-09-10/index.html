@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Thrown Together — Camera comparison</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#192b33;color:#f6f0df;font:16px/1.5 system-ui,sans-serif}header,main,footer{max-width:1800px;margin:auto;padding:24px}h1{font-size:clamp(24px,3vw,38px);margin:0 0 8px}p{max-width:1000px;margin:8px 0 16px}.sub{color:#bfd0d3}.controls{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin:20px 0}button{font:inherit;cursor:pointer;background:#30464e;border:1px solid #829b9d;border-radius:6px;color:inherit;padding:9px 16px}button[aria-pressed=true]{background:#e3bb79;color:#192b33;border-color:#e3bb79}button:focus-visible,a:focus-visible{outline:3px solid #fff;outline-offset:4px}.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}article{border:1px solid #50676b;border-radius:8px;overflow:hidden;background:#223840}article.recommended{border-color:#e3bb79}h2{font-size:19px;margin:0}article .copy{padding:16px}article p{margin:6px 0 0;font-size:14px}img{width:100%;height:auto;display:block}a{color:#f0ca8d}.badge{color:#f0ca8d;font-weight:600}.grid.large{grid-template-columns:1fr;max-width:1300px;margin:auto}footer{color:#bfd0d3;font-size:14px} @media(max-width:850px){.grid{grid-template-columns:1fr}header,main,footer{padding:16px}}
+</style>
+<header>
+<h1>Same kitchen. Three camera treatments.</h1>
+<p>VisualDirectionTest • 1920 × 1080 • Orthographic throughout • Existing assets, lighting and character scale</p>
+<p class="sub">Recommendation: <strong>B — 45°</strong>. More visible faces and cabinet fronts, with less worktop occlusion than C. Production camera unchanged.</p>
+<div class="controls" aria-label="View options">
+<button id="normal" aria-pressed="true">Normal view</button><button id="expansion" aria-pressed="false">Expansion distance</button>
+<button id="layout" aria-pressed="false">Large stacked images</button>
+</div>
+<p id="mode" class="sub" aria-live="polite">Normal framing. Select an image to inspect the full-resolution PNG.</p>
+</header>
+<main class="grid" id="grid">
+<article><div class="copy"><h2>A — Current baseline</h2><p>55° down • Size <span data-size="A">6.5</span></p></div><a data-view="A" href="A-normal.png"><img src="A-normal.png" alt="A: saved 55-degree camera showing two chefs, prep, fryer, sink and counters"></a><div class="copy"><p>Strong worktop overview. Faces and vertical panels are less visible.</p></div></article>
+<article class="recommended"><div class="copy"><h2>B — Moderate angle</h2><p>45° down • Size <span data-size="B">5.75</span> • <span class="badge">Recommended</span></p></div><a data-view="B" href="B-normal.png"><img src="B-normal.png" alt="B: 45-degree camera with closer framing of the identical two-chef scene"></a><div class="copy"><p>Best balance of depth, identifiable food, faces and work surfaces.</p></div></article>
+<article><div class="copy"><h2>C — Stronger angle</h2><p>35° down • Size <span data-size="C">5.25</span></p></div><a data-view="C" href="C-normal.png"><img src="C-normal.png" alt="C: 35-degree camera showing stronger vertical faces in the identical scene"></a><div class="copy"><p>Most dimensional. Foreground counters hide more of the chefs and floor.</p></div></article>
+</main>
+<footer><p>Expansion = 1.5× each camera's orthographic size; same scene, no added room or people. This original module study is not the full current restaurant. Static co-op visibility only; no physical controller test.</p><p>Unity MCP was unresponsive. Captured with Unity's renderer in an isolated project copy. <a href="README.md">Evaluation and limitations</a> · <a href="capture-settings.json">Exact settings</a></p></footer>
+<script>
+const sizes={normal:{A:6.5,B:5.75,C:5.25},expansion:{A:9.75,B:8.625,C:7.875}};
+for(const mode of ['normal','expansion'])document.getElementById(mode).onclick=()=>{
+ for(const key of ['normal','expansion'])document.getElementById(key).setAttribute('aria-pressed',String(key===mode));
+ for(const link of document.querySelectorAll('[data-view]')){const key=link.dataset.view;link.href=`${key}-${mode}.png`;link.querySelector('img').src=link.href;document.querySelector(`[data-size=${key}]`).textContent=sizes[mode][key];}
+ document.getElementById('mode').textContent=mode==='normal'?'Normal framing. Select an image to inspect the full-resolution PNG.':'Expansion distance: objects are two-thirds their normal pixel size. The kitchen itself is unchanged.';
+};
+document.getElementById('layout').onclick=function(){const large=document.getElementById('grid').classList.toggle('large');this.setAttribute('aria-pressed',String(large));};
+</script>
+</html>
