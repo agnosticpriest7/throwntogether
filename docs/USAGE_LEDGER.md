@@ -60,3 +60,5 @@ User last reported 48% remaining before music integration and asked for substant
 2026-09-10 — Approved visual priorities 4–6: shared Blender helpers and material palette, seven small modules, isolated Unity authoring while MCP unavailable. No subagents or speculative gameplay work. Account-wide usage unknown; no percentage inferred.
 
 2026-09-10 — Priority 7 only: two small Blender overlays reusing existing materials/helpers, isolated Unity authoring and established regression pipeline. No subagents or speculative gameplay. Account-wide usage remains unknown.
+
+2026-09-10 — Owner explicitly approved priority 8 as the final batch before pausing for more tokens. Reused state-driven visuals and two small shared meshes; no subagents. Current account-wide usage is unknown. Do not initiate further development until Kyle resumes.

@@ -42,9 +42,11 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 29b85e1d4c6f49f418d58c15b3036132, type: 3}
-  m_Name: 
+  m_Name:
   m_EditorClassIdentifier: ThrownTogether.Runtime::ThrownTogether.Carryable
   sphereMesh: {fileID: 10207, guid: 0000000000000000e000000000000000, type: 0}
   cubeMesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
   cylinderMesh: {fileID: 10206, guid: 0000000000000000e000000000000000, type: 0}
+  plateMesh: {fileID: 4300000, guid: 37fea0f23be0e6346a047512af5e8e3c, type: 2}
+  mushroomCapMesh: {fileID: 4300000, guid: 9d0724d6e207a0b47b5307c9fbc2b95b, type: 2}
   visualShader: {fileID: 4800000, guid: 933532a4fcc9baf4fa0491de14d08ed7, type: 3}

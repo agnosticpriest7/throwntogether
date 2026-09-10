@@ -44,3 +44,5 @@
 2026-09-10 — Kyle approved visual priorities 4–6: dining furniture, walls/windows/entrance and lighting/material polish. Keep room/gameplay layout, customer behavior, camera and all interaction parameters. Entrance is visual only; broader customer animation, decoration/exterior and gameplay systems remain deferred.
 
 2026-09-10 — Owner approved visual priority 7: refine the service counter and dirty-dish return within the approved kitchen style. Preserve all serving/delivery/washing rules and layout; no new bell interaction or food/customer/HUD art pass.
+
+2026-09-10 — Kyle approved priority 8 (held food/plate readability) and then requested a pause until more tokens are available. Preserve gameplay and carry anchors; reduce visual bulk and refine existing dishes. Stop after verified deployment; do not proceed to priority 9.

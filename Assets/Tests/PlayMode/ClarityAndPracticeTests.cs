@@ -116,6 +116,39 @@ namespace ThrownTogether.Tests
             }
             yield return null;
         }
+        [UnityTest] public IEnumerator FoodVisualRefreshPreservesOwnershipAndCompactFootprint()
+        {
+            var sources=Object.FindObjectsByType<SourceStation>().Where(s=>s.gameObject.scene==scene&&!s.plates).ToArray();
+            var item=Object.Instantiate(sources[0].itemPrefab);Assert.That(item.plateMesh,Is.Not.Null);Assert.That(item.mushroomCapMesh,Is.Not.Null);
+            chef.transform.rotation=Quaternion.identity;var anchor=chef.Hands.transform.localPosition;
+            item.Configure(ItemPayload.Plate());Assert.That(chef.Hands.TryTake(item),Is.True);
+            foreach(var source in sources)foreach(FoodState state in System.Enum.GetValues(typeof(FoodState)))
+            {
+                var payload=new ItemPayload{ingredient=source.ingredient,state=state};item.Configure(payload);
+                Assert.That(item.Payload,Is.SameAs(payload));Assert.That(item.Owner,Is.SameAs(chef.Hands));Assert.That(chef.Hands.Item,Is.SameAs(item));
+                Assert.That(item.transform.localPosition,Is.EqualTo(Vector3.zero));Assert.That(chef.Hands.transform.localPosition,Is.EqualTo(anchor));
+                var renderers=item.GetComponentsInChildren<Renderer>();var bounds=renderers[0].bounds;foreach(var r in renderers)bounds.Encapsulate(r.bounds);
+                Assert.That(bounds.size.x,Is.LessThan(1.01f));Assert.That(bounds.size.z,Is.LessThan(1.01f));
+                Assert.That(item.GetComponentsInChildren<Collider>(),Is.Empty);
+            }
+            item.Configure(ItemPayload.Plate());Assert.That(item.GetComponentsInChildren<MeshFilter>().Single().sharedMesh,Is.SameAs(item.plateMesh));
+            item.Payload.MakeDirty();item.RefreshVisual();Assert.That(item.Payload.dirty,Is.True);Assert.That(item.Owner,Is.SameAs(chef.Hands));
+            yield return null;
+        }
+        [UnityTest] public IEnumerator GardenSaladLooksIdenticalInEitherAssemblyOrder()
+        {
+            var sources=Object.FindObjectsByType<SourceStation>().Where(s=>s.gameObject.scene==scene&&!s.plates).ToArray();
+            var lettuce=sources.Single(s=>s.ingredient.visualKind==IngredientVisualKind.Lettuce);var tomato=sources.Single(s=>s.ingredient.visualKind==IngredientVisualKind.Tomato);
+            var a=Object.Instantiate(lettuce.itemPrefab);var b=Object.Instantiate(lettuce.itemPrefab);
+            var first=ItemPayload.Plate();first.AddFood(new ItemPayload{ingredient=lettuce.ingredient,state=FoodState.Cut});first.AddFood(new ItemPayload{ingredient=tomato.ingredient,state=FoodState.Cut});
+            var second=ItemPayload.Plate();second.AddFood(new ItemPayload{ingredient=tomato.ingredient,state=FoodState.Cut});second.AddFood(new ItemPayload{ingredient=lettuce.ingredient,state=FoodState.Cut});
+            a.Configure(first);b.Configure(second);
+            var ar=a.GetComponentsInChildren<MeshFilter>();var br=b.GetComponentsInChildren<MeshFilter>();Assert.That(ar.Length,Is.EqualTo(br.Length));
+            for(int i=0;i<ar.Length;i++){Assert.That(ar[i].sharedMesh,Is.SameAs(br[i].sharedMesh));Assert.That(ar[i].transform.localPosition,Is.EqualTo(br[i].transform.localPosition));Assert.That(ar[i].transform.localScale,Is.EqualTo(br[i].transform.localScale));}
+            var bounds=a.GetComponentsInChildren<Renderer>()[0].bounds;foreach(var r in a.GetComponentsInChildren<Renderer>())bounds.Encapsulate(r.bounds);
+            Assert.That(bounds.size.y,Is.LessThan(.4f));Assert.That(bounds.size.x,Is.LessThan(1.01f));Assert.That(bounds.size.z,Is.LessThan(1.01f));
+            Object.Destroy(a.gameObject);Object.Destroy(b.gameObject);yield return null;
+        }
         [UnityTest] public IEnumerator AuthoredServiceDisplayAvoidsDuplicateDressingAndKeepsFoodSpaceClear()
         {
             var stations=Object.FindObjectsByType<Interactable>().Where(s=>s.gameObject.scene==scene&&(s is ServiceStation||s is DishReturnStation)).ToArray();
