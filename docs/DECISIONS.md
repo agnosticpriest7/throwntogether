@@ -52,3 +52,5 @@
 2026-09-10 — Kyle approved restrained decoration and exterior framing, completing the visual priority list. Keep details subordinate to kitchen readability; preserve gameplay footprint/camera. Original small signs and greenery, cutaway awning, sidewalk and mat; no new playable exterior or gameplay feature.
 
 2026-09-10 — Kyle approved a kitchen/dining divider, accessible service/return counters on both sides, a connecting doorway for future serving, and a total pool of five reusable plates to require washing. Dining expansion allowed if needed; current footprint fits after shifting tables. Three-order short shifts retain their existing order count and can finish without washing.
+
+2026-09-10 — Restaurant entry belongs on the dining frontage, not the kitchen frontage. Owner requested correcting the entry location; retain the internal kitchen/dining doorway.
