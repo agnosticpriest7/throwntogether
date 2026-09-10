@@ -68,7 +68,7 @@ namespace ThrownTogether.Tests
                 foreach(float x in new[]{2.25f,4.95f})
                 {
                     var p=new Vector3(x,.4f,station.transform.position.z);
-                    Assert.That(Physics.CheckCapsule(p,p+Vector3.up*1.1f,.32f,~0,QueryTriggerInteraction.Ignore),Is.False,"Pass approach blocked: "+p);
+                    Assert.That(Physics.CheckCapsule(p,p+Vector3.up*1.1f,.32f,~0,QueryTriggerInteraction.Ignore),Is.False,"Layout "+index+" pass approach blocked: "+p);
                     chef.transform.position=new Vector3(x,.03f,station.transform.position.z);
                     chef.transform.rotation=Quaternion.LookRotation(new Vector3(3.6f-x,0,0));chef.FindFocus();Assert.That(chef.Focus,Is.SameAs(station));
                 }
@@ -76,7 +76,7 @@ namespace ThrownTogether.Tests
                 for(float x=2.5f;x<5.3f;x+=.2f)
                 {
                     var p=new Vector3(x,.4f,-3.35f);
-                    Assert.That(Physics.CheckCapsule(p,p+Vector3.up*1.1f,.32f,~0,QueryTriggerInteraction.Ignore),Is.False,"Doorway blocked: "+p);
+                    Assert.That(Physics.CheckCapsule(p,p+Vector3.up*1.1f,.32f,~0,QueryTriggerInteraction.Ignore),Is.False,"Layout "+index+" doorway blocked: "+p);
                 }
                 Assert.That(Physics.CheckCapsule(new Vector3(3.6f,.4f,4),new Vector3(3.6f,1.5f,4),.32f),Is.True,"Divider must block walking through the wall");
                 motor.enabled=true;yield return null;

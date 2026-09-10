@@ -43,6 +43,7 @@ namespace ThrownTogether.Editor
             {
                 var layout=AssetDatabase.LoadAssetAtPath<KitchenLayoutDefinition>("Assets/Data/VerticalSlice/Kitchen"+i+".asset");
                 layout.stations[8]=new Vector3(3.6f,0,1);layout.stations[11]=new Vector3(3.6f,0,-1);
+                if(i==2)layout.stations[7]=new Vector3(.6f,0,-1.7f);
                 if(i==1){layout.stations[9]=new Vector3(-6,0,1);layout.stations[10]=new Vector3(-2.7f,0,-4.5f);}
                 EditorUtility.SetDirty(layout);
             }
