@@ -39,6 +39,27 @@ namespace ThrownTogether.Tests
             if(scene.IsValid() && scene.isLoaded) yield return SceneManager.UnloadSceneAsync(scene);
             SceneManager.SetActiveScene(original); foreach(var root in suspended) if(root!=null) root.SetActive(true);
         }
+        [UnityTest] public IEnumerator FinishingDetailsStayOutsideGameplayAndUseBoundedVisuals()
+        {
+            var root=scene.GetRootGameObjects().Single(g=>g.name=="Restaurant finishing details");
+            Assert.That(root.GetComponentsInChildren<Collider>(),Is.Empty);
+            Assert.That(root.GetComponentsInChildren<Interactable>(),Is.Empty);
+            Assert.That(root.GetComponentsInChildren<Light>(),Is.Empty,"Reuse emissive sconces without extra realtime lights");
+            Assert.That(root.GetComponentsInChildren<Renderer>().Length,Is.LessThanOrEqualTo(25));
+            foreach(var mesh in root.GetComponentsInChildren<MeshFilter>())Assert.That(mesh.sharedMesh.vertexCount,Is.LessThan(10000));
+            var exterior=root.transform.Find("Exterior framing");
+            foreach(var renderer in exterior.GetComponentsInChildren<Renderer>())
+                Assert.That(renderer.bounds.max.z,Is.LessThan(-5.59f),renderer.name+" must stay beyond the closed front boundary");
+            foreach(var renderer in root.transform.Find("Perimeter decoration").GetComponentsInChildren<Renderer>())
+                Assert.That(renderer.bounds.min.z>7.1f || renderer.bounds.max.z< -5.6f,Is.True,"Decoration belongs at room edges");
+            foreach(var renderer in root.GetComponentsInChildren<Renderer>())Assert.That(renderer.sharedMaterials.All(m=>m!=null),Is.True);
+            var layout=hud.GetComponent<KitchenLayout>();
+            foreach(int index in new[]{0,1,2})
+            {
+                Assert.That(layout.Apply(index),Is.True);yield return null;
+                Assert.That(root.GetComponentsInChildren<Collider>(),Is.Empty);
+            }
+        }
         [UnityTest] public IEnumerator ApprovedStationArtRemainsVisualOnlyAcrossAllLayouts()
         {
             var stations=Interactable.Active.Where(s=>s.gameObject.scene==scene).ToArray();

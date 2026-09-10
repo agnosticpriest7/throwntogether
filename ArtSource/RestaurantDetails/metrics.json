@@ -1,0 +1,65 @@
+{
+  "PottedPlant": {
+    "triangles": 692,
+    "materials": 4,
+    "dimensions": [
+      0.5583896636962891,
+      0.5253149271011353,
+      1.0225883722305298
+    ]
+  },
+  "LowPlanter": {
+    "triangles": 816,
+    "materials": 4,
+    "dimensions": [
+      1.4116127490997314,
+      0.5699999928474426,
+      0.940000057220459
+    ]
+  },
+  "SidewalkTile": {
+    "triangles": 540,
+    "materials": 2,
+    "dimensions": [
+      1.899999976158142,
+      1.600000023841858,
+      0.1850000023841858
+    ]
+  },
+  "EntranceMat": {
+    "triangles": 264,
+    "materials": 3,
+    "dimensions": [
+      1.899999976158142,
+      1.0499999523162842,
+      0.0560000017285347
+    ]
+  },
+  "EntranceAwning": {
+    "triangles": 1536,
+    "materials": 3,
+    "dimensions": [
+      2.520000457763672,
+      1.0539005994796753,
+      0.20482195913791656
+    ]
+  },
+  "KitchenSign": {
+    "triangles": 644,
+    "materials": 3,
+    "dimensions": [
+      1.5499999523162842,
+      0.09700000286102295,
+      0.5299999713897705
+    ]
+  },
+  "DiningSign": {
+    "triangles": 616,
+    "materials": 3,
+    "dimensions": [
+      1.5499999523162842,
+      0.09700000286102295,
+      0.5299999713897705
+    ]
+  }
+}
