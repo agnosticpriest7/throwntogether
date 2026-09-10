@@ -39,6 +39,48 @@ namespace ThrownTogether.Tests
             if(scene.IsValid() && scene.isLoaded) yield return SceneManager.UnloadSceneAsync(scene);
             SceneManager.SetActiveScene(original); foreach(var root in suspended) if(root!=null) root.SetActive(true);
         }
+        [UnityTest] public IEnumerator ApprovedStationArtRemainsVisualOnlyAcrossAllLayouts()
+        {
+            var stations=Interactable.Active.Where(s=>s.gameObject.scene==scene).ToArray();
+            foreach(var station in stations)
+            {
+                var art=station.GetComponent<StationArt>();Assert.That(art,Is.Not.Null,station.name);
+                Assert.That(art.visual,Is.Not.Null);Assert.That(art.visual.GetComponentsInChildren<Collider>(),Is.Empty);
+                Assert.That(station.transform.Find("Cabinet").GetComponent<Collider>().enabled,Is.True);
+                Assert.That(station.transform.Find("Worktop").GetComponent<Collider>().enabled,Is.True);
+                Assert.That(station.transform.Find("Cabinet").GetComponent<Renderer>().enabled,Is.False);
+                Assert.That(station.transform.Find("Worktop").GetComponent<Renderer>().enabled,Is.False);
+                Assert.That(station.transform.Find("Door seam"),Is.Null,"Legacy dressing must not duplicate authored doors.");
+                foreach(var renderer in art.visual.GetComponentsInChildren<Renderer>())Assert.That(renderer.sharedMaterials.All(m=>m!=null && m.shader!=null),Is.True);
+            }
+            var layout=hud.GetComponent<KitchenLayout>();
+            for(int i=0;i<layout.choices.Length;i++)
+            {
+                Assert.That(layout.Apply(i),Is.True);yield return null;
+                foreach(var station in stations)
+                {
+                    Assert.That(station.GetComponent<StationArt>().visual.transform.position,Is.EqualTo(station.transform.position));
+                    var point=hud.gameplayCamera.WorldToViewportPoint(station.transform.position+Vector3.up*1.3f);
+                    Assert.That(point.x,Is.InRange(.05f,.95f));Assert.That(point.y,Is.InRange(.13f,.88f));
+                }
+            }
+        }
+        [UnityTest] public IEnumerator CombinedFloorArtPreservesExistingFloorBounds()
+        {
+            foreach(string name in new[]{"Kitchen","Dining"})
+            {
+                var roots=scene.GetRootGameObjects();
+                var old=roots.Single(g=>g.name==name+" floor");
+                var art=roots.Single(g=>g.name=="RestaurantShift"+name+"Floor art");
+                Assert.That(art.GetComponentsInChildren<Collider>(),Is.Empty);
+                Assert.That(old.GetComponent<Collider>().enabled,Is.True);Assert.That(old.GetComponent<Renderer>().enabled,Is.False);
+                var physics=old.GetComponent<Collider>().bounds;var visual=art.GetComponent<Renderer>().bounds;
+                Assert.That(visual.min.x,Is.EqualTo(physics.min.x).Within(.005f));Assert.That(visual.max.x,Is.EqualTo(physics.max.x).Within(.005f));
+                Assert.That(visual.min.z,Is.EqualTo(physics.min.z).Within(.005f));Assert.That(visual.max.z,Is.EqualTo(physics.max.z).Within(.005f));
+                Assert.That(art.GetComponent<MeshFilter>().sharedMesh.subMeshCount,Is.EqualTo(2));
+            }
+            yield return null;
+        }
         [UnityTest] public IEnumerator ManualPrepStallsOnMovementAndCanResumeWithoutLosingProgress()
         {
             var source=Interactable.Active.OfType<SourceStation>().First(s=>s.gameObject.scene==scene&&!s.plates&&s.ingredient.visualKind==IngredientVisualKind.Potato);

@@ -34,3 +34,5 @@
 **Reason:**  
 **Alternatives rejected:**  
 **Implications:**  
+
+2026-09-09 — Kyle approved the VisualDirectionTest study and requested proceeding. Apply the approved visual direction to existing playable kitchens while preserving gameplay dimensions, layouts, controls and behavior. Retain the separate study and source Blender modules.

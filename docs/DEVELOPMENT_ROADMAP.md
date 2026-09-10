@@ -115,3 +115,5 @@ Not included: alternate layouts, third recipe, dishwashing, throwing, new contro
 - Added: selectable First Service / Prep Island / Split Line kitchens, Tomato Salad cold-prep recipe, guided salad practice, dedicated co-op help and reconnect coverage.
 - Acceptance: full regression suites, live Unity cooking verification and Web publication; physical kitchen flow/readability and Xbox reconnection remain owner playtests.
 - Deferred: throwing/catching, Windows distribution, economy, employees and restaurant progression. No automatic next milestone.
+
+Approved visual integration (0.8.0): modular kitchen art, materials, cutaway walls and angled orthographic camera applied to the current layouts. No new mode, economy, employee or recipe scope. Physical readability review follows publication.

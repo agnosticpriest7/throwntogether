@@ -1,0 +1,117 @@
+{
+  "palette": {
+    "VD_Steel": [
+      "#A7BFC7",
+      0.36
+    ],
+    "VD_Cabinet": [
+      "#648894",
+      0.64
+    ],
+    "VD_Dark": [
+      "#30434B",
+      0.75
+    ],
+    "VD_Wood": [
+      "#D6A468",
+      0.73
+    ],
+    "VD_WoodEdge": [
+      "#A96D3D",
+      0.8
+    ],
+    "VD_Ceramic": [
+      "#F1E8D5",
+      0.38
+    ],
+    "VD_Water": [
+      "#58AEBB",
+      0.3
+    ],
+    "VD_Oil": [
+      "#655038",
+      0.8
+    ],
+    "VD_Heat": [
+      "#EEA54B",
+      0.6
+    ],
+    "VD_Tile": [
+      "#D3C6AC",
+      0.9
+    ],
+    "VD_Grout": [
+      "#8C918A",
+      0.95
+    ],
+    "VD_Wall": [
+      "#E5DCC7",
+      0.9
+    ]
+  },
+  "modules": {
+    "CounterWood": {
+      "triangles": 1212,
+      "materials": 5,
+      "dimensions": [
+        1.899999976158142,
+        1.6405000686645508,
+        1.1775000095367432
+      ]
+    },
+    "CounterSteel": {
+      "triangles": 1080,
+      "materials": 3,
+      "dimensions": [
+        1.899999976158142,
+        1.6405000686645508,
+        1.1749999523162842
+      ]
+    },
+    "PrepCounter": {
+      "triangles": 1512,
+      "materials": 5,
+      "dimensions": [
+        1.899999976158142,
+        1.6405000686645508,
+        1.3300000429153442
+      ]
+    },
+    "Fryer": {
+      "triangles": 5244,
+      "materials": 5,
+      "dimensions": [
+        1.9000000953674316,
+        1.6405000686645508,
+        1.5150001049041748
+      ]
+    },
+    "Sink": {
+      "triangles": 2344,
+      "materials": 5,
+      "dimensions": [
+        1.9000000953674316,
+        1.6405000686645508,
+        1.6777880191802979
+      ]
+    },
+    "FloorTile": {
+      "triangles": 120,
+      "materials": 2,
+      "dimensions": [
+        1.0,
+        1.0,
+        0.12999999523162842
+      ]
+    },
+    "WallShort": {
+      "triangles": 432,
+      "materials": 4,
+      "dimensions": [
+        1.940000057220459,
+        0.2750000059604645,
+        1.6600000858306885
+      ]
+    }
+  }
+}

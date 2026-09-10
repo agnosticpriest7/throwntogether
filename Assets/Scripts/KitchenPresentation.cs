@@ -10,7 +10,7 @@ namespace ThrownTogether
         private Carryable assets;
         private Marker[] markers;
         private sealed class Marker { public Interactable station; public GameObject one, two, ready; }
-        private readonly Color wood=new Color(.48f,.27f,.11f), steel=new Color(.58f,.67f,.72f);
+        private readonly Color wood=new Color(.66f,.43f,.24f), steel=new Color(.65f,.75f,.78f);
         private void Start()
         {
             hud=GetComponent<RestaurantHud>();
@@ -62,14 +62,19 @@ namespace ThrownTogether
         private void Dress(Interactable station)
         {
             var t=station.transform;
+            bool authored=station.GetComponent<StationArt>()?.visual!=null;
+            if(!authored)
+            {
             Tint(t,"Worktop",new Color(.77f,.81f,.78f));
             Tint(t,"Cabinet",new Color(.24f,.32f,.32f));
             // Small cabinet seams and handles supply scale without covering the work surface.
             Box(t,"Door seam",new Vector3(0,.54f,-.757f),new Vector3(.025f,.87f,.015f),new Color(.12f,.18f,.18f));
             Box(t,"Left handle",new Vector3(-.13f,.75f,-.79f),new Vector3(.045f,.19f,.045f),steel);
             Box(t,"Right handle",new Vector3(.13f,.75f,-.79f),new Vector3(.045f,.19f,.045f),steel);
+            }
             if(station is WashingStation)
             {
+                if(authored) return;
                 Tint(t,"Worktop",steel);
                 Box(t,"Sink bowl",new Vector3(0,1.23f,0),new Vector3(1.4f,.06f,1),new Color(.12f,.28f,.35f));
                 for(int side=-1;side<=1;side+=2) Box(t,"Sink rim",new Vector3(side*.76f,1.29f,0),new Vector3(.09f,.13f,1.16f),steel);
@@ -114,6 +119,11 @@ namespace ThrownTogether
             }
             if(station is ProcessingStation process)
             {
+                if(authored)
+                {
+                    station.gameObject.AddComponent<StationPresentation>().Initialize(process,assets);
+                    return;
+                }
                 bool prep=process.recipe.input==FoodState.Raw;
                 if(prep)
                 {

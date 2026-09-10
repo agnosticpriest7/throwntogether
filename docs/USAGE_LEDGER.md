@@ -50,3 +50,5 @@ User last reported 48% remaining before music integration and asked for substant
 2026-09-09 — Owner approved the character style, initial clothing selection, and three body builds. Reused the chef controller, co-op flow, menu, and carry system. Created a Blender-authored modular prototype and Unity wardrobe. No subagents used. Actual token usage, account allowance delta, and cost are unavailable; no estimates recorded.
 
 2026-09-09: Owner authorized review, integration and publication of existing character work. Reused approved assets and existing tests/pipeline; no account-wide usage measurement available.
+
+2026-09-09 — Owner approved proceeding from the visual study. Reused the Blender modules and established tests/build pipeline. No account-wide token usage or remaining allowance inferred.
