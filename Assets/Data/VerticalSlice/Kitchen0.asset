@@ -14,19 +14,19 @@ MonoBehaviour:
   m_EditorClassIdentifier: ThrownTogether.Runtime::ThrownTogether.KitchenLayoutDefinition
   id: kitchen-0
   displayName: First Service
-  description: The familiar kitchen, with a tomato crate added. Existing station positions stay the same.
+  description: Corner pantry, left-side prep and washing, central assembly island and a clear serving edge. An open circuit for one or two chefs.
   stations:
-  - {x: -6, y: 0, z: 4.6}
-  - {x: -2.6, y: 0, z: 4.6}
-  - {x: 1.2, y: 0, z: -2.6}
-  - {x: -1.2, y: 0, z: 1}
-  - {x: 1.2, y: 0, z: 4.6}
-  - {x: -6, y: 0, z: -2.6}
-  - {x: -1.2, y: 0, z: -2.6}
-  - {x: -6, y: 0, z: 1}
-  - {x: 4.8, y: 0, z: 1}
-  - {x: 3.6, y: 0, z: 4.6}
-  - {x: 3, y: 0, z: -4.5}
-  - {x: 3.6, y: 0, z: -2.6}
-  playerOneSpawn: {x: -3.84, y: 0.03, z: -0.56}
-  playerTwoSpawn: {x: -2.64, y: 0.03, z: -4.52}
+  - {x: -6.4, y: 0, z: 5.8}
+  - {x: -4.4, y: 0, z: 5.8}
+  - {x: -6.4, y: 0, z: 4.1}
+  - {x: -6.4, y: 0, z: 0.65}
+  - {x: 0.8, y: 0, z: 5.8}
+  - {x: -0.8, y: 0, z: 2.2}
+  - {x: -0.8, y: 0, z: -1.1}
+  - {x: -0.8, y: 0, z: 0.55}
+  - {x: 3.2, y: 0, z: 1}
+  - {x: -4.4, y: 0, z: 4.1}
+  - {x: -6.4, y: 0, z: -1.9}
+  - {x: 3.2, y: 0, z: -1}
+  playerOneSpawn: {x: -3.4, y: 0.03, z: -3}
+  playerTwoSpawn: {x: -0.5, y: 0.03, z: -3.5}

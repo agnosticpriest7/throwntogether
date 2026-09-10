@@ -30,9 +30,11 @@
 **Implications:** This explicitly expands the original single-body-build scope. All builds share the head, skeleton, movement, collision, and interaction reach. Clothing meshes fit each torso. Wardrobe choices are session-scoped for this prototype.
 
 ### YYYY-MM-DD — Decision
-**Decision:**  
-**Reason:**  
-**Alternatives rejected:**  
-**Implications:**  
+**Decision:**
+**Reason:**
+**Alternatives rejected:**
+**Implications:**
 
 2026-09-09 — Kyle approved the VisualDirectionTest study and requested proceeding. Apply the approved visual direction to existing playable kitchens while preserving gameplay dimensions, layouts, controls and behavior. Retain the separate study and source Blender modules.
+
+2026-09-10 — Kyle approved starting with the floor and an original First Service rearrangement inspired by the reference. This supersedes the prior preserve-layout restriction for First Service only. Preserve room/chef dimensions and gameplay parameters; no full prop-art conversion bundled into this pass.

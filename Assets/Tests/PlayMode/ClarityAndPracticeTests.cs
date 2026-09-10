@@ -77,9 +77,23 @@ namespace ThrownTogether.Tests
                 var physics=old.GetComponent<Collider>().bounds;var visual=art.GetComponent<Renderer>().bounds;
                 Assert.That(visual.min.x,Is.EqualTo(physics.min.x).Within(.005f));Assert.That(visual.max.x,Is.EqualTo(physics.max.x).Within(.005f));
                 Assert.That(visual.min.z,Is.EqualTo(physics.min.z).Within(.005f));Assert.That(visual.max.z,Is.EqualTo(physics.max.z).Within(.005f));
-                Assert.That(art.GetComponent<MeshFilter>().sharedMesh.subMeshCount,Is.EqualTo(2));
+                Assert.That(art.GetComponent<MeshFilter>().sharedMesh.subMeshCount,Is.EqualTo(7));
             }
             yield return null;
+        }
+        [UnityTest] public IEnumerator FirstServiceIslandHasTwoChefPassingLanes()
+        {
+            var layout=hud.GetComponent<KitchenLayout>();Assert.That(layout.Apply(0),Is.True);
+            var motor=chef.GetComponent<CharacterController>();motor.enabled=false;Physics.SyncTransforms();
+            // Two separate 0.64m capsules fit beside one another on both sides of the island.
+            // This checks collision clearance, not subjective controller comfort.
+            foreach(float x in new[]{-3.8f,-3.0f,.9f,1.65f})
+            for(float z=-2.8f;z<=2.8f;z+=.2f)
+            {
+                var p=new Vector3(x,.4f,z);
+                Assert.That(Physics.CheckCapsule(p,p+Vector3.up*1.1f,.32f,~0,QueryTriggerInteraction.Ignore),Is.False,"Passing lane blocked at "+p);
+            }
+            motor.enabled=true;yield return null;
         }
         [UnityTest] public IEnumerator ManualPrepStallsOnMovementAndCanResumeWithoutLosingProgress()
         {
@@ -226,6 +240,7 @@ namespace ThrownTogether.Tests
                     for(int x=0;x<width&&!reachable;x++) for(int z=0;z<height;z++)
                         if(visited[x,z] && Vector2.Distance(new Vector2(-8+x*cell,-5+z*cell),new Vector2(anchor.position.x,anchor.position.z))<1.8f) {reachable=true;break;}
                     Assert.That(reachable,Is.True,layout.CurrentName+": "+anchor.name);
+                    KitchenTestAccess.Approach(chef,anchor.GetComponent<Interactable>());
                 }
                 Assert.That(chef.speed,Is.EqualTo(4.2f));Assert.That(chef.reach,Is.EqualTo(2));
                 Assert.That(hud.gameplayCamera.transform.position,Is.EqualTo(cameraPosition));Assert.That(hud.gameplayCamera.orthographicSize,Is.EqualTo(cameraSize));

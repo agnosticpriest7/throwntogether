@@ -172,9 +172,7 @@ namespace ThrownTogether.Tests
         private T Find<T>(string label) where T:Interactable => Interactable.Active.OfType<T>().First(x=>x.gameObject.scene==testScene && x.stationName.Contains(label));
         private void Approach(Interactable station)
         {
-            var motor=chef.GetComponent<CharacterController>(); motor.enabled=false;
-            chef.transform.position=station.transform.position+new Vector3(0,.04f,-1.5f); chef.transform.rotation=Quaternion.identity; motor.enabled=true;
-            chef.FindFocus(); Assert.That(chef.Focus,Is.EqualTo(station));
+            KitchenTestAccess.Approach(chef,station);
         }
         private void Use(Interactable station) { Approach(station); Assert.That(chef.Use(),Is.True,station.stationName); }
         [UnityTest]

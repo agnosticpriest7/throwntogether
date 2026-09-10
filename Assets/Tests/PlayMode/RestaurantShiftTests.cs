@@ -72,10 +72,30 @@ namespace ThrownTogether.Tests
         }
         private static void Use(ChefController chef,Interactable station)
         {
-            var motor=chef.GetComponent<CharacterController>(); motor.enabled=false;
-            chef.transform.position=station.transform.position+new Vector3(0,.04f,-1.5f);
-            chef.transform.rotation=Quaternion.identity; motor.enabled=true;
+            KitchenTestAccess.Approach(chef,station);
             Assert.That(chef.Use(),Is.True,"Use failed at "+station.stationName+": "+chef.Feedback);
+        }
+    }
+    internal static class KitchenTestAccess
+    {
+        // Stations can now form connected runs. Approach from an actually clear side,
+        // rather than teleporting inside the adjacent counter south of every station.
+        public static void Approach(ChefController chef,Interactable station)
+        {
+            var motor=chef.GetComponent<CharacterController>();bool enabled=motor.enabled;motor.enabled=false;Physics.SyncTransforms();
+            try
+            {
+                foreach(float distance in new[]{1.5f,1.3f,1.7f})
+                foreach(var side in new[]{Vector3.back,Vector3.right,Vector3.forward,Vector3.left})
+                {
+                    var point=station.transform.position+side*distance;
+                    if(Physics.CheckCapsule(point+Vector3.up*.4f,point+Vector3.up*1.5f,.32f,~0,QueryTriggerInteraction.Ignore))continue;
+                    chef.transform.position=point+Vector3.up*.04f;chef.transform.rotation=Quaternion.LookRotation(-side);chef.FindFocus();
+                    if(chef.Focus==station)return;
+                }
+                Assert.Fail("No clear interaction approach to "+station.stationName);
+            }
+            finally{motor.enabled=enabled;Physics.SyncTransforms();}
         }
     }
 }

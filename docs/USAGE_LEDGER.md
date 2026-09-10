@@ -52,3 +52,5 @@ User last reported 48% remaining before music integration and asked for substant
 2026-09-09: Owner authorized review, integration and publication of existing character work. Reused approved assets and existing tests/pipeline; no account-wide usage measurement available.
 
 2026-09-09 — Owner approved proceeding from the visual study. Reused the Blender modules and established tests/build pipeline. No account-wide token usage or remaining allowance inferred.
+
+2026-09-10 — Owner-authorized flooring/First Service layout pass. Narrow scope, existing Unity modules reused, no delegated agents or speculative art generation. Unity MCP unavailable; isolated batch authoring/camera review used. Account-wide remaining usage is unknown; no percentage inferred.
