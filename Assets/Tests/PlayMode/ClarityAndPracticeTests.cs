@@ -116,6 +116,27 @@ namespace ThrownTogether.Tests
             }
             yield return null;
         }
+        [UnityTest] public IEnumerator SeatedCustomersKeepChairsFixedAndPreserveOrderTiming()
+        {
+            var orders=Object.FindObjectsByType<CustomerOrder>().Where(o=>o.gameObject.scene==scene).ToArray();
+            var source=Object.FindObjectsByType<SourceStation>().First(s=>s.gameObject.scene==scene&&!s.plates);
+            Assert.That(orders.Select(o=>o.GetComponent<CustomerPresentation>().variant).Distinct().Count(),Is.EqualTo(orders.Length));
+            foreach(var order in orders)
+            {
+                var presentation=order.GetComponent<CustomerPresentation>();var actor=presentation.seatedVisual;
+                Assert.That(actor,Is.Not.Null);Assert.That(actor.enabled,Is.False);Assert.That(actor.usePlayerSelection,Is.False);
+                Assert.That(actor.GetComponentsInChildren<Collider>(),Is.Empty);Assert.That(actor.GetComponentsInChildren<ChefController>(),Is.Empty);Assert.That(actor.GetComponentsInChildren<ChefInput>(),Is.Empty);
+                var arm=actor.GetComponentsInChildren<Transform>(true).Single(t=>t.name=="B_Arm_R");
+                presentation.ApplyPose(OrderPhase.Eating,.1f,true);var rotation=arm.localRotation;presentation.ApplyPose(OrderPhase.Eating,8,true);Assert.That(arm.localRotation,Is.EqualTo(rotation),"Reduced effects has no rhythmic motion");
+                presentation.ApplyPose(OrderPhase.Eating,0,false);var animatedStart=arm.localRotation;presentation.ApplyPose(OrderPhase.Eating,.31f,false);Assert.That(Quaternion.Angle(animatedStart,arm.localRotation),Is.GreaterThan(5),"Eating must animate the arm rig");
+                var chair=order.customerVisual.Find("Dining chair art");var chairPosition=chair.position;var rootPosition=order.customerVisual.position;
+                var dish=Object.Instantiate(source.itemPrefab);dish.Configure(new ItemPayload{isPlate=true,ingredient=order.recipe.ingredient,state=order.recipe.requiredState});
+                Assert.That(order.Reserve(dish.Payload),Is.True);order.Receive(dish);order.Advance(.5f);presentation.ApplyPose(order.Phase,8,false);
+                Assert.That(order.Phase,Is.EqualTo(OrderPhase.Eating));Assert.That(order.tableSlot.Item,Is.SameAs(dish));Assert.That(chair.position,Is.EqualTo(chairPosition));Assert.That(order.customerVisual.position,Is.EqualTo(rootPosition));
+                order.Advance(1.5f);Assert.That(order.Phase,Is.EqualTo(OrderPhase.Complete));Assert.That(dish.Payload.dirty,Is.True);Assert.That(order.tableSlot.Item,Is.Null);
+            }
+            yield return null;
+        }
         [UnityTest] public IEnumerator FoodVisualRefreshPreservesOwnershipAndCompactFootprint()
         {
             var sources=Object.FindObjectsByType<SourceStation>().Where(s=>s.gameObject.scene==scene&&!s.plates).ToArray();

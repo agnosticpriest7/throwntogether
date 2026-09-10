@@ -46,3 +46,5 @@
 2026-09-10 — Owner approved visual priority 7: refine the service counter and dirty-dish return within the approved kitchen style. Preserve all serving/delivery/washing rules and layout; no new bell interaction or food/customer/HUD art pass.
 
 2026-09-10 — Kyle approved priority 8 (held food/plate readability) and then requested a pause until more tokens are available. Preserve gameplay and carry anchors; reduce visual bulk and refine existing dishes. Stop after verified deployment; do not proceed to priority 9.
+
+2026-09-10 — Kyle resumed for visual priorities 9–10: seated customer art/animation and order-bubble/HUD clarity. Preserve customer rules and gameplay. Automatic approval review requires explicit authorization before this candidate is committed/pushed/deployed.

@@ -62,3 +62,5 @@ User last reported 48% remaining before music integration and asked for substant
 2026-09-10 — Priority 7 only: two small Blender overlays reusing existing materials/helpers, isolated Unity authoring and established regression pipeline. No subagents or speculative gameplay. Account-wide usage remains unknown.
 
 2026-09-10 — Owner explicitly approved priority 8 as the final batch before pausing for more tokens. Reused state-driven visuals and two small shared meshes; no subagents. Current account-wide usage is unknown. Do not initiate further development until Kyle resumes.
+
+2026-09-10 — Owner resumed for 9–10. Reused character meshes, materials and food icons; no subagents or new art generation. Unity MCP unavailable; isolated authoring used. Account-wide usage remains unknown.

@@ -30,7 +30,7 @@ namespace ThrownTogether
                 marker.one.SetActive(false); marker.two.SetActive(false); marker.ready.SetActive(false);
             }
             foreach(var customer in FindObjectsByType<CustomerOrder>(FindObjectsSortMode.None))
-                if(customer.gameObject.scene==gameObject.scene) customer.gameObject.AddComponent<CustomerPresentation>().Initialize(customer,assets);
+                if(customer.gameObject.scene==gameObject.scene) (customer.GetComponent<CustomerPresentation>()??customer.gameObject.AddComponent<CustomerPresentation>()).Initialize(customer,assets);
         }
         private Transform Part(Transform parent,string name,Mesh mesh,Vector3 position,Vector3 scale,Color color)
         {

@@ -47,16 +47,13 @@ namespace ThrownTogether
             label.normal.textColor=small.normal.textColor=title.normal.textColor=Color.white;
             var previous=GUI.matrix;
             GUI.matrix=Matrix4x4.Scale(new Vector3(Screen.width/1280f,Screen.height/720f,1));
-            Panel(new Rect(20,12,1240,76));
-            if(shift==null) DrawTicket(order,new Rect(32,19,740,61),1);
-            else
-            {
-                for(int i=0;i<shift.seats.Length;i++) DrawTicket(shift.seats[i],new Rect(32+i*385,19,375,61),i+1);
-            }
             int total=shift!=null ? shift.TotalOrders:1;
-            GUI.Label(new Rect(800,20,250,30),lastCompleted+" / "+total+" served",label);
-            GUI.Label(new Rect(800,49,250,26),System.TimeSpan.FromSeconds(summary.ElapsedSeconds).ToString(@"mm\:ss"),small);
-            if(GUI.Button(new Rect(1060,29,182,39),"Y / Esc: Menu")) menu.Open();
+            Panel(new Rect(20,12,300,48));
+            GUI.Label(new Rect(26,18,188,35),lastCompleted+" / "+total+" served",label);
+            GUI.Label(new Rect(214,18,98,35),System.TimeSpan.FromSeconds(summary.ElapsedSeconds).ToString(@"mm\:ss"),small);
+            if(GUI.Button(new Rect(1060,18,182,39),"Y / Esc: Menu")) menu.Open();
+            if(shift==null) DrawOrderBubble(order,1);
+            else for(int i=0;i<shift.seats.Length;i++)DrawOrderBubble(shift.seats[i],i+1);
             foreach(var station in Interactable.Active)
             {
                 if(station==null || station.gameObject.scene!=gameObject.scene || station.Progress<0) continue;
@@ -67,7 +64,7 @@ namespace ThrownTogether
             }
             // Identity is carried by apron colors and target borders; no floating panels cover chefs.
             bool two=coop!=null && coop.PlayerTwo!=null;
-            DrawPlayer(chef,"P1",new Color(.2f,1,.7f),20,two ? 612:1240);
+            DrawPlayer(chef,"P1",new Color(.2f,1,.7f),two?20:240,two ? 612:800);
             if(two) DrawPlayer(coop.PlayerTwo,"P2",new Color(1,.42f,.32f),648,612);
             if(coop!=null && !string.IsNullOrEmpty(coop.ConnectionHelp))
             {
@@ -108,13 +105,25 @@ namespace ThrownTogether
             GUI.color=RestaurantMenu.Display.highContrast ? Color.black:new Color(.035f,.055f,.07f,.88f);
             GUI.DrawTexture(rect,Texture2D.whiteTexture); GUI.color=Color.white;
         }
-        private void DrawTicket(CustomerOrder ticket,Rect rect,int number)
+        private void DrawOrderBubble(CustomerOrder ticket,int number)
         {
-            if(!ticket.Active) { GUI.Label(rect,"Seat "+number+" — finished",small); return; }
-            FoodIcon.Draw(new Rect(rect.x+8,rect.y+6,48,48),ticket.recipe.ingredient);
-            string state=ticket.Phase==OrderPhase.Waiting ? "TO COOK" : ticket.Phase==OrderPhase.Delivering ? "ON THE WAY" : ticket.Phase==OrderPhase.Eating ? "ENJOYING":"SERVED";
-            GUI.Label(new Rect(rect.x+65,rect.y,rect.width-65,32),ticket.recipe.displayName,label);
-            GUI.Label(new Rect(rect.x+65,rect.y+32,rect.width-65,26),"Seat "+number+"  /  "+state,small);
+            if(!ticket.Active||ticket.recipe==null||ticket.customerVisual==null)return;
+            var point=gameplayCamera.WorldToViewportPoint(ticket.customerVisual.position+Vector3.up*1.7f);if(point.z<=0)return;
+            float scale=Mathf.Clamp(RestaurantMenu.Display.TextScale,1,1.4f);
+            var rect=OrderBubbleLayout.ForSeat(new Vector2(point.x*1280,(1-point.y)*720),scale);
+            bool contrast=RestaurantMenu.Display.highContrast;
+            var ink=contrast?Color.white:new Color(.16f,.23f,.24f);
+            GUI.color=new Color(.23f,.31f,.32f);GUI.DrawTexture(new Rect(rect.x-7,rect.y+27*scale,10,10),Texture2D.whiteTexture);GUI.DrawTexture(rect,Texture2D.whiteTexture);
+            GUI.color=contrast?Color.black:new Color(.97f,.94f,.85f);GUI.DrawTexture(new Rect(rect.x+2,rect.y+2,rect.width-4,rect.height-4),Texture2D.whiteTexture);GUI.color=Color.white;
+            small.fontSize=Mathf.RoundToInt(13*scale);small.normal.textColor=ink;
+            GUI.Label(new Rect(rect.x+6,rect.y+3,rect.width-12,22*scale),"TABLE "+number,small);
+            FoodIcon.Draw(new Rect(rect.x+8,rect.y+28*scale,48*scale,42*scale),ticket.recipe.ingredient);
+            label.fontSize=Mathf.RoundToInt(18*scale);label.normal.textColor=ink;
+            GUI.Label(new Rect(rect.x+62*scale,rect.y+23*scale,rect.width-68*scale,49*scale),ticket.recipe.displayName,label);
+            GUI.color=ticket.Phase==OrderPhase.Waiting?new Color(.04f,.12f,.13f):ticket.Phase==OrderPhase.Delivering?new Color(.17f,.09f,.025f):new Color(.05f,.14f,.04f);
+            GUI.DrawTexture(new Rect(rect.x+6,rect.y+75*scale,rect.width-12,20*scale),Texture2D.whiteTexture);GUI.color=Color.white;small.normal.textColor=Color.white;
+            GUI.Label(new Rect(rect.x+6,rect.y+74*scale,rect.width-12,22*scale),OrderBubbleLayout.State(ticket.Phase),small);
+            label.fontSize=Mathf.RoundToInt(19*RestaurantMenu.Display.TextScale);small.fontSize=Mathf.RoundToInt(15*RestaurantMenu.Display.TextScale);label.normal.textColor=Color.white;
         }
     }
 }
