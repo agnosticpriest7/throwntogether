@@ -1,0 +1,124 @@
+{
+  "palette": {
+    "Steel": "AABEC3",
+    "Highlight": "D7E1DD",
+    "Body": "67848A",
+    "Dark": "344A50",
+    "Wood": "C9985E",
+    "WoodLight": "D8AF75",
+    "WoodDark": "99693E",
+    "Water": "5CA6B2",
+    "Oil": "59442C",
+    "Red": "BE513E",
+    "Amber": "E8B652",
+    "Potato": "B78B4E",
+    "Spot": "85603C",
+    "Tomato": "DA4634",
+    "TomatoLight": "EF6743",
+    "Leaf": "598E3D",
+    "LeafLight": "86B850",
+    "Cream": "DDD0B0",
+    "Mushroom": "AC8C6B"
+  },
+  "modules": {
+    "CounterStraight": {
+      "triangles": 1752,
+      "materials": 6,
+      "dimensions": [
+        1.899999976158142,
+        1.6698492765426636,
+        1.1934999227523804
+      ]
+    },
+    "CounterEnd": {
+      "triangles": 1968,
+      "materials": 6,
+      "dimensions": [
+        1.899999976158142,
+        1.6698492765426636,
+        1.1934999227523804
+      ]
+    },
+    "CounterCorner": {
+      "triangles": 2184,
+      "materials": 6,
+      "dimensions": [
+        1.899999976158142,
+        1.6698492765426636,
+        1.1934999227523804
+      ]
+    },
+    "CounterSteel": {
+      "triangles": 1260,
+      "materials": 3,
+      "dimensions": [
+        1.899999976158142,
+        1.6698492765426636,
+        1.1899999380111694
+      ]
+    },
+    "PrepCounter": {
+      "triangles": 1772,
+      "materials": 6,
+      "dimensions": [
+        1.899999976158142,
+        1.6698492765426636,
+        1.3255000114440918
+      ]
+    },
+    "Fryer": {
+      "triangles": 9172,
+      "materials": 6,
+      "dimensions": [
+        1.899999976158142,
+        1.6698492765426636,
+        1.5749999284744263
+      ]
+    },
+    "Sink": {
+      "triangles": 4228,
+      "materials": 5,
+      "dimensions": [
+        1.899999976158142,
+        1.6698492765426636,
+        1.7200500965118408
+      ]
+    },
+    "PantryPotato": {
+      "triangles": 4740,
+      "materials": 8,
+      "dimensions": [
+        1.899999976158142,
+        1.6698492765426636,
+        1.600000023841858
+      ]
+    },
+    "PantryMushroom": {
+      "triangles": 4716,
+      "materials": 8,
+      "dimensions": [
+        1.899999976158142,
+        1.6698492765426636,
+        1.5950000286102295
+      ]
+    },
+    "PantryTomato": {
+      "triangles": 5676,
+      "materials": 8,
+      "dimensions": [
+        1.899999976158142,
+        1.6698492765426636,
+        1.655995488166809
+      ]
+    },
+    "PantryLettuce": {
+      "triangles": 7164,
+      "materials": 8,
+      "dimensions": [
+        1.899999976158142,
+        1.6698492765426636,
+        1.5829023122787476
+      ]
+    }
+  }
+}

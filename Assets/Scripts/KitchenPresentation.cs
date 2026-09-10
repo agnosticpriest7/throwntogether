@@ -98,6 +98,7 @@ namespace ThrownTogether
                     return;
                 }
                 HideDecoration(t,"Potato crate");
+                if(authored && station.GetComponent<StationArt>().includesPantryDisplay) return;
                 Box(t,"Crate base",new Vector3(0,1.24f,0),new Vector3(1.42f,.08f,1.04f),wood);
                 for(int side=-1;side<=1;side+=2)
                 {

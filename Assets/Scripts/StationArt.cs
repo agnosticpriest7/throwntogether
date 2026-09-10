@@ -7,5 +7,6 @@ namespace ThrownTogether
     public sealed class StationArt : MonoBehaviour
     {
         public GameObject visual;
+        public bool includesPantryDisplay;
     }
 }

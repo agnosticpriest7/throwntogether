@@ -347,8 +347,16 @@ namespace ThrownTogether.Tests
             Assert.That(hud.GetComponent<KitchenPresentation>(),Is.Not.Null);
             Assert.That(hud.GetComponent<PracticeGuide>().Active,Is.False);
             var previews=Object.FindObjectsByType<Carryable>().Where(c=>c.gameObject.scene==scene && c.name=="Pantry ingredient display").ToArray();
-            Assert.That(previews.Length,Is.EqualTo(16));
-            foreach(var preview in previews) Assert.That(preview.GetComponentsInChildren<Collider>(),Is.Empty);
+            Assert.That(previews,Is.Empty,"Authored pantry meshes must not also spawn duplicate gameplay item previews.");
+            var pantries=Interactable.Active.OfType<SourceStation>().Where(s=>s.gameObject.scene==scene&&!s.plates).ToArray();
+            Assert.That(pantries.Length,Is.EqualTo(4));
+            foreach(var pantry in pantries)
+            {
+                var art=pantry.GetComponent<StationArt>();Assert.That(art.includesPantryDisplay,Is.True);
+                Assert.That(art.visual.GetComponentsInChildren<Collider>(),Is.Empty);
+                Assert.That(art.visual.GetComponentsInChildren<Carryable>(),Is.Empty);
+                Assert.That(art.visual.GetComponentInChildren<MeshFilter>().sharedMesh.name,Does.StartWith("Pantry"+pantry.ingredient.visualKind));
+            }
             foreach(var station in Interactable.Active.Where(s=>s.gameObject.scene==scene))
                 Assert.That(station.transform.Find("P1 target").GetComponentsInChildren<Collider>(),Is.Empty);
             yield return null;

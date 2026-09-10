@@ -38,3 +38,5 @@
 2026-09-09 — Kyle approved the VisualDirectionTest study and requested proceeding. Apply the approved visual direction to existing playable kitchens while preserving gameplay dimensions, layouts, controls and behavior. Retain the separate study and source Blender modules.
 
 2026-09-10 — Kyle approved starting with the floor and an original First Service rearrangement inspired by the reference. This supersedes the prior preserve-layout restriction for First Service only. Preserve room/chef dimensions and gameplay parameters; no full prop-art conversion bundled into this pass.
+
+2026-09-10 — Kyle approved appliance refinement, cohesive modular counters and ingredient storage from the visual priority list. Preserve current layouts, player dimensions and gameplay. Use original Blender geometry and retain the earlier visual study; broader restaurant decoration and gameplay work remain deferred.
