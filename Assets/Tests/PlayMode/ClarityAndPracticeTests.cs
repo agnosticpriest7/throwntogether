@@ -99,7 +99,7 @@ namespace ThrownTogether.Tests
         {
             var room=scene.GetRootGameObjects().Single(g=>g.name=="Restaurant room art");
             Assert.That(room.GetComponentsInChildren<Collider>(),Is.Empty);
-            Assert.That(room.GetComponentsInChildren<Transform>().Count(t=>t.name=="WindowWall"),Is.EqualTo(3));
+            Assert.That(room.GetComponentsInChildren<Transform>().Count(t=>t.name=="WindowWall"&&t.parent==room.transform),Is.EqualTo(3));
             var lights=room.GetComponentsInChildren<Light>();Assert.That(lights.Length,Is.EqualTo(2));
             foreach(var light in lights){Assert.That(light.shadows,Is.EqualTo(LightShadows.None));Assert.That(light.range,Is.LessThanOrEqualTo(4));}
             foreach(var order in Object.FindObjectsByType<CustomerOrder>().Where(o=>o.gameObject.scene==scene))
