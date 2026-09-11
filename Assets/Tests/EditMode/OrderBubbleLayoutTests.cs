@@ -4,6 +4,12 @@ namespace ThrownTogether.Tests
 {
     public sealed class OrderBubbleLayoutTests
     {
+        [Test] public void EveryRecipeHasItsOwnRenderedCompletedDishIcon()
+        {
+            foreach(var recipe in Resources.Load<RecipeBook>("RecipeBook").recipes){var image=FoodIcon.DishImage(recipe);Assert.That(image,Is.Not.Null,recipe.displayName);Assert.That(image.width,Is.EqualTo(192));}
+            var produce=UnityEditor.AssetDatabase.LoadAssetAtPath<IngredientStorageDefinition>("Assets/Data/MenuExpansion/ProduceRack.asset");
+            CollectionAssert.AreEqual(new[]{IngredientVisualKind.Lettuce,IngredientVisualKind.Mushroom,IngredientVisualKind.Potato,IngredientVisualKind.Tomato},System.Array.ConvertAll(produce.ingredients,i=>i.visualKind));
+        }
         [Test] public void CardsStayInsideHudSafeAreaAtEveryTextSize()
         {
             foreach(float scale in new[]{1f,1.15f,1.3f})foreach(var p in new[]{new Vector2(-100,-100),new Vector2(940,120),new Vector2(940,430),new Vector2(1600,900)})

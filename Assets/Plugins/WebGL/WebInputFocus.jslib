@@ -16,6 +16,14 @@ mergeInto(LibraryManager.library, {
       }
     } catch(e) { history.last="Sampling error: "+e.name; }
   },
+  TT_FocusFromGamepad: function () {
+    // Called only for a real controller A press. Never capture Edge Menu or contextmenu.
+    if(!document.hasFocus() || document.hidden) return false;
+    var el=document.activeElement;
+    if(el && (el.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName))) return false;
+    Module.canvas.focus({preventScroll:true});
+    return document.activeElement===Module.canvas;
+  },
   TT_HasInputFocus: function () {
     return document.hasFocus() && !document.hidden && document.activeElement === Module.canvas;
   },

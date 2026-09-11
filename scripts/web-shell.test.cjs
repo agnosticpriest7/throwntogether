@@ -88,3 +88,13 @@ test('actual development template overrides Unity context-menu suppression befor
   assert.deepEqual(Array.from(received.disabledCanvasEvents),['dragstart']);
   assert.equal(received.autoSyncPersistentDataPath,true);
 });
+test('explicit gamepad focus respects browser focus and editable elements',()=>{
+ const vm=require('node:vm'),fs=require('node:fs'),path=require('node:path');
+ const library={},doc={hasFocus:()=>true,hidden:false,activeElement:{tagName:'BODY'}};
+ const canvas={focus:()=>{doc.activeElement=canvas;}};
+ vm.runInNewContext(fs.readFileSync(path.join(__dirname,'../Assets/Plugins/WebGL/WebInputFocus.jslib'),'utf8'),{LibraryManager:{library},Module:{canvas},document:doc,mergeInto:Object.assign});
+ assert.equal(library.TT_FocusFromGamepad(),true);
+ doc.activeElement={tagName:'INPUT'};assert.equal(library.TT_FocusFromGamepad(),false);
+ doc.activeElement={tagName:'BODY'};doc.hidden=true;assert.equal(library.TT_FocusFromGamepad(),false);
+ doc.hidden=false;doc.hasFocus=()=>false;assert.equal(library.TT_FocusFromGamepad(),false);
+});

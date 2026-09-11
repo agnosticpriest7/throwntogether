@@ -4,6 +4,8 @@ namespace ThrownTogether
     public static class FoodIcon
     {
         private static Texture2D disc;
+        private static readonly System.Collections.Generic.Dictionary<string,Texture2D> dishImages=new System.Collections.Generic.Dictionary<string,Texture2D>();
+        public static Texture2D DishImage(RecipeDefinition recipe){if(!dishImages.TryGetValue(recipe.id,out var image)){image=Resources.Load<Texture2D>("DishIcons/"+recipe.id);dishImages[recipe.id]=image;}return image;}
         private static Texture2D Disc
         {
             get
@@ -18,6 +20,7 @@ namespace ThrownTogether
         private static Color WithOpacity(Color color,float opacity) { color.a*=opacity; return color; }
         public static void Draw(Rect area,RecipeDefinition recipe,float opacity=1)
         {
+            var image=DishImage(recipe);if(image!=null){var prior=GUI.color;GUI.color=new Color(1,1,1,opacity);GUI.DrawTexture(area,image,ScaleMode.ScaleToFit);GUI.color=prior;return;}
             int count=1+recipe.additionalIngredients.Length;
             if(count==1){Draw(area,recipe.ingredient,opacity,recipe.requiredState);return;}
             float width=area.width/(count==3?1.8f:1.5f);

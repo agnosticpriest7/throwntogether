@@ -16,7 +16,7 @@ MonoBehaviour:
   displayName: Produce Rack
   description:
   ingredients:
-  - {fileID: 11400000, guid: b6c37beafb6da634496b787d071ca4ac, type: 2}
-  - {fileID: 11400000, guid: d59fc79e3765848469ee63bebb057d38, type: 2}
   - {fileID: 11400000, guid: 89a386b274d272c4abf5920e4c16bd21, type: 2}
   - {fileID: 11400000, guid: 774a8cef9a9a6dd4ca0ff91166849847, type: 2}
+  - {fileID: 11400000, guid: b6c37beafb6da634496b787d071ca4ac, type: 2}
+  - {fileID: 11400000, guid: d59fc79e3765848469ee63bebb057d38, type: 2}

@@ -6,6 +6,7 @@ namespace ThrownTogether
     [Serializable] public sealed class RestaurantSave
     {
         public int schemaVersion=1, cash, nextDay=1, activeDay, settledDay, completedDays;
+        public int arrangementPaidBreak=-1;
         public string[] purchases=new string[0];
         public string[] selectedMenu=new string[0];
         public FurniturePlacement[] furniture=new FurniturePlacement[0];
@@ -53,12 +54,15 @@ namespace ThrownTogether
             if(ids==null || System.Array.Exists(ids,string.IsNullOrWhiteSpace))return false;
             var next=Copy();next.selectedMenu=System.Linq.Enumerable.ToArray(System.Linq.Enumerable.Distinct(ids));return Commit(next);
         }
-        public bool SetFurniture(int kitchen,FurniturePlacement[] placements)
+        public int ArrangementFee=>Data.completedDays==0 || Data.arrangementPaidBreak==Data.settledDay?0:10;
+        public bool SetFurniture(int kitchen,FurniturePlacement[] placements,bool charge=false)
         {
             if(Data.activeDay>Data.settledDay || kitchen<0 || kitchen>2 || placements==null)return false;
             if(Array.Exists(placements,p=>p==null || p.kitchen!=kitchen || string.IsNullOrWhiteSpace(p.id) || p.slot<0 || p.slot>=KitchenFurniture.Slots.Length || p.turns<0 || p.turns>3))return false;
             if(System.Linq.Enumerable.Distinct(System.Linq.Enumerable.Select(placements,p=>p.id)).Count()!=placements.Length || System.Linq.Enumerable.Distinct(System.Linq.Enumerable.Select(placements,p=>p.slot)).Count()!=placements.Length)return false;
-            var next=Copy();next.furniture=System.Linq.Enumerable.ToArray(System.Linq.Enumerable.Concat(System.Linq.Enumerable.Where(next.furniture??new FurniturePlacement[0],p=>p!=null && p.kitchen!=kitchen),placements));return Commit(next);
+            int fee=charge?ArrangementFee:0;
+            if(Data.cash<fee){Problem="Rearranging costs $"+fee+" for this break. Your draft is retained.";return false;}
+            var next=Copy();next.cash-=fee;if(charge)next.arrangementPaidBreak=next.settledDay;next.furniture=System.Linq.Enumerable.ToArray(System.Linq.Enumerable.Concat(System.Linq.Enumerable.Where(next.furniture??new FurniturePlacement[0],p=>p!=null && p.kitchen!=kitchen),placements));return Commit(next);
         }
         public bool Owns(string id)=>Array.IndexOf(Data.purchases,id)>=0;
         public int StartDay()

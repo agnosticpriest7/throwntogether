@@ -403,17 +403,17 @@ namespace ThrownTogether.Tests
             }
             finally {menu.Close();}
         }
-        [UnityTest] public IEnumerator ChoosingKitchenRequiresWardrobeBeforeGameplay()
+        [UnityTest] public IEnumerator ChoosingCareerKitchenSkipsWardrobeAndDefaultsRemainDistinct()
         {
             var menu=hud.GetComponent<RestaurantMenu>();
             try
             {
-                menu.OpenFrontEnd();menu.ShowLevels(false);menu.ActivateSelection();
-                Assert.That(menu.Page,Is.EqualTo("Your chef"));Assert.That(RestaurantMenu.GameplayBlocked,Is.True);
+                SessionOptions.ShiftOrders=0;menu.OpenFrontEnd();menu.ShowLevels(false);menu.ActivateSelection();
+                Assert.That(menu.Page,Is.EqualTo("Today's Menu"));Assert.That(RestaurantMenu.GameplayBlocked,Is.True);
                 Assert.That(Time.timeScale,Is.Zero);Assert.That(SceneManager.GetActiveScene(),Is.EqualTo(scene));
                 yield return null;
-                Assert.That(hud.GetComponent<ChefWardrobePreview>().Image,Is.Not.Null);
-                menu.NavigateBack();Assert.That(menu.Page,Is.EqualTo("Levels"));
+                Assert.That(ChefWardrobe.ForPlayer(0).bodyColor,Is.Not.EqualTo(ChefWardrobe.ForPlayer(1).bodyColor));
+                menu.NavigateBack();Assert.That(menu.Page,Is.EqualTo("Title"));
             }
             finally {menu.Close();}
         }

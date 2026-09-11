@@ -7,8 +7,8 @@ namespace ThrownTogether
         enum Destination { Idle, Pass, Table }
         RestaurantDay day;ServiceStation pass;DiningWalker walker;CarrySlot hands;DiningTable target;Destination destination;
         Vector3 Home=>day.Settings.serverIdle;
-        Vector3 Pickup=>new Vector3(day.Settings.diningAisleX,0,pass.transform.position.z);
-        void Travel(Destination next,Vector3 point){destination=next;walker.Go(day.DiningRoute(walker.transform.position,point));}
+        Vector3 Pickup=>KitchenStaffRoute.Approach(pass.transform)??Home;
+        void Travel(Destination next,Vector3 point){destination=next;var path=next==Destination.Pass?KitchenStaffRoute.ToStation(walker.transform.position,pass.transform):KitchenStaffRoute.ToPoint(walker.transform.position,point);if(path!=null)walker.Go(path);}
         public void Initialize(RestaurantDay owner,ServiceStation station)
         {
             day=owner;pass=station;var go=new GameObject("Hired server");go.transform.SetParent(transform);go.transform.position=Home;

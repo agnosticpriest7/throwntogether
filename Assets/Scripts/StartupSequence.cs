@@ -41,6 +41,7 @@ namespace ThrownTogether
                 return;
             }
             if(loading)return;
+            foreach(var pad in Gamepad.all)if(pad.buttonSouth.wasPressedThisFrame)WebInputFocus.FocusFromGamepad();
             if(!start.IsPressed())released=true;
             if(released && start.WasPressedThisFrame() && WebInputFocus.HasFocus)RequestStart();
             Advance(Time.unscaledDeltaTime);

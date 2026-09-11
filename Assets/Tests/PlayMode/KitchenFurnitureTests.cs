@@ -39,6 +39,19 @@ namespace ThrownTogether.Tests
             SceneManager.SetActiveScene(original);foreach(var g in suspended)if(g!=null)g.SetActive(true);
             Time.timeScale=1;SessionOptions.ShiftOrders=6;SessionOptions.Kitchen=0;RestaurantAccounts.ResetCache();
         }
+        [UnityTest] public IEnumerator AllKitchenEquipmentStartsOnBaysAndEveryUiControlIsReachable()
+        {
+            var f=hud.GetComponent<KitchenFurniture>();Assert.That(f.Validate(out var why),Is.True,why);Assert.That(f.Begin(),Is.True);
+            foreach(int anchor in new[]{0,1,3,4,5,6,7,8,10,11})Assert.That(f.AssignedSlot("base:"+anchor),Is.GreaterThanOrEqualTo(0));
+            var seen=new System.Collections.Generic.HashSet<int>{0};var pending=new System.Collections.Generic.Queue<int>();pending.Enqueue(0);
+            while(pending.Count>0){int start=pending.Dequeue();foreach(var direction in new[]{Vector2.up,Vector2.down,Vector2.left,Vector2.right}){f.Select(start);f.Navigate(direction);if(seen.Add(f.Selected))pending.Enqueue(f.Selected);}}
+            Assert.That(seen.Count,Is.EqualTo(KitchenFurniture.Slots.Length+2),"Every bay, Save and Cancel must be reachable by D-pad");
+            Assert.That(f.TryMove("base:8",6,0),Is.True,f.Message);Assert.That(f.TryMove("base:11",9,0),Is.True,f.Message);f.Cancel();
+            var menu=hud.GetComponent<RestaurantMenu>();menu.OpenFrontEnd();var pad=InputSystem.AddDevice<Gamepad>();
+            try{hud.coop.UseControllerPlayerOne();hud.coop.BindPlayerOne(null);Assert.That(hud.coop.Join(pad),Is.False);hud.coop.RefreshPlayerOneAssignment();Assert.That(hud.coop.PlayerOnePad,Is.SameAs(pad));Assert.That(hud.coop.PlayerTwo,Is.Null);}
+            finally{InputSystem.RemoveDevice(pad);menu.Close();}
+            yield return null;
+        }
         [UnityTest] public IEnumerator CareerResetDefaultsToCancelAndWriteFailureKeepsMenuOpen()
         {
             var account=RestaurantAccounts.Current;int funded=account.StartDay();account.Settle(funded,100,0);
@@ -62,7 +75,7 @@ namespace ThrownTogether.Tests
         {
             var account=RestaurantAccounts.Current;int funded=account.StartDay();Assert.That(account.Settle(funded,1000,0),Is.True);
             foreach(var offer in day.Settings.purchases.Where(p=>p.stationPrefab!=null))Assert.That(account.Buy(offer.id,offer.cost),Is.True);
-            var f=hud.GetComponent<KitchenFurniture>();Assert.That(f.Begin(),Is.True);Assert.That(f.Count,Is.EqualTo(12));
+            var f=hud.GetComponent<KitchenFurniture>();Assert.That(f.Begin(),Is.True);Assert.That(f.Count,Is.EqualTo(14));
             Assert.That(f.TryMove("purchase:counter-bay",10,0),Is.True,f.Message);Assert.That(f.Save(),Is.True,f.Message);
             var menu=hud.GetComponent<RestaurantMenu>();menu.OpenRestaurant();
             var pad=InputSystem.AddDevice<Gamepad>();
@@ -78,11 +91,11 @@ namespace ThrownTogether.Tests
             }
             finally{InputSystem.RemoveDevice(pad);InputSystem.settings.backgroundBehavior=background;InputSystem.settings.editorInputBehaviorInPlayMode=editor;}
             RestaurantAccounts.UseStorage(memory);yield return Load();f=hud.GetComponent<KitchenFurniture>();Assert.That(f.Find("purchase:counter-bay").position,Is.EqualTo(KitchenFurniture.Slots[10]));
-            Assert.That(f.Count,Is.EqualTo(12));LogAssert.NoUnexpectedReceived();
+            Assert.That(f.Count,Is.EqualTo(14));LogAssert.NoUnexpectedReceived();
         }
         [UnityTest] public IEnumerator MovesSaveReloadCancelAndServiceLock()
         {
-            var furniture=hud.GetComponent<KitchenFurniture>();Assert.That(furniture,Is.Not.Null);Assert.That(furniture.Count,Is.EqualTo(8));
+            var furniture=hud.GetComponent<KitchenFurniture>();Assert.That(furniture,Is.Not.Null);Assert.That(furniture.Count,Is.EqualTo(10));
             Assert.That(furniture.Validate(out var reason),Is.True,reason);Assert.That(furniture.Begin(),Is.True);
             var prep=furniture.Find("base:3");var originalPosition=prep.position;
             Assert.That(furniture.TryMove("base:3",6,0),Is.True,furniture.Message);

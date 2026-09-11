@@ -17,14 +17,17 @@ namespace ThrownTogether
         static bool Segment(Vector3 a,Vector3 b)
         {int steps=Mathf.CeilToInt(Vector3.Distance(a,b)/.1f);for(int i=0;i<=steps;i++)if(!Clear(Vector3.Lerp(a,b,steps==0?0:(float)i/steps)))return false;return true;}
         public static Vector3[] ToStation(Vector3 from,Transform target)
+            =>Search(from,p=>{var delta=target.position-p;delta.y=0;return delta.magnitude<=1.75f && Clear(p);});
+        public static Vector3[] ToPoint(Vector3 from,Vector3 target)=>Search(from,p=>Vector3.Distance(p,new Vector3(target.x,0,target.z))<.3f && Clear(p));
+        static Vector3[] Search(Vector3 from,System.Func<Vector3,bool> reached)
         {
             var start=Cell(from);var queue=new Queue<Vector2Int>();var parents=new Dictionary<Vector2Int,Vector2Int>();
             queue.Enqueue(start);parents[start]=start;
             var directions=new[]{Vector2Int.up,Vector2Int.down,Vector2Int.left,Vector2Int.right};
             while(queue.Count>0)
             {
-                var cell=queue.Dequeue();var p=Point(cell);var delta=target.position-p;delta.y=0;
-                if(delta.magnitude<=1.75f && Clear(p))
+                var cell=queue.Dequeue();var p=Point(cell);
+                if(reached(p))
                 {
                     var path=new List<Vector3>{p};while(cell!=start){cell=parents[cell];path.Add(Point(cell));}path.Reverse();
                     if(!Segment(from,path[0]))return null;return path.ToArray();

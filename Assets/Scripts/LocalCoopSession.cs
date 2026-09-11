@@ -20,7 +20,7 @@ namespace ThrownTogether
         public string ConnectionHelp => PlayerOneDisconnected ? "P1 disconnected: reconnect your pad or press A on an unused pad. Keyboard still works." :
             PlayerTwo!=null && (PlayerTwoPad==null || !PlayerTwoPad.added) ? "P2 disconnected: chef and food retained. Reconnect your pad or press A on an unused pad." : "";
         private static string DeviceName(Gamepad pad) => pad.displayName.Length>36 ? pad.displayName.Substring(0,36)+"…" : pad.displayName;
-        public string DeviceSummary => "P1: "+(PlayerOnePad!=null && PlayerOnePad.added ? DeviceName(PlayerOnePad)+" + keyboard":"Keyboard (no assigned pad)")+
+        public string DeviceSummary => "P1: "+(PlayerOnePad!=null && PlayerOnePad.added ? DeviceName(PlayerOnePad)+" + keyboard":"Auto — keyboard available; first controller becomes P1")+
             "\nP2: "+(PlayerTwo==null ? "Not joined — resume and press A on an unused pad" : PlayerTwoPad!=null && PlayerTwoPad.added ? DeviceName(PlayerTwoPad) : "Disconnected — item retained")+"\n"+LastEvent;
         public void UseKeyboardPlayerOne()
         {
@@ -49,6 +49,7 @@ namespace ThrownTogether
         public bool Join(Gamepad pad)
         {
             if(RestaurantMenu.GameplayBlocked || pad==null || !pad.added || pad==PlayerOnePad || (PlayerTwoPad!=null && PlayerTwoPad.added)) return false;
+            if(!KeyboardPlayerOne && (PlayerOnePad==null || !PlayerOnePad.added)){BindPlayerOne(pad);LastEvent="Controller assigned to P1";return false;}
             bool reconnect=PlayerTwo!=null;
             if(PlayerTwo==null)
             {
@@ -83,6 +84,7 @@ namespace ThrownTogether
                 if(p2Connected!=connected) LastEvent=connected ? "P2 reconnected" : "P2 disconnected — chef and held item retained";
                 p2Connected=connected;
             }
+            RefreshPlayerOneAssignment();
             if(RestaurantMenu.GameplayBlocked || !WebInputFocus.HasFocus) return;
             foreach(var pad in Gamepad.all)
             {

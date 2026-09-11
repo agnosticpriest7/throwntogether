@@ -5,6 +5,15 @@ namespace ThrownTogether.Tests
     public sealed class RestaurantAccountTests
     {
         sealed class Memory:ISettingsStorage {public string json="";public bool fail;public string Read()=>json;public void Write(string value){if(fail)throw new Exception("Storage unavailable");json=value;}}
+        [Test] public void ArrangementFeeIsOncePerPaidBreakAtomicAndFreeBeforeDayOne()
+        {
+            var store=new Memory();var a=new RestaurantAccount(store);Assert.That(a.ArrangementFee,Is.Zero);var records=new[]{new FurniturePlacement{id="base:3",slot=4}};
+            int day=a.StartDay();a.Settle(day,100,0);Assert.That(a.ArrangementFee,Is.EqualTo(10));
+            store.fail=true;Assert.That(a.SetFurniture(0,records,true),Is.False);Assert.That(a.Data.cash,Is.EqualTo(100));Assert.That(a.ArrangementFee,Is.EqualTo(10));
+            store.fail=false;Assert.That(a.SetFurniture(0,records,true),Is.True);Assert.That(a.Data.cash,Is.EqualTo(90));
+            a=new RestaurantAccount(store);Assert.That(a.ArrangementFee,Is.Zero);a.SetFurniture(0,records,true);Assert.That(a.Data.cash,Is.EqualTo(90));
+            day=a.StartDay();a.Settle(day,0,0);Assert.That(a.ArrangementFee,Is.EqualTo(10));
+        }
         [Test] public void CareerResetClearsProgressAndFailedResetPreservesIt()
         {
             var storage=new Memory();var account=new RestaurantAccount(storage);int day=account.StartDay();account.Settle(day,200,0);account.Buy("grill",50);

@@ -90,7 +90,7 @@ namespace ThrownTogether.Tests
         public static void SelectDefault(ChefController chef,Interactable station)
         {
             if(station is SourceStation source && source.storage!=null && chef.GetComponent<ChefInput>().Storage!=null)
-                Assert.That(chef.GetComponent<ChefInput>().ChooseIngredient(0),Is.True);
+                Assert.That(chef.GetComponent<ChefInput>().ChooseIngredient(System.Array.FindIndex(source.Ingredients,x=>x==source.ingredient)),Is.True);
         }
         public static void Take(ChefController chef,IngredientDefinition ingredient)
         {

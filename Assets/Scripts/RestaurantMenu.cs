@@ -82,7 +82,7 @@ namespace ThrownTogether
         public void ShowLevels(bool practice) { practiceLevel=practice; SetPage("Levels"); }
         private void LaunchLevel(int index)
         {
-            pendingKitchen=index; wardrobeBeforeLaunch=true; ShowWardrobe();
+            pendingKitchen=index; wardrobeBeforeLaunch=false; FinishLaunch();
         }
         private void FinishLaunch()
         {
@@ -122,6 +122,7 @@ namespace ThrownTogether
         }
         public void NavigateBack()
         {
+            if(Page=="Employees"){SetPage("Restaurant");return;}
             if(Page=="Reset career"){SetPage(resetReturnPage);return;}
             if(Page=="Face" || Page=="Accessories") {SetPage("Your chef");return;}
             if(Page=="Your chef") {SetPage(wardrobeBeforeLaunch ? "Levels":"Main");return;}
@@ -218,17 +219,24 @@ namespace ThrownTogether
                 }
                 Add("Back",()=>SetPage(IsFrontEnd?"Title":"Restaurant"));return;
             }
+            if(Page=="Employees")
+            {
+                var config=Resources.Load<DayServiceDefinition>("ServiceDay");var account=RestaurantAccounts.Current;
+                foreach(var role in new[]{config.serverRole,config.dishwasherRole,config.busserRole})
+                {var employee=role;if(employee!=null)Add(employee.displayName+(account.Owns(employee.id)?" — hired":" — $"+employee.hireCost),()=>Buy(employee.id,employee.hireCost));}
+                Add("Back",()=>SetPage("Restaurant"));return;
+            }
             if(Page=="Restaurant")
             {
                 var day=hud.shift?.Day;var config=Resources.Load<DayServiceDefinition>("ServiceDay");var account=RestaurantAccounts.Current;
                 Add("Next day — bank $"+account.Data.cash,()=>{if(day!=null && day.AwaitingMenu)ChooseDailyMenu(()=>{if(day.StartService())Close();});else if(day!=null && !day.Closed)message="Finish this day before starting the next.";else if(day!=null && !day.Paid)message="Save today's earnings before continuing. Use Retry below.";else {var presentation=GetComponent<DayPresentation>(); Action start=()=>{SessionOptions.ShiftOrders=0;Close();Load("RestaurantShift");}; ChooseDailyMenu(()=>{if(presentation==null || day==null)start();else presentation.BeginNextDay(start);});}});
                 Add("Arrange kitchen",()=>OpenKitchenLayout());
+                Add("Employees",()=>SetPage("Employees"));
                 if(config!=null)
                 {
                     foreach(var offer in config.purchases)
                     {var purchase=offer;Add(purchase.displayName+(account.Owns(purchase.id)?" — owned":" — $"+purchase.cost),()=>Buy(purchase.id,purchase.cost));}
-                    foreach(var employee in new[]{config.serverRole,config.dishwasherRole,config.busserRole})
-                    {var role=employee;if(role!=null)Add(role.displayName+(account.Owns(role.id)?" — hired":" — $"+role.hireCost),()=>Buy(role.id,role.hireCost));}
+
                 }
                 Add("Reset career",RequestCareerReset);
                 if(day!=null && day.Closed && !day.Paid)Add("Retry saving today's earnings",()=>message=day.RetryPayment()?"Earnings saved.":account.Problem);
@@ -331,7 +339,11 @@ namespace ThrownTogether
         }
         private void Confirm(string text,Action action) { if(!IsOpen) Open(); pending=action; confirmation=text; SetPage("Confirm"); }
         public void ActivateSelection() { if(StartupSequence.BlocksMenu)return; if(GetComponent<DayPresentation>()?.Transitioning==true)return; if(!rows[Mathf.Clamp(Selection,0,rows.Count-1)].enabled) return; rows[Mathf.Clamp(Selection,0,rows.Count-1)].select(); hud.audioFeedback?.Click(); if(IsOpen) BuildRows(); }
-        private void Update() => Tick(WebInputFocus.HasFocus);
+        private void Update()
+        {
+            foreach(var pad in Gamepad.all)if(pad.buttonSouth.wasPressedThisFrame)WebInputFocus.FocusFromGamepad();
+            Tick(WebInputFocus.HasFocus);
+        }
         public void Tick(bool focused)
         {
             if(StartupSequence.BlocksMenu || !focused || GetComponent<DayPresentation>()?.Transitioning==true) return;
@@ -345,7 +357,7 @@ namespace ThrownTogether
                 var movement=navigate.ReadValue<Vector2>();
                 if(movement.sqrMagnitude<.25f)navigationHeld=false;
                 else if(!navigationHeld || Time.unscaledTime>=nextNavigation){furniture.Navigate(Mathf.Abs(movement.x)>Mathf.Abs(movement.y)?new Vector2(Mathf.Sign(movement.x),0):new Vector2(0,Mathf.Sign(movement.y)));nextNavigation=Time.unscaledTime+(navigationHeld ? .16f:.35f);navigationHeld=true;}
-                if(accept.WasPressedThisFrame())furniture.Confirm();return;
+                if(accept.WasPressedThisFrame()){furniture.Confirm();if(!furniture.Editing)SetPage("Restaurant");}return;
             }
             if(toggle.WasPressedThisFrame()) { if(IsOpen) {if(IsFrontEnd) NavigateBack(); else Close();} else Open(); return; }
             if(!IsOpen) return;
@@ -396,6 +408,7 @@ namespace ThrownTogether
                 GUI.enabled=rows[i].enabled && !StartupSequence.BlocksMenu && (presentation==null || !presentation.Transitioning);
                 GUI.backgroundColor=i==Selection ? new Color(.2f,.8f,.6f):Color.gray;
                 var rowRect=Page=="Recipes" ? new Rect(35,160+(i-first)*55,345,48):WardrobePage ? new Rect(65,145+(i-first)*47,670,42):(Page=="Restaurant" || Page=="Today's Menu") ? new Rect(260,140+(i-first)*42,760,37):new Rect(260,145+(i-first)*47,760,42);
+                GUI.color=new Color(.025f,.035f,.05f,.94f*opacity);GUI.DrawTexture(rowRect,Texture2D.whiteTexture);GUI.color=new Color(1,1,1,opacity);
                 if(GUI.Button(rowRect,(i==Selection ? ">  ":"    ")+rows[i].label,style)) { Selection=i; ActivateSelection(); break; }
             }
             GUI.enabled=true; GUI.backgroundColor=Color.white;

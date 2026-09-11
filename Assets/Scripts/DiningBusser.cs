@@ -6,8 +6,8 @@ namespace ThrownTogether
     {
         RestaurantDay day;DishReturnStation rack;DiningWalker walker;CarrySlot hands;DiningTable target;bool returning;
         Vector3 Home=>day.Settings.busserIdle;
-        Vector3 DropOff=>new Vector3(day.Settings.diningAisleX,0,rack.transform.position.z);
-        void Travel(Vector3 point)=>walker.Go(day.DiningRoute(walker.transform.position,point));
+        Vector3 DropOff=>KitchenStaffRoute.Approach(rack.transform)??Home;
+        void Travel(Vector3 point){var path=returning?KitchenStaffRoute.ToStation(walker.transform.position,rack.transform):KitchenStaffRoute.ToPoint(walker.transform.position,point);if(path!=null)walker.Go(path);}
         public void Initialize(RestaurantDay owner)
         {
             day=owner;rack=FindObjectsByType<DishReturnStation>().First(s=>s.gameObject.scene==gameObject.scene);
