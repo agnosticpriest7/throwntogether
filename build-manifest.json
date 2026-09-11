@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "sourceCommit": "0d05e228ca9e913462a9693e4085eda2c2614fb5",
-  "totalBytes": 62081611,
+  "sourceCommit": "b2b6a48c0a89a0e313f936b52e623dcb63d02ff8",
+  "totalBytes": 61137900,
   "files": [
     {
       "path": ".nojekyll",
@@ -11,7 +11,7 @@
     {
       "path": "build-info.json",
       "bytes": 340,
-      "sha256": "47c42ebc2a1d96b0bfde7392b41da3902eb2643080f24da30c29ae9959475115"
+      "sha256": "2b8b03c298ceba7efb8d575a2167d55a6d6abe05785b26c2b087c411c96b4898"
     },
     {
       "path": "Build/2aab7cdc42a3a29ffedebe5d7d087285.framework.js",
@@ -19,24 +19,24 @@
       "sha256": "cfcc917dfc4ff98d7a40e421d8432a28eb2619f6f9f1a12cbd38d986df515a41"
     },
     {
-      "path": "Build/60b0ce1f5052d2c544c37e5fbab10708.data",
-      "bytes": 18184715,
-      "sha256": "7dd454d5850b88aaa4b0be12113cc7e08d348231e4445f2844811efed7fdc21a"
+      "path": "Build/66c93655400cca02a978c442839321b5.data",
+      "bytes": 17219227,
+      "sha256": "990ae293df6069559179102597cb9f1bc9c64de929d26455398506dc8dcc1daf"
     },
     {
-      "path": "Build/87f1dbca0ed47eb9ef97c816a7e6320a.loader.js",
+      "path": "Build/8edca7c4d1049f7e44ec4fa370a72ec9.wasm",
+      "bytes": 35361205,
+      "sha256": "a9c067ef4e80c10abfe42b916cf4add34805f4d2d70c29f122fa3a1d645c9e47"
+    },
+    {
+      "path": "Build/bcb803abae502f4ba990c09413f63d7e.loader.js",
       "bytes": 20263,
-      "sha256": "c59aad76815a6f72e6f1172f3b4b090ad2cc2d0d269f5a4371adcd9cbc660e42"
-    },
-    {
-      "path": "Build/88eeccec4bf795d5a0d0d7c3926d20cb.wasm",
-      "bytes": 35339428,
-      "sha256": "fea256936e0f0bd864336327b1d50c345f82584ecbae7030f9e7442821eaa552"
+      "sha256": "8af948a912eeae28919c41a1e96718ad847e7c96db71c0c984e4921b3301f45e"
     },
     {
       "path": "index.html",
       "bytes": 3179,
-      "sha256": "022d569f6425197413db97dd2a309809fa5fe743be95cef9c4b9f4d41ca8674b"
+      "sha256": "b3d7ab98add9d826cfda52de72e68e8fbd8d303634f3d4ff8ca995bb7f6eeb73"
     },
     {
       "path": "StreamingAssets/Music/first-service.ogg",
