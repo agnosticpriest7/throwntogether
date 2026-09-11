@@ -309,6 +309,7 @@ MonoBehaviour:
   m_Name:
   m_EditorClassIdentifier: ThrownTogether.Runtime::ThrownTogether.StartupSequence
   studioIntro: 1
+  publisherLogo: {fileID: 2800000, guid: 2596108815b544bbb743a0ff841e5289, type: 3}
   artwork: {fileID: 1522445224}
   canvas: {fileID: 1438679714}
 --- !u!114 &1438679713

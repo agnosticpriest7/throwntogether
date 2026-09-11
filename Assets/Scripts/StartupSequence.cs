@@ -2,6 +2,7 @@ using System.Collections;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.SceneManagement;
+using UnityEngine.UI;
 
 namespace ThrownTogether
 {
@@ -10,7 +11,9 @@ namespace ThrownTogether
         public bool studioIntro;
         public CanvasGroup artwork;
         public Canvas canvas;
-        public const float FadeIn=.5f, Hold=1.5f, FadeOut=.75f;
+        public Texture2D publisherLogo;
+        public bool ShowingPublisher { get; private set; }
+        public const float FadeIn=.5f, Hold=3f, FadeOut=.75f;
         public float Elapsed { get; private set; }
         public bool Leaving { get; private set; }
         private static StartupSequence active;
@@ -40,7 +43,7 @@ namespace ThrownTogether
             if(released && start.WasPressedThisFrame() && WebInputFocus.HasFocus)RequestStart();
             Advance(Time.unscaledDeltaTime);
             if(studioIntro && !Leaving && Elapsed>=FadeIn+Hold)RequestStart();
-            if(Leaving && Elapsed>=FadeOut){loading=true;StartCoroutine(LoadNext());}
+            if(Leaving && Elapsed>=FadeOut && !TryShowPublisher()){loading=true;StartCoroutine(LoadNext());}
         }
         public void Advance(float seconds)
         {
@@ -52,6 +55,18 @@ namespace ThrownTogether
         {
             if(Leaving || loading || revealing)return false;
             exitFrom=artwork.alpha;Elapsed=0;Leaving=true;return true;
+        }
+        // Switch artwork only at black, reusing the same lightweight canvas and fade.
+        public bool TryShowPublisher()
+        {
+            if(!studioIntro || ShowingPublisher || publisherLogo==null || !Leaving || Elapsed<FadeOut)return false;
+            var image=artwork.GetComponentInChildren<RawImage>();
+            if(image==null)return false;
+            image.texture=publisherLogo;
+            var fit=image.GetComponent<AspectRatioFitter>();
+            if(fit!=null)fit.aspectRatio=(float)publisherLogo.width/publisherLogo.height;
+            ShowingPublisher=true;Leaving=false;Elapsed=0;artwork.alpha=0;released=false;
+            return true;
         }
         private IEnumerator LoadNext()
         {
