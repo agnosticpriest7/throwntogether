@@ -11,9 +11,21 @@ namespace ThrownTogether.Tests
                 var r=OrderBubbleLayout.ForSeat(p,scale);Assert.That(r.xMin,Is.GreaterThanOrEqualTo(12));Assert.That(r.xMax,Is.LessThanOrEqualTo(1268));Assert.That(r.yMin,Is.GreaterThanOrEqualTo(76));Assert.That(r.yMax,Is.LessThanOrEqualTo(612));
             }
         }
-        [Test] public void OrderStatesDescribePhasesWithoutInventingPatience()
+        [Test] public void ServedOrdersHideImmediatelyAndNewOrdersReappear()
         {
-            Assert.That(OrderBubbleLayout.State(OrderPhase.Waiting),Is.EqualTo("TO COOK"));Assert.That(OrderBubbleLayout.State(OrderPhase.Delivering),Is.EqualTo("ON THE WAY"));Assert.That(OrderBubbleLayout.State(OrderPhase.Eating),Is.EqualTo("ENJOYING"));Assert.That(OrderBubbleLayout.State(OrderPhase.Complete),Is.EqualTo("SERVED"));
+            var root=new GameObject("Order");var dish=new GameObject("Dish");var recipe=ScriptableObject.CreateInstance<RecipeDefinition>();
+            try
+            {
+                var ticket=root.AddComponent<CustomerOrder>();ticket.tableSlot=root.AddComponent<CarrySlot>();ticket.ResetOrder(recipe);
+                Assert.That(OrderBubbleLayout.Visible(ticket),Is.True);
+                ticket.Receive(dish.AddComponent<Carryable>());
+                Assert.That(ticket.Phase,Is.EqualTo(OrderPhase.Eating));Assert.That(OrderBubbleLayout.Visible(ticket),Is.False);
+                ticket.Advance(3);Assert.That(OrderBubbleLayout.Visible(ticket),Is.False);
+                ticket.ResetOrder(recipe);Assert.That(OrderBubbleLayout.Visible(ticket),Is.True);
+                ticket.ResetOrder(null);Assert.That(OrderBubbleLayout.Visible(ticket),Is.False);
+                var size=OrderBubbleLayout.ForSeat(Vector2.zero,1).size;Assert.That(size.x*size.y,Is.LessThan(206*109*.25f));
+            }
+            finally{Object.DestroyImmediate(dish);Object.DestroyImmediate(root);Object.DestroyImmediate(recipe);}
         }
     }
 }

@@ -39,6 +39,25 @@ namespace ThrownTogether.Tests
             SceneManager.SetActiveScene(original);foreach(var g in suspended)if(g!=null)g.SetActive(true);
             Time.timeScale=1;SessionOptions.ShiftOrders=6;SessionOptions.Kitchen=0;RestaurantAccounts.ResetCache();
         }
+        [UnityTest] public IEnumerator CareerResetDefaultsToCancelAndWriteFailureKeepsMenuOpen()
+        {
+            var account=RestaurantAccounts.Current;int funded=account.StartDay();account.Settle(funded,100,0);
+            var menu=hud.GetComponent<RestaurantMenu>();menu.OpenRestaurant();menu.RequestCareerReset();
+            Assert.That(menu.Page,Is.EqualTo("Reset career"));Assert.That(menu.Selection,Is.Zero);
+            menu.ActivateSelection();Assert.That(menu.Page,Is.EqualTo("Restaurant"));Assert.That(account.Data.cash,Is.EqualTo(100));
+            menu.RequestCareerReset();var pad=InputSystem.AddDevice<Gamepad>();
+            var background=InputSystem.settings.backgroundBehavior;var editor=InputSystem.settings.editorInputBehaviorInPlayMode;
+            InputSystem.settings.backgroundBehavior=InputSettings.BackgroundBehavior.IgnoreFocus;InputSystem.settings.editorInputBehaviorInPlayMode=InputSettings.EditorInputBehaviorInPlayMode.AllDeviceInputAlwaysGoesToGameView;
+            try
+            {
+                void Send(GamepadState state){InputSystem.QueueStateEvent(pad,state);InputSystem.Update();menu.Tick(true);}
+                memory.fail=true;Send(new GamepadState());Send(new GamepadState().WithButton(GamepadButton.DpadDown));Send(new GamepadState());Send(new GamepadState().WithButton(GamepadButton.South));
+                Assert.That(menu.Page,Is.EqualTo("Reset career"));Assert.That(menu.IsOpen,Is.True);Assert.That(account.Data.cash,Is.EqualTo(100));
+                Send(new GamepadState());Send(new GamepadState().WithButton(GamepadButton.East));Assert.That(menu.Page,Is.EqualTo("Restaurant"));
+            }
+            finally{InputSystem.RemoveDevice(pad);InputSystem.settings.backgroundBehavior=background;InputSystem.settings.editorInputBehaviorInPlayMode=editor;memory.fail=false;}
+            yield return null;
+        }
         [UnityTest] public IEnumerator PurchasedEquipmentCanBeArrangedAndControllerCanSaveWithoutMouse()
         {
             var account=RestaurantAccounts.Current;int funded=account.StartDay();Assert.That(account.Settle(funded,1000,0),Is.True);

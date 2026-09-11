@@ -41,6 +41,13 @@ namespace ThrownTogether
             try{storage.Write(JsonUtility.ToJson(next));Data=next;Problem="";return true;}
             catch(Exception){Problem="Could not save. No money or purchase was changed. Retry when storage is available.";return false;}
         }
+        // Invoked only after the player's explicit reset confirmation; settings use separate storage.
+        public bool ResetCareer()
+        {
+            var fresh=new RestaurantSave();
+            try{storage.Write(JsonUtility.ToJson(fresh));Data=fresh;Writable=true;Problem="";return true;}
+            catch(Exception){Problem="Career could not be reset. Existing progress is unchanged. Please retry.";return false;}
+        }
         public bool SetMenu(string[] ids)
         {
             if(ids==null || System.Array.Exists(ids,string.IsNullOrWhiteSpace))return false;

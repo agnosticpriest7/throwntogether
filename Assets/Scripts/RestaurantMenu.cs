@@ -41,12 +41,15 @@ namespace ThrownTogether
         private ChefWardrobePreview wardrobePreview;
         private bool WardrobePage => Page=="Your chef" || Page=="Face" || Page=="Accessories";
         private GUIStyle buttonStyle, textStyle;
+        private Texture2D mainMenuBackground;
+        private string resetReturnPage;
         private readonly List<Row> rows=new List<Row>();
         private sealed class Row { public string label; public Action select; public Action<int> adjust; public bool enabled=true; }
         private void Awake()
         {
             hud=GetComponent<RestaurantHud>(); Instance=this;
             recipeBook=Resources.Load<RecipeBook>("RecipeBook");
+            mainMenuBackground=Resources.Load<Texture2D>("MainMenuBackground");
             controls=new InputActionMap("Restaurant menu");
             rotateLayout=controls.AddAction("Rotate furniture",InputActionType.Button);rotateLayout.AddBinding("<Gamepad>/buttonWest");rotateLayout.AddBinding("<Keyboard>/r");
             cycleFurniture=controls.AddAction("Choose furniture",InputActionType.Button);cycleFurniture.AddBinding("<Gamepad>/rightShoulder");cycleFurniture.AddBinding("<Keyboard>/tab");
@@ -119,6 +122,7 @@ namespace ThrownTogether
         }
         public void NavigateBack()
         {
+            if(Page=="Reset career"){SetPage(resetReturnPage);return;}
             if(Page=="Face" || Page=="Accessories") {SetPage("Your chef");return;}
             if(Page=="Your chef") {SetPage(wardrobeBeforeLaunch ? "Levels":"Main");return;}
             if(IsFrontEnd) SetPage("Title");
@@ -140,6 +144,15 @@ namespace ThrownTogether
         {
             rows.Clear();
             if(Page=="Kitchen layout")return;
+            if(Page=="Reset career")
+            {
+                Add("Cancel — keep career",()=>SetPage(resetReturnPage));
+                Add("Reset career — erase progress",()=>{
+                    if(!RestaurantAccounts.Current.ResetCareer()){message=RestaurantAccounts.Current.Problem;return;}
+                    startMenuDay=null;SessionOptions.ShiftOrders=0;SessionOptions.Kitchen=0;
+                    ShowFrontEndOnNextLoad();Close();Load("RestaurantDevelopment");
+                });return;
+            }
             if(Page=="Title")
             {
                 AddUnavailable("Tutorial");
@@ -187,6 +200,7 @@ namespace ThrownTogether
                 var layouts=hud.GetComponent<KitchenLayout>().choices;
                 for(int i=0;i<layouts.Length;i++) {int index=i;Add(layouts[i].displayName,()=>LaunchLevel(index));}
                 if(!practiceLevel) Add("Shift length: "+SessionOptions.ShiftLabel,()=>CycleLength(1),CycleLength);
+                if(!practiceLevel && SessionOptions.ShiftOrders==0)Add("Reset career",RequestCareerReset);
                 Add("Back",()=>SetPage("Title"));return;
             }
             if(Page=="Settings")
@@ -216,6 +230,7 @@ namespace ThrownTogether
                     foreach(var employee in new[]{config.serverRole,config.dishwasherRole,config.busserRole})
                     {var role=employee;if(role!=null)Add(role.displayName+(account.Owns(role.id)?" — hired":" — $"+role.hireCost),()=>Buy(role.id,role.hireCost));}
                 }
+                Add("Reset career",RequestCareerReset);
                 if(day!=null && day.Closed && !day.Paid)Add("Retry saving today's earnings",()=>message=day.RetryPayment()?"Earnings saved.":account.Problem);
                 Add("Back",()=>SetPage("Main"));return;
             }
@@ -299,6 +314,7 @@ namespace ThrownTogether
             Add(name+": "+Mathf.RoundToInt(read()*100)+"%   ← / →",()=>change(1),change);
         }
         private void Save() { message=hud.settings.Save() ? "Settings saved." : "Settings could not be saved; existing saved data was preserved."; }
+        public void RequestCareerReset(){resetReturnPage=Page;SetPage("Reset career");}
         public void RequestRestart() => Confirm("Restart this mode? Unpaid earnings and current food/orders will be lost. Saved money and purchases stay.",()=>hud.chef.GetComponent<ChefInput>().RestartSlice());
         public bool OpenKitchenLayout()
         {
@@ -363,11 +379,16 @@ namespace ThrownTogether
             GUI.depth=-100;
             var matrix=GUI.matrix; GUI.matrix=Matrix4x4.Scale(new Vector3(Screen.width/1280f,Screen.height/720f,1));
             GUI.color=new Color(0,0,0,(presentation!=null && presentation.NightMenu ? .22f:1)*opacity); GUI.DrawTexture(new Rect(0,0,1280,720),Texture2D.whiteTexture); GUI.color=new Color(1,1,1,opacity);
+            if(IsFrontEnd && mainMenuBackground!=null)
+            {
+                GUI.DrawTexture(new Rect(0,0,1280,720),mainMenuBackground,ScaleMode.ScaleAndCrop);
+                GUI.color=new Color(0,0,0,.57f*opacity);GUI.DrawTexture(new Rect(0,0,1280,720),Texture2D.whiteTexture);GUI.color=new Color(1,1,1,opacity);
+            }
             if(buttonStyle==null) { buttonStyle=new GUIStyle(GUI.skin.button) {alignment=TextAnchor.MiddleLeft}; textStyle=new GUIStyle(GUI.skin.label) {fontSize=22,wordWrap=true,alignment=TextAnchor.MiddleCenter}; }
             var style=buttonStyle; style.fontSize=Mathf.RoundToInt(21*Display.TextScale); var text=textStyle;
             text.normal.textColor=Color.white; style.normal.textColor=Color.white; style.hover.textColor=Color.white; style.active.textColor=Color.white;
             GUI.Label(new Rect(260,25,760,48),Page=="Title" ? "THROWN TOGETHER" : Page=="Main" ? "PAUSED" : Page=="Levels" ? (practiceLevel ? "CHOOSE A PRACTICE KITCHEN":"CHOOSE YOUR LEVEL") : Page=="Recipes" ? "RECIPE BOOK" : Page.ToUpperInvariant(),text);
-            GUI.Label(Page=="Restaurant"?new Rect(180,73,920,60):new Rect(260,73,760,60),Page=="Confirm" ? confirmation : Page=="Today's Menu" ? DailyMenu.Resolve(RestaurantAccounts.Current).Length+" selected • Minimum 3 • A: toggle dish\nServe 4 different menu dishes: +5% meal revenue (max $15)" : Page=="Restaurant" && hud.shift?.Day?.Closed==true ? "10:00 PM — Closed • "+hud.shift.Day.Served+" meals • Earned $"+hud.shift.Day.NetIncome+" (speed $"+hud.shift.Day.Bonuses+", variety $"+hud.shift.Day.VarietyBonus+", waste $"+hud.shift.Day.WasteFees+")\nD-pad / stick: navigate • A: select • Y / Escape: view restaurant" : IsFrontEnd ? "D-pad / stick: navigate • A: select • B: back\nChoose a kitchen and start cooking." : "Paused • D-pad / stick: navigate • A: select • B: back\nY / Escape: close • Xbox Menu belongs to Edge",text);
+            GUI.Label(Page=="Restaurant"?new Rect(180,73,920,60):new Rect(260,73,760,60),Page=="Reset career" ? "Erase all career days, money, purchases, hires, menu choices and saved kitchen layouts? Settings and chef appearance stay." : Page=="Confirm" ? confirmation : Page=="Today's Menu" ? DailyMenu.Resolve(RestaurantAccounts.Current).Length+" selected • Minimum 3 • A: toggle dish\nServe 4 different menu dishes: +5% meal revenue (max $15)" : Page=="Restaurant" && hud.shift?.Day?.Closed==true ? "10:00 PM — Closed • "+hud.shift.Day.Served+" meals • Earned $"+hud.shift.Day.NetIncome+" (speed $"+hud.shift.Day.Bonuses+", variety $"+hud.shift.Day.VarietyBonus+", waste $"+hud.shift.Day.WasteFees+")\nD-pad / stick: navigate • A: select • Y / Escape: view restaurant" : IsFrontEnd ? "D-pad / stick: navigate • A: select • B: back\nChoose a kitchen and start cooking." : "Paused • D-pad / stick: navigate • A: select • B: back\nY / Escape: close • Xbox Menu belongs to Edge",text);
             int visible=Page=="Recipes"?6:(Page=="Restaurant" || Page=="Today's Menu")?8:9;
             int first=rows.Count>visible?(Selection/visible)*visible:0;
             for(int i=first;i<Mathf.Min(rows.Count,first+visible);i++)

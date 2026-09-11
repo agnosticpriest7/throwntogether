@@ -5,6 +5,15 @@ namespace ThrownTogether.Tests
     public sealed class RestaurantAccountTests
     {
         sealed class Memory:ISettingsStorage {public string json="";public bool fail;public string Read()=>json;public void Write(string value){if(fail)throw new Exception("Storage unavailable");json=value;}}
+        [Test] public void CareerResetClearsProgressAndFailedResetPreservesIt()
+        {
+            var storage=new Memory();var account=new RestaurantAccount(storage);int day=account.StartDay();account.Settle(day,200,0);account.Buy("grill",50);
+            account.SetMenu(new[]{"fries"});account.SetFurniture(0,new[]{new FurniturePlacement{id="base:3",slot=2}});
+            string before=storage.json;storage.fail=true;Assert.That(account.ResetCareer(),Is.False);Assert.That(storage.json,Is.EqualTo(before));Assert.That(account.Data.cash,Is.EqualTo(150));
+            storage.fail=false;Assert.That(account.ResetCareer(),Is.True);var loaded=new RestaurantAccount(storage);
+            Assert.That(loaded.Data.nextDay,Is.EqualTo(1));Assert.That(loaded.Data.cash,Is.Zero);Assert.That(loaded.Data.completedDays,Is.Zero);
+            Assert.That(loaded.Data.purchases,Is.Empty);Assert.That(loaded.Data.selectedMenu,Is.Empty);Assert.That(loaded.Data.furniture,Is.Empty);
+        }
         [Test] public void FurnitureIsAtomicPerKitchenAndCannotChangeDuringService()
         {
             var storage=new Memory();var account=new RestaurantAccount(storage);
