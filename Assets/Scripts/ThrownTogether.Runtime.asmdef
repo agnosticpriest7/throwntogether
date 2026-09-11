@@ -1,1 +1,1 @@
-{"name":"ThrownTogether.Runtime","rootNamespace":"ThrownTogether","references":["Unity.InputSystem"]}
+{"name": "ThrownTogether.Runtime", "rootNamespace": "ThrownTogether", "references": ["Unity.InputSystem", "Unity.ugui"]}

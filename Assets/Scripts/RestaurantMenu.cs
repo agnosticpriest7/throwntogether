@@ -15,9 +15,11 @@ namespace ThrownTogether
         public static DisplaySettingsData Display => Instance?.hud?.settings?.Repository?.Display ?? defaults;
         private static readonly DisplaySettingsData defaults=new DisplaySettingsData();
         private static bool booted;
+        private static bool forceFrontEnd;
+        public static void ShowFrontEndOnNextLoad(){forceFrontEnd=true;gateAfterLoad=true;}
         private static bool gateAfterLoad;
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-        private static void ResetStatics() { Instance=null; booted=false; gateAfterLoad=false; }
+        private static void ResetStatics() { Instance=null; booted=false; gateAfterLoad=false; forceFrontEnd=false; }
         public bool IsOpen { get; private set; }
         public bool IsFrontEnd { get; private set; }
         public int Selection { get; private set; }
@@ -53,7 +55,7 @@ namespace ThrownTogether
         }
         private void Start()
         {
-            if(!booted && !Application.isEditor) OpenFrontEnd(); booted=true;
+            if(forceFrontEnd || (!booted && !Application.isEditor)) OpenFrontEnd(); booted=true; forceFrontEnd=false;
             if(gateAfterLoad)
             {
                 blockThroughFrame=Time.frameCount+1;
@@ -275,11 +277,11 @@ namespace ThrownTogether
             message=account.Buy(id,cost)?"Purchased — available next day.":!string.IsNullOrEmpty(account.Problem)?account.Problem:"Already owned, insufficient cash, or today's earnings are not yet saved.";
         }
         private void Confirm(string text,Action action) { if(!IsOpen) Open(); pending=action; confirmation=text; SetPage("Confirm"); }
-        public void ActivateSelection() { if(GetComponent<DayPresentation>()?.Transitioning==true)return; if(!rows[Mathf.Clamp(Selection,0,rows.Count-1)].enabled) return; rows[Mathf.Clamp(Selection,0,rows.Count-1)].select(); hud.audioFeedback?.Click(); if(IsOpen) BuildRows(); }
+        public void ActivateSelection() { if(StartupSequence.BlocksMenu)return; if(GetComponent<DayPresentation>()?.Transitioning==true)return; if(!rows[Mathf.Clamp(Selection,0,rows.Count-1)].enabled) return; rows[Mathf.Clamp(Selection,0,rows.Count-1)].select(); hud.audioFeedback?.Click(); if(IsOpen) BuildRows(); }
         private void Update() => Tick(WebInputFocus.HasFocus);
         public void Tick(bool focused)
         {
-            if(!focused || GetComponent<DayPresentation>()?.Transitioning==true) return;
+            if(StartupSequence.BlocksMenu || !focused || GetComponent<DayPresentation>()?.Transitioning==true) return;
             if(toggle.WasPressedThisFrame()) { if(IsOpen) {if(IsFrontEnd) NavigateBack(); else Close();} else Open(); return; }
             if(!IsOpen) return;
             if(back.WasPressedThisFrame()) { NavigateBack(); return; }
@@ -318,7 +320,7 @@ namespace ThrownTogether
             GUI.Label(new Rect(260,73,760,60),Page=="Confirm" ? confirmation : Page=="Restaurant" && hud.shift?.Day?.Closed==true ? "10:00 PM — Closed • "+hud.shift.Day.Served+" meals • Earned $"+hud.shift.Day.NetIncome+" (bonus $"+hud.shift.Day.Bonuses+", waste $"+hud.shift.Day.WasteFees+")\nD-pad / stick: navigate • A: select • Y / Escape: view restaurant" : IsFrontEnd ? "D-pad / stick: navigate • A: select • B: back\nChoose a kitchen and start cooking." : "Paused • D-pad / stick: navigate • A: select • B: back\nY / Escape: close • Xbox Menu belongs to Edge",text);
             for(int i=0;i<rows.Count;i++)
             {
-                GUI.enabled=rows[i].enabled && (presentation==null || !presentation.Transitioning);
+                GUI.enabled=rows[i].enabled && !StartupSequence.BlocksMenu && (presentation==null || !presentation.Transitioning);
                 GUI.backgroundColor=i==Selection ? new Color(.2f,.8f,.6f):Color.gray;
                 var rowRect=Page=="Recipes" ? new Rect(35,160+i*55,345,48):WardrobePage ? new Rect(65,145+i*47,670,42):Page=="Restaurant" ? new Rect(260,140+i*42,760,37):new Rect(260,145+i*47,760,42);
                 if(GUI.Button(rowRect,(i==Selection ? ">  ":"    ")+rows[i].label,style)) { Selection=i; ActivateSelection(); break; }
