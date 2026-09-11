@@ -56,7 +56,7 @@ namespace ThrownTogether
             {
                 Panel(new Rect(340,12,690,48));
                 GUI.Label(new Rect(350,15,670,42),"Day "+day.DayNumber+" | Bank $"+RestaurantAccounts.Current.Data.cash+" | Today $"+(day.BaseIncome+day.Bonuses)+" | Outside "+day.WaitingOutside+" ("+Mathf.CeilToInt(Mathf.Max(0,day.Settings.outsidePatience-day.OldestWait))+"s) | Left "+day.LostCustomers,small);
-                if(day.Elapsed-day.LastLostAt<3){Panel(new Rect(390,66,500,28));GUI.Label(new Rect(395,66,490,28),"Customer left unhappy — waited outside too long",small);}
+                if(day.Elapsed-day.LastLostAt<3){Panel(new Rect(390,66,500,28));GUI.Label(new Rect(395,66,490,28),"Customer left unhappy — waited too long",small);}
             }
             if(GUI.Button(new Rect(1060,18,182,39),"Y / Esc: Menu")) menu.Open();
             if(shift==null) DrawOrderBubble(order,1);
