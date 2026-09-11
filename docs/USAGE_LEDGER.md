@@ -85,3 +85,7 @@ Implemented the explicitly requested gameplay batch using existing assets, plate
 2026-09-11: Authorized studio/title startup sequence using supplied images, tests and Web verification. Account-wide usage unavailable; no usage estimate recorded.
 
 2026-09-11 — Owner-requested food/menu/appliance/storage progression. Reused existing state, recipe, purchase, save, input and layout systems. No delegation. Account-wide usage unavailable; no estimate recorded. Verification details in development notes.
+
+
+### 2026-09-11 — Studio/publisher intro
+Extended both logo holds to three seconds, imported supplied Twist artwork, and prevented Unity splash time consuming the studio hold. Reused Boot UI; focused changes, full existing pipeline and browser deployment verification. Account-wide usage unavailable; no estimated usage recorded.
