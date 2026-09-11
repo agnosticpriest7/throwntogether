@@ -21,7 +21,7 @@ namespace ThrownTogether
                 lines.Add(station+": "+(step.input==FoodState.Raw ? "press Use and stay still for " : "process for ")+step.duration.ToString("0.#",CultureInfo.InvariantCulture)+" seconds, then pick up "+step.ingredient.NameFor(step.output)+".");
             }
             lines.Add("On an ordinary counter, combine all the prepared ingredients with a clean plate. Add each ingredient separately; either order works.");
-            lines.Add("Pick up the finished plate from the counter.");
+            lines.Add("Shortcut: while holding prepared food, press Use at the clean-plate stack to plate it in your hands. Add any remaining ingredient on a counter.");
             lines.Add("Restaurant day: carry "+recipe.displayName+" to the matching customer's table. A hired server can collect it from the pass. Practice shifts use automatic pass delivery.");
             for(int i=0;i<lines.Count;i++) lines[i]=(i+1)+". "+lines[i];
             return string.Join("\n",lines);

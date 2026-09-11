@@ -47,14 +47,24 @@ namespace ThrownTogether
         }
         public static void ApplyCustomerLook(ChefAppearance appearance,int variant)
         {
-            var look=ChefAppearanceData.Example(variant==0?1:3);look.clothing=0;look.headwear=0;look.hair=1;look.build=variant==0?1:2;appearance.Apply(look);
+            var random=new System.Random(variant);
+            var look=new ChefAppearanceData {build=random.Next(3),bodyColor=random.Next(ChefWardrobe.Colors.Length),clothing=0,headwear=0,
+                hair=random.Next(1,ChefWardrobe.Hair.Length),hairColor=random.Next(ChefWardrobe.HairColors.Length),eyes=random.Next(ChefWardrobe.Eyes.Length),mouth=random.Next(ChefWardrobe.Mouths.Length),glasses=random.Next(2)};
+            appearance.Apply(look);
+            // Civilian palette/outfits are independent from both players' wardrobe choices.
+            Color shirt=Color.HSVToRGB((float)random.NextDouble(),.48f,.68f);
+            bool scarf=random.Next(2)==0;
             foreach(var renderer in appearance.GetComponentsInChildren<Renderer>(true))
             {
-                bool shirt=renderer.name.StartsWith("C_Torso"),trousers=renderer.name.StartsWith("C_Leg"),shoe=renderer.name.StartsWith("C_Foot");
-                if(!shirt&&!trousers&&!shoe)continue;var block=new MaterialPropertyBlock();renderer.GetPropertyBlock(block);
-                block.SetColor("_BaseColor",shirt?(variant==0?new Color(.27f,.39f,.58f):new Color(.73f,.36f,.24f)):shoe?new Color(.22f,.26f,.28f):new Color(.24f,.30f,.36f));renderer.SetPropertyBlock(block);
+                bool torso=renderer.name.StartsWith("C_Torso"),trousers=renderer.name.StartsWith("C_Leg"),shoe=renderer.name.StartsWith("C_Foot");
+                bool detail=renderer.name.StartsWith(scarf?"C_CustomerScarf":"C_CustomerVest") && renderer.name.EndsWith(look.build.ToString());
+                if(detail)renderer.gameObject.SetActive(true);
+                if(!torso&&!trousers&&!shoe&&!detail)continue;
+                var block=new MaterialPropertyBlock();renderer.GetPropertyBlock(block);
+                block.SetColor("_BaseColor",torso?shirt:shoe?new Color(.18f,.16f,.15f):detail?Color.Lerp(shirt,new Color(.98f,.76f,.35f),.65f):new Color(.20f,.25f,.31f));renderer.SetPropertyBlock(block);
             }
         }
+
         private void Update()
         {
             if(seatedVisual!=null){if(order!=null)ApplyPose(order.Phase,Time.time,RestaurantMenu.Display.reducedEffects);return;}

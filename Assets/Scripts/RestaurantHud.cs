@@ -169,6 +169,13 @@ namespace ThrownTogether
             GUI.color=ticket.Phase==OrderPhase.Waiting?new Color(.04f,.12f,.13f):ticket.Phase==OrderPhase.Delivering?new Color(.17f,.09f,.025f):new Color(.05f,.14f,.04f);
             GUI.DrawTexture(new Rect(rect.x+6,rect.y+75*scale,rect.width-12,20*scale),Texture2D.whiteTexture);GUI.color=Color.white;small.normal.textColor=Color.white;
             GUI.Label(new Rect(rect.x+6,rect.y+74*scale,rect.width-12,22*scale),OrderBubbleLayout.State(ticket.Phase),small);
+            var table=ticket.manualService ? ticket.tableSlot.GetComponentInParent<DiningTable>():null;
+            if(table!=null && table.WaitingForMeal)
+            {
+                var bar=new Rect(rect.x+6,rect.y+97*scale,rect.width-12,7*scale);
+                GUI.color=new Color(.12f,.16f,.17f);GUI.DrawTexture(bar,Texture2D.whiteTexture);
+                bar.width*=table.PatienceRemaining;GUI.color=Color.Lerp(new Color(.9f,.22f,.12f),new Color(.22f,.7f,.36f),table.PatienceRemaining);GUI.DrawTexture(bar,Texture2D.whiteTexture);GUI.color=Color.white;
+            }
             label.fontSize=Mathf.RoundToInt(19*RestaurantMenu.Display.TextScale);small.fontSize=Mathf.RoundToInt(15*RestaurantMenu.Display.TextScale);label.normal.textColor=Color.white;
         }
     }

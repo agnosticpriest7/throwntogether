@@ -20,7 +20,7 @@ namespace ThrownTogether.Tests
             var chef=instance.GetComponent<ChefController>(); var motor=instance.GetComponent<CharacterController>();
             float radius=motor.radius,height=motor.height,speed=chef.speed,reach=chef.reach;
             Vector3 anchor=chef.Hands.transform.localPosition;
-            for(int build=0;build<3;build++) for(int clothing=0;clothing<3;clothing++)
+            for(int build=0;build<3;build++) for(int clothing=0;clothing<ChefWardrobe.Clothes.Length;clothing++)
             {
                 var a=ChefAppearanceData.Example(0);a.build=build;a.clothing=clothing;visual.Apply(a);visual.Pose(1,18,1);
                 Assert.That(visual.IsVisible("C_Torso"+build),Is.True);
@@ -35,10 +35,10 @@ namespace ThrownTogether.Tests
         }
         [Test] public void EveryEyeAndMouthCombinationKeepsIndependentIdentity()
         {
-            for(int eyes=0;eyes<4;eyes++) for(int mouth=0;mouth<4;mouth++)
+            for(int eyes=0;eyes<ChefWardrobe.Eyes.Length;eyes++) for(int mouth=0;mouth<ChefWardrobe.Mouths.Length;mouth++)
             {
                 var a=ChefAppearanceData.Example(1);a.eyes=eyes;a.mouth=mouth;visual.Apply(a);
-                for(int i=0;i<4;i++)
+                for(int i=0;i<ChefWardrobe.Eyes.Length;i++)
                 {Assert.That(visual.IsVisible("C_Eyes"+i),Is.EqualTo(i==eyes));Assert.That(visual.IsVisible("C_Mouth"+i),Is.EqualTo(i==mouth));}
                 Assert.That(visual.IsVisible("C_Tooth3"),Is.EqualTo(mouth==3));
                 Assert.That(visual.IsVisible("C_GlassesBridge"),Is.True);
@@ -57,6 +57,26 @@ namespace ThrownTogether.Tests
             }
             a.headwear=0;a.glasses=0;a.clothing=0;visual.Apply(a);
             Assert.That(visual.IsVisible("C_Hair0"),Is.True);Assert.That(visual.IsVisible("C_GlassesBridge"),Is.False);
+        }
+        [Test] public void ExtraHairAndCivilianLooksAreIndependentFromPlayerChoices()
+        {
+            var before=JsonUtility.ToJson(ChefWardrobe.ForPlayer(0));
+            for(int hair=2;hair<ChefWardrobe.Hair.Length;hair++)
+            {
+                var a=new ChefAppearanceData{hair=hair,headwear=0};visual.Apply(a);
+                Assert.That(visual.GetComponentsInChildren<Renderer>().Any(r=>r.name.StartsWith("C_HairStyle"+hair+"_")),Is.True);
+                a.headwear=1;visual.Apply(a);Assert.That(visual.GetComponentsInChildren<Renderer>().Any(r=>r.name.StartsWith("C_Hair")),Is.False);
+            }
+            var signatures=new System.Collections.Generic.HashSet<string>();
+            for(int seed=0;seed<20;seed++)
+            {
+                CustomerPresentation.ApplyCustomerLook(visual,seed);signatures.Add(JsonUtility.ToJson(visual.appearance));
+                Assert.That(visual.appearance.clothing,Is.Zero);Assert.That(visual.appearance.headwear,Is.Zero);
+                Assert.That(visual.GetComponentsInChildren<Renderer>().Any(r=>r.name.StartsWith("C_Customer")),Is.True);
+                var expected=JsonUtility.ToJson(visual.appearance);CustomerPresentation.ApplyCustomerLook(visual,seed);Assert.That(JsonUtility.ToJson(visual.appearance),Is.EqualTo(expected));
+            }
+            Assert.That(signatures.Count,Is.GreaterThan(15));Assert.That(JsonUtility.ToJson(ChefWardrobe.ForPlayer(0)),Is.EqualTo(before));
+            visual.Apply(ChefWardrobe.ForPlayer(0));Assert.That(visual.GetComponentsInChildren<Renderer>().Any(r=>r.name.StartsWith("C_Customer")),Is.False);
         }
         [Test] public void ImportedFacesContainTrianglesAndUseSupportedShaders()
         {

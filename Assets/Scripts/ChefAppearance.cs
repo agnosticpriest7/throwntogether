@@ -16,8 +16,9 @@ namespace ThrownTogether
         private Vector3 lastPosition;
         private float stride;
         public float CarryPose { get; private set; }
-        private static readonly Color[] bodyColors={new Color(.22f,.66f,.64f),new Color(.98f,.62f,.47f),new Color(.66f,.53f,.79f),new Color(.43f,.68f,.89f)};
-        private static readonly Color[] clothColors={new Color(.96f,.87f,.68f),new Color(.14f,.20f,.34f),new Color(1,.81f,.40f),new Color(.69f,.30f,.15f)};
+        private static readonly Color[] bodyColors={new Color(.22f,.66f,.64f),new Color(.98f,.62f,.47f),new Color(.66f,.53f,.79f),new Color(.43f,.68f,.89f),new Color(.40f,.24f,.17f),new Color(.77f,.58f,.40f),new Color(.87f,.43f,.52f),new Color(.48f,.78f,.58f),new Color(.94f,.71f,.26f),new Color(.43f,.48f,.58f)};
+        private static readonly Color[] clothColors={new Color(.96f,.87f,.68f),new Color(.14f,.20f,.34f),new Color(1,.81f,.40f),new Color(.69f,.30f,.15f),new Color(.16f,.53f,.46f),new Color(.43f,.24f,.48f),new Color(.90f,.39f,.34f),new Color(.20f,.23f,.28f),new Color(.93f,.93f,.88f),new Color(.20f,.36f,.77f)};
+        private static readonly Color[] hairColors={new Color(.12f,.075f,.06f),new Color(.035f,.04f,.05f),new Color(.36f,.19f,.10f),new Color(.79f,.54f,.22f),new Color(.68f,.70f,.72f),new Color(.55f,.20f,.10f)};
         private void Awake() { Cache(); chef=GetComponentInParent<ChefController>(); lastPosition=transform.position; }
         private void Start() => Apply(usePlayerSelection ? ChefWardrobe.ForPlayer(playerIndex) : appearance);
         private void Cache()
@@ -43,17 +44,24 @@ namespace ThrownTogether
                 else if(n.StartsWith("C_Cap")) visible=a.headwear==1;
                 else if(n.StartsWith("C_Beanie")) visible=a.headwear==2;
                 else if(n.StartsWith("C_Headband")) visible=a.headwear==3;
+                else if(n.StartsWith("C_HairStyle")) visible=n.StartsWith("C_HairStyle"+a.hair+"_") && a.headwear==0;
                 else if(n.StartsWith("C_Hair")) visible=a.hair==1 && a.headwear==0;
+                else if(n.StartsWith("C_Jacket")) visible=a.clothing==3 && n.EndsWith(a.build.ToString());
+                else if(n.StartsWith("C_Stripes")) visible=a.clothing==4 && n.EndsWith(a.build.ToString());
+                else if(n.StartsWith("C_Customer")) visible=false;
                 else if(n.StartsWith("C_Glasses")) visible=a.glasses==1;
                 entry.Value.gameObject.SetActive(visible);
                 var block=new MaterialPropertyBlock();
                 bool body=n=="C_Head" || n.StartsWith("C_Torso") || n.StartsWith("C_Arm") || n.StartsWith("C_Leg") || n.StartsWith("C_Foot");
                 bool clothing=n.StartsWith("C_Waist") || n.StartsWith("C_Bib");
+                bool shirt=n.StartsWith("C_Torso") && a.clothing>=3;
+                bool hair=n.StartsWith("C_Hair");
+                bool ink=n.StartsWith("C_Eyes") || n.StartsWith("C_Mouth") || n.StartsWith("C_Glasses");
                 bool headwear=n.StartsWith("C_Cap") || n.StartsWith("C_Beanie") || n.StartsWith("C_Headband");
-                if(body || clothing || headwear)
+                if(body || clothing || headwear || hair || ink)
                 {
                     Color hatColor=a.headwear==2 ? new Color(.23f,.39f,.65f):a.headwear==3 ? new Color(.91f,.38f,.33f):new Color(.91f,.61f,.21f);
-                    block.SetColor("_BaseColor",body ? bodyColors[a.bodyColor]:clothing ? clothColors[a.clothingColor]:hatColor);
+                    block.SetColor("_BaseColor",ink ? (a.bodyColor==4 ? new Color(.90f,.80f,.65f):new Color(.045f,.035f,.032f)):hair ? hairColors[a.hairColor]:shirt ? clothColors[a.clothingColor]:body ? bodyColors[a.bodyColor]:clothing ? clothColors[a.clothingColor]:hatColor);
                     entry.Value.SetPropertyBlock(block);
                 }
             }

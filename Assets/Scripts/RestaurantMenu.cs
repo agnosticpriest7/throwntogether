@@ -155,7 +155,8 @@ namespace ThrownTogether
                 }
                 else
                 {
-                    Choice("Hair",new[]{"None","Swept tuft"},()=>a.hair,v=>a.hair=v);
+                    Choice("Hair",ChefWardrobe.Hair,()=>a.hair,v=>a.hair=v);
+                    Choice("Hair color",ChefWardrobe.HairColors,()=>a.hairColor,v=>a.hairColor=v);
                     Choice("Headwear",ChefWardrobe.Hats,()=>a.headwear,v=>a.headwear=v);
                     Choice("Glasses",new[]{"None","Round glasses"},()=>a.glasses,v=>a.glasses=v);
                     Add("Back",NavigateBack);
@@ -179,7 +180,8 @@ namespace ThrownTogether
                 {
                     foreach(var offer in config.purchases)
                     {var purchase=offer;Add(purchase.displayName+(account.Owns(purchase.id)?" — owned":" — $"+purchase.cost),()=>Buy(purchase.id,purchase.cost));}
-                    var role=config.serverRole;if(role!=null)Add(role.displayName+(account.Owns(role.id)?" — hired":" — $"+role.hireCost),()=>Buy(role.id,role.hireCost));
+                    foreach(var employee in new[]{config.serverRole,config.dishwasherRole})
+                    {var role=employee;if(role!=null)Add(role.displayName+(account.Owns(role.id)?" — hired":" — $"+role.hireCost),()=>Buy(role.id,role.hireCost));}
                 }
                 if(day!=null && day.Closed && !day.Paid)Add("Retry saving today's earnings",()=>message=day.RetryPayment()?"Earnings saved.":account.Problem);
                 Add("Back",()=>SetPage("Main"));return;

@@ -57,3 +57,6 @@
 
 ### 2026-09-10 — First timed service day
 Owner requested 11 AM–10 PM in about five minutes, manual seating/service/clearing, outside patience, meal income and speed bonuses, purchasable equipment space/upgrades and a starter server. Initial tuning: 300 seconds, 12 arrivals, 45-second outside patience, eight-second meals, $10 base + up to $5 quick-service bonus. First purchases are predefined reusable counter/fryer bays rather than a construction UI; one-time server hire transports pass-to-table only. Money/purchases persist locally; no wages or ingredient costs added. Fixed-order practice remains separate and unpaid. These values need solo/co-op physical playtesting.
+
+### 2026-09-10 — Service quality-of-life batch
+Owner approved direct stock-to-hand plating, a multi-plate sink, seated customer patience, a dishwasher hire, broader player cosmetics and unique randomized customers. Initial seated patience: 90 seconds; dishwasher: $125 permanent hire applying next day. Washer handles sink plates and returns clean stock; players retain table clearing. Five-plate capacity, movement, reach, camera and recipe timing remain intact. No wages, new recipes or progression beyond this hire.

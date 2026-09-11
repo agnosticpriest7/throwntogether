@@ -83,9 +83,9 @@ namespace ThrownTogether.Tests
             day.Advance(300);Assert.That(day.Clock,Is.EqualTo("10:00 PM"));Assert.That(day.Paid,Is.True);int cash=RestaurantAccounts.Current.Data.cash;day.Advance(300);day.RetryPayment();Assert.That(RestaurantAccounts.Current.Data.cash,Is.EqualTo(cash));
             LogAssert.NoUnexpectedReceived();yield return null;
         }
-        [UnityTest] public IEnumerator UnservedTablesStayOccupiedAndOutsideGuestsEventuallyLeave()
+        [UnityTest] public IEnumerator UnservedGuestsAndOutsideQueueEventuallyLeave()
         {
-            day.Advance(150);Assert.That(day.Tables.All(t=>t.Occupied),Is.True);Assert.That(day.LostCustomers,Is.GreaterThan(0));Assert.That(day.Served,Is.Zero);
+            day.Advance(150);Assert.That(day.LostCustomers,Is.GreaterThan(0));Assert.That(day.Served,Is.Zero);
             day.Advance(150);Assert.That(day.Closed,Is.True);Assert.That(RestaurantAccounts.Current.Data.cash,Is.Zero);Assert.That(day.WaitingOutside,Is.LessThanOrEqualTo(3));yield return null;
         }
         [UnityTest] public IEnumerator PassDoesNotTeleportFoodAndServerMovesMatchingDishToTable()
@@ -135,9 +135,10 @@ namespace ThrownTogether.Tests
         }
         [UnityTest] public IEnumerator PaidImprovementsApplyOnNextDayIncludingServerAndFryerSpeed()
         {
-            var account=RestaurantAccounts.Current;Assert.That(account.Settle(day.DayNumber,500,0),Is.True);
+            var account=RestaurantAccounts.Current;Assert.That(account.Settle(day.DayNumber,700,0),Is.True);
             foreach(var offer in day.Settings.purchases)Assert.That(account.Buy(offer.id,offer.cost),Is.True);
             Assert.That(account.Buy(day.Settings.serverRole.id,day.Settings.serverRole.hireCost),Is.True);
+            Assert.That(account.Buy(day.Settings.dishwasherRole.id,day.Settings.dishwasherRole.hireCost),Is.True);
             SceneManager.SetActiveScene(original);yield return SceneManager.UnloadSceneAsync(scene);
 #if UNITY_EDITOR
             yield return EditorSceneManager.LoadSceneAsyncInPlayMode("Assets/Scenes/RestaurantShift.unity",new LoadSceneParameters(LoadSceneMode.Additive));
@@ -146,8 +147,9 @@ namespace ThrownTogether.Tests
 #endif
             scene=SceneManager.GetSceneAt(SceneManager.sceneCount-1);SceneManager.SetActiveScene(scene);yield return null;
             day=Object.FindObjectsByType<RestaurantDay>().Single(s=>s.gameObject.scene==scene);
-            Assert.That(day.DayNumber,Is.EqualTo(2));Assert.That(account.Data.cash,Is.EqualTo(120));
+            Assert.That(day.DayNumber,Is.EqualTo(2));Assert.That(account.Data.cash,Is.EqualTo(195));
             Assert.That(day.GetComponent<DiningServer>(),Is.Not.Null);
+            Assert.That(day.GetComponent<KitchenDishwasher>(),Is.Not.Null);
             var fryers=Object.FindObjectsByType<ProcessingStation>().Where(s=>s.gameObject.scene==scene && !s.requiresAttendance).ToArray();
             Assert.That(fryers.Length,Is.EqualTo(2));Assert.That(fryers.All(f=>Mathf.Approximately(f.processingSpeed,1.25f)),Is.True);
             Assert.That(Object.FindObjectsByType<CounterStation>().Count(s=>s.gameObject.scene==scene && s.GetType()==typeof(CounterStation)),Is.EqualTo(3));
@@ -157,6 +159,74 @@ namespace ThrownTogether.Tests
         {
             float time=day.Elapsed;Time.timeScale=0;yield return new WaitForSecondsRealtime(.15f);
             Assert.That(day.Elapsed,Is.EqualTo(time));Assert.That(day.Tables.All(t=>t.Clean),Is.True);Time.timeScale=1;
+        }
+        [UnityTest] public IEnumerator PlateStackCombinesInHandsWithoutBypassingPreparationOrStock()
+        {
+            var source=stations.OfType<SourceStation>().Single(s=>s.plates);
+            var potato=stations.OfType<SourceStation>().Single(s=>s.ingredient!=null && s.ingredient.id=="ingredient.potato");
+            Use(potato);var food=chef.Hands.Item;
+            Assert.That(source.Interact(chef),Is.False);Assert.That(source.CleanPlatesRemaining,Is.EqualTo(5));
+            food.Payload.state=FoodState.Cooked;food.RefreshVisual();Use(source);
+            Assert.That(chef.Hands.Item.Payload.isPlate,Is.True);Assert.That(chef.Hands.Item.Payload.ingredient,Is.SameAs(potato.ingredient));
+            Assert.That(source.CleanPlatesRemaining,Is.EqualTo(4));
+            var samePlate=chef.Hands.Item;samePlate.Payload.MakeDirty();samePlate.Configure(ItemPayload.Plate());Use(source);
+            Assert.That(source.CleanPlatesRemaining,Is.EqualTo(5));
+            var issued=new System.Collections.Generic.List<Carryable>();for(int i=0;i<5;i++)issued.Add(source.TakeCleanPlate());
+            Use(potato);chef.Hands.Item.Payload.state=FoodState.Cooked;
+            var held=chef.Hands.Item;Assert.That(source.Interact(chef),Is.False);Assert.That(chef.Hands.Item,Is.SameAs(held));
+            Assert.That(issued.Distinct().Count(),Is.EqualTo(5));Assert.That(issued,Does.Contain(samePlate));
+            foreach(var plate in issued)Assert.That(source.ReturnCleanPlate(plate),Is.True);
+            yield return null;LogAssert.NoUnexpectedReceived();
+        }
+        [UnityTest] public IEnumerator SinkQueuesAllFivePlatesAndPreservesManualAttendance()
+        {
+            var stock=stations.OfType<SourceStation>().Single(s=>s.plates);var sink=stations.OfType<WashingStation>().Single();
+            var plates=new System.Collections.Generic.List<Carryable>();
+            for(int i=0;i<5;i++){Use(stock);plates.Add(chef.Hands.Item);chef.Hands.Item.Payload.MakeDirty();Use(sink);}
+            Assert.That(sink.Count,Is.EqualTo(5));Assert.That(stock.CleanPlatesRemaining,Is.Zero);
+            chef.Move(Vector2.right,.01f);sink.Advance(10);Assert.That(sink.Busy,Is.True);
+            for(int i=0;i<5;i++)
+            {
+                Use(sink);sink.Advance(3);Use(sink);Assert.That(chef.Hands.Item,Is.SameAs(plates[i]));
+                Assert.That(chef.Hands.Item.Payload.EmptyPlate,Is.True);Use(stock);
+            }
+            Assert.That(sink.Count,Is.Zero);Assert.That(stock.CleanPlatesRemaining,Is.EqualTo(5));yield return null;LogAssert.NoUnexpectedReceived();
+        }
+        [UnityTest] public IEnumerator SeatedPatienceExpiresOnceWithoutPaymentAndTableCanBeReused()
+        {
+            day.Advance(18);var table=day.Tables.First(t=>t.WaitingForMeal);var recipe=table.order.recipe;
+            float left=day.Settings.seatedPatience-(day.Elapsed-table.SeatedAt);
+            day.Advance(left/2);Assert.That(table.PatienceRemaining,Is.InRange(.45f,.51f));
+            table.ReservedForServer=true;day.Advance(left/2+.3f);
+            Assert.That(table.Leaving,Is.True);Assert.That(table.ReservedForServer,Is.False);Assert.That(table.order.Active,Is.False);
+            Assert.That(table.CanServe(new ItemPayload{isPlate=true,ingredient=recipe.ingredient,state=FoodState.Cooked}),Is.False);
+            Assert.That(day.Served,Is.Zero);Assert.That(day.BaseIncome,Is.Zero);Assert.That(day.LostCustomers,Is.GreaterThan(0));
+            day.Advance(20);Assert.That(table.Leaving && table.Occupied,Is.False);yield return null;
+        }
+        [UnityTest] public IEnumerator DishwasherReturnsSameFivePlatesWithoutTakingOverHumanWork()
+        {
+            var stock=stations.OfType<SourceStation>().Single(s=>s.plates);var sink=stations.OfType<WashingStation>().Single();
+            for(int i=0;i<5;i++){Use(stock);chef.Hands.Item.Payload.MakeDirty();Use(sink);}
+            var worker=day.gameObject.AddComponent<KitchenDishwasher>();worker.Initialize(day);
+            for(int i=0;i<40;i++)worker.Advance(.1f);
+            Assert.That(sink.Busy,Is.True,"Employee must not steal the player's active washing job");
+            chef.CancelWork();
+            for(int i=0;i<1600 && stock.CleanPlatesRemaining<5;i++)worker.Advance(.1f);
+            Assert.That(stock.CleanPlatesRemaining,Is.EqualTo(5));Assert.That(sink.Count,Is.Zero);
+            Assert.That(day.Served,Is.Zero);yield return null;LogAssert.NoUnexpectedReceived();
+        }
+        [UnityTest] public IEnumerator DishwasherHasClearSinkToStockRoutesInEveryKitchen()
+        {
+            var layout=Object.FindObjectsByType<KitchenLayout>().Single(s=>s.gameObject.scene==scene);
+            var stock=stations.OfType<SourceStation>().Single(s=>s.plates);var sink=stations.OfType<WashingStation>().Single();
+            for(int index=0;index<layout.choices.Length;index++)
+            {
+                layout.Apply(index);Physics.SyncTransforms();var start=KitchenStaffRoute.Approach(sink.transform);Assert.That(start,Is.Not.Null);
+                var route=KitchenStaffRoute.ToStation(start.Value,stock.transform);Assert.That(route,Is.Not.Null,"Kitchen "+index);
+                foreach(var point in route)Assert.That(KitchenStaffRoute.Clear(point),Is.True);
+                Assert.That(KitchenStaffRoute.ToStation(route.Last(),sink.transform),Is.Not.Null);
+            }
+            yield return null;
         }
         [UnityTest] public IEnumerator DiningRouteClearsTheOpenDoorAndTableEdges()
         {

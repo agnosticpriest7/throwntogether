@@ -21,6 +21,7 @@ MonoBehaviour:
   arrivalInterval: 24
   outsidePatience: 45
   eatingSeconds: 8
+  seatedPatience: 90
   bonusWindow: 60
   maximumBonus: 5
   walkingSpeed: 2.4
@@ -32,3 +33,4 @@ MonoBehaviour:
   - {fileID: 11400000, guid: ec93092e6552ca943afed481d2f348b3, type: 2}
   walkingVisual: {fileID: 2952335610465244968, guid: c0436b59516a1534d99a46c7fd5a0983, type: 3}
   serverRole: {fileID: 11400000, guid: 9347d4505819b0c45b715e6fb81cba5d, type: 2}
+  dishwasherRole: {fileID: 11400000, guid: ef1bfba298fb32c499572d2fecceef75, type: 2}

@@ -21,7 +21,8 @@ namespace ThrownTogether
         public string Clock {get {int m=660+Mathf.FloorToInt(Mathf.Clamp01(Elapsed/Settings.durationSeconds)*660);return ((m/60+11)%12+1)+":"+(m%60).ToString("00")+(m<720?" AM":" PM");}}
         readonly List<Guest> guests=new List<Guest>();
         sealed class Guest {public DiningWalker walker;public DiningTable table;public RecipeDefinition recipe;public float arrived;public int phase,look;}
-        RestaurantShift shift;int spawned;float nextArrival;DiningServer server;
+        RestaurantShift shift;int spawned;float nextArrival;DiningServer server;KitchenDishwasher dishwasher;
+        readonly System.Random customerRandom=new System.Random();
         public void Begin(RestaurantShift owner,DayServiceDefinition settings)
         {
             shift=owner;Settings=settings;DayNumber=RestaurantAccounts.Current.StartDay();nextArrival=settings.firstArrival;
@@ -53,6 +54,8 @@ namespace ThrownTogether
                 var pass=FindObjectsByType<ServiceStation>(FindObjectsSortMode.None).First(s=>s.gameObject.scene==gameObject.scene);
                 server=gameObject.AddComponent<DiningServer>();server.Initialize(this,pass);
             }
+            if(Settings.dishwasherRole!=null && account.Owns(Settings.dishwasherRole.id))
+            {dishwasher=gameObject.AddComponent<KitchenDishwasher>();dishwasher.Initialize(this);}
         }
         DiningWalker Walker(string label,int look,Vector3 position)
         {
@@ -68,7 +71,8 @@ namespace ThrownTogether
         void Spawn()
         {
             var p=Settings.entrance+Vector3.right*((spawned%3-1)*.8f);
-            guests.Add(new Guest {walker=Walker("Arriving customer",spawned%2,p),look=spawned%2,arrived=Elapsed,recipe=shift.definition.orders[spawned%shift.definition.orders.Length]});spawned++;
+            int look=customerRandom.Next();
+            guests.Add(new Guest {walker=Walker("Arriving customer",look,p),look=look,arrived=Elapsed,recipe=shift.definition.orders[spawned%shift.definition.orders.Length]});spawned++;
         }
         public void Advance(float seconds)
         {
@@ -104,13 +108,14 @@ namespace ThrownTogether
                         else{if(guest.table!=null)guest.table.Depart();guests.Remove(guest);Destroy(guest.walker.gameObject);}
                     }
                 }
-                else if(guest.phase==2 && guest.table.order.Phase==OrderPhase.Dirty)
+                else if(guest.phase==2 && (guest.table.order.Phase==OrderPhase.Dirty || guest.table.WaitingForMeal && guest.table.PatienceRemaining<=0))
                 {
-                    guest.phase=3;guest.table.SetGuestVisible(false);guest.walker.gameObject.SetActive(true);
+                    if(guest.table.WaitingForMeal){LostCustomers++;LastLostAt=Elapsed;guest.walker.name="Customer left — not served";}
+                    guest.phase=3;guest.table.BeginDeparture();guest.walker.gameObject.SetActive(true);
                     guest.walker.Go(Aisle(guest.walker.transform.position.z),Aisle(-5),new Vector3(Settings.entrance.x,0,-5),Settings.entrance);
                 }
             }
-            server?.Advance(dt);
+            server?.Advance(dt);dishwasher?.Advance(dt);
         }
         public void RecordMeal(RecipeDefinition recipe,float waiting)
         {

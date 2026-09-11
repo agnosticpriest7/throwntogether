@@ -44,7 +44,7 @@ namespace ThrownTogether
             Feedback=Focus.Prompt(this); feedbackUntil=Time.time+1.5f;
             var previousItem=Hands.Item;
             bool hadItem=previousItem != null;
-            bool plated=Focus is CounterStation counter && counter.CanCombine(this);
+            bool plated=Focus is CounterStation counter && counter.CanCombine(this) || Focus is SourceStation source && source.plates && ItemPayload.CanPlate(ItemPayload.Plate(),Hands.Item?.Payload);
             bool used=Focus.Interact(this);
             if(used) Feedback=Hands.Item!=null ? "Holding "+Hands.Item.Payload.Label : "Placed / started at "+Focus.stationName;
             if(used && (previousItem!=Hands.Item || plated || Focus is ServiceStation))
