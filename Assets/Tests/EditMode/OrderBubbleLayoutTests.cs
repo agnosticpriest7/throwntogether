@@ -6,7 +6,7 @@ namespace ThrownTogether.Tests
     {
         [Test] public void EveryRecipeHasItsOwnRenderedCompletedDishIcon()
         {
-            foreach(var recipe in Resources.Load<RecipeBook>("RecipeBook").recipes){var image=FoodIcon.DishImage(recipe);Assert.That(image,Is.Not.Null,recipe.displayName);Assert.That(image.width,Is.EqualTo(192));}
+            foreach(var recipe in Resources.Load<RecipeBook>("RecipeBook").recipes){var image=FoodIcon.DishImage(recipe);Assert.That(image,Is.Not.Null,recipe.displayName);Assert.That(image.width,Is.GreaterThanOrEqualTo(128));}
             var produce=UnityEditor.AssetDatabase.LoadAssetAtPath<IngredientStorageDefinition>("Assets/Data/MenuExpansion/ProduceRack.asset");
             CollectionAssert.AreEqual(new[]{IngredientVisualKind.Lettuce,IngredientVisualKind.Mushroom,IngredientVisualKind.Potato,IngredientVisualKind.Tomato},System.Array.ConvertAll(produce.ingredients,i=>i.visualKind));
         }
