@@ -58,14 +58,7 @@ namespace ThrownTogether
         void ApplyPurchases()
         {
             var account=RestaurantAccounts.Current;
-            foreach(var purchase in Settings.purchases)
-            {
-                if(purchase==null||!account.Owns(purchase.id)||purchase.stationPrefab==null)continue;
-                int layout=Mathf.Clamp(SessionOptions.Kitchen,0,purchase.layoutPositions.Length-1);
-                if(layout<0)continue;
-                var station=Instantiate(purchase.stationPrefab,purchase.layoutPositions[layout],Quaternion.identity);station.name=purchase.displayName;
-                GetComponent<KitchenFurniture>().Register("purchase:"+purchase.id,station.transform);
-            }
+            GetComponent<KitchenFurniture>().IncludeNewPurchases();
             foreach(var purchase in Settings.purchases)
                 if(purchase!=null && account.Owns(purchase.id) && purchase.kind==RestaurantPurchaseKind.FasterFryers)
                     foreach(var fryer in FindObjectsByType<ProcessingStation>(FindObjectsSortMode.None))

@@ -15,13 +15,16 @@ namespace ThrownTogether
             walker=go.AddComponent<DiningWalker>();walker.Initialize(day.Settings.walkingVisual,1);
             var grip=new GameObject("Carried plate");grip.transform.SetParent(go.transform,false);grip.transform.localPosition=new Vector3(0,1.25f,.65f);hands=grip.AddComponent<CarrySlot>();
         }
+        bool FindTask()
+        {target=day.Tables.FirstOrDefault(t=>t.order.tableSlot.Item?.Payload.dirty==true);if(target==null)return false;Travel(day.TableApproach(target));return true;}
         public void Advance(float seconds)
         {
             if(day.Closed || walker==null)return;
-            walker.Advance(seconds,day.Settings.walkingSpeed,hands.Item!=null);if(!walker.Arrived)return;
+            if(target==null && !returning)FindTask();
+            walker.Advance(seconds,day.Settings.walkingSpeed*RestaurantAccounts.Current.StaffSpeed(day.Settings.busserRole.id),hands.Item!=null);if(!walker.Arrived)return;
             if(target!=null)
             {target.TakeDirty(hands);target=null;returning=hands.Item!=null;Travel(returning?DropOff:Home);return;}
-            if(returning){if(hands.Item!=null)rack.Return(hands.Item);returning=false;Travel(Home);return;}
+            if(returning){if(hands.Item!=null)rack.Return(hands.Item);returning=false;if(!FindTask())Travel(Home);return;}
             target=day.Tables.FirstOrDefault(t=>t.order.tableSlot.Item?.Payload.dirty==true);
             if(target!=null)Travel(day.TableApproach(target));
         }

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.SceneManagement;
@@ -42,7 +43,13 @@ namespace ThrownTogether
         private bool WardrobePage => Page=="Your chef" || Page=="Face" || Page=="Accessories";
         private GUIStyle buttonStyle, textStyle;
         private Texture2D mainMenuBackground;
-        private string resetReturnPage;
+        private string resetReturnPage, confirmReturnPage;
+        private int shopTab;
+        private readonly string[] shopTabs={"Appliances","Counters","Dishes","Upgrades","Sell"};
+        private bool BetweenDays=>!IsFrontEnd && hud.shift?.Day!=null && (hud.shift.Day.Closed || hud.shift.Day.AwaitingMenu);
+        public string[] VisibleOptions=>rows.Select(r=>r.label).ToArray();
+        public void SelectRow(int value){Selection=Mathf.Clamp(value,0,rows.Count-1);}
+        public void OpenShop(){SetPage("Shop");}
         private readonly List<Row> rows=new List<Row>();
         private sealed class Row { public string label; public Action select; public Action<int> adjust; public bool enabled=true; }
         private void Awake()
@@ -75,7 +82,7 @@ namespace ThrownTogether
         public void Open()
         {
             if(!IsOpen) { savedTimeScale=Time.timeScale; Time.timeScale=0; IsOpen=true; }
-            SetPage("Main");
+            SetPage(BetweenDays?"Restaurant":"Main");
         }
         public void OpenFrontEnd() { IsFrontEnd=true; Open(); }
         public void OpenRecipeBook() { if(!IsOpen) Open(); SetPage("Recipes"); }
@@ -122,7 +129,10 @@ namespace ThrownTogether
         }
         public void NavigateBack()
         {
-            if(Page=="Employees"){SetPage("Restaurant");return;}
+            if(Page=="Restaurant")return;
+            if(Page=="Confirm"){SetPage(confirmReturnPage);return;}
+            if(Page=="Employees" || Page=="Shop" || Page=="Today's Menu" && !IsFrontEnd){SetPage("Restaurant");return;}
+            if(BetweenDays && (Page=="Settings" || Page=="Audio" || Page=="Display")){SetPage(Page=="Settings"?"Restaurant":"Settings");return;}
             if(Page=="Reset career"){SetPage(resetReturnPage);return;}
             if(Page=="Face" || Page=="Accessories") {SetPage("Your chef");return;}
             if(Page=="Your chef") {SetPage(wardrobeBeforeLaunch ? "Levels":"Main");return;}
@@ -205,7 +215,7 @@ namespace ThrownTogether
                 Add("Back",()=>SetPage("Title"));return;
             }
             if(Page=="Settings")
-            {Add("Audio",()=>SetPage("Audio"));Add("Text and accessibility",()=>SetPage("Display"));Add("Back",()=>SetPage("Main"));return;}
+            {Add("Audio",()=>SetPage("Audio"));Add("Text and accessibility",()=>SetPage("Display"));Add("Back",NavigateBack);return;}
             if(Page=="Today's Menu")
             {
                 var account=RestaurantAccounts.Current;
@@ -223,24 +233,26 @@ namespace ThrownTogether
             {
                 var config=Resources.Load<DayServiceDefinition>("ServiceDay");var account=RestaurantAccounts.Current;
                 foreach(var role in new[]{config.serverRole,config.dishwasherRole,config.busserRole})
-                {var employee=role;if(employee!=null)Add(employee.displayName+(account.Owns(employee.id)?" — hired":" — $"+employee.hireCost),()=>Buy(employee.id,employee.hireCost));}
-                Add("Back",()=>SetPage("Restaurant"));return;
+                {
+                    var employee=role;if(employee==null)continue;
+                    bool hired=account.Owns(employee.id);int level=account.TrainingLevel(employee.id);
+                    Add(employee.displayName+(hired?" — Hired • Training "+level+"/3":" — Hire $"+employee.hireCost),()=>Buy(employee.id,employee.hireCost));rows[rows.Count-1].enabled=!hired;
+                    if(hired){Add(level<3?"Train "+employee.displayName+" — $"+account.TrainingPrice(employee.id)+" • speed +"+((level+1)*10)+"%":"Maximum training — speed +30%",()=>{message=account.Train(employee.id)?"Training purchased. Applies next service.":string.IsNullOrEmpty(account.Problem)?"Not enough money.":account.Problem;});rows[rows.Count-1].enabled=level<3;}
+                }
+                Add("Back to Day Complete",NavigateBack);return;
             }
+            if(Page=="Shop") { BuildShopRows();return; }
             if(Page=="Restaurant")
             {
-                var day=hud.shift?.Day;var config=Resources.Load<DayServiceDefinition>("ServiceDay");var account=RestaurantAccounts.Current;
-                Add("Next day — bank $"+account.Data.cash,()=>{if(day!=null && day.AwaitingMenu)ChooseDailyMenu(()=>{if(day.StartService())Close();});else if(day!=null && !day.Closed)message="Finish this day before starting the next.";else if(day!=null && !day.Paid)message="Save today's earnings before continuing. Use Retry below.";else {var presentation=GetComponent<DayPresentation>(); Action start=()=>{SessionOptions.ShiftOrders=0;Close();Load("RestaurantShift");}; ChooseDailyMenu(()=>{if(presentation==null || day==null)start();else presentation.BeginNextDay(start);});}});
-                Add("Arrange kitchen",()=>OpenKitchenLayout());
-                Add("Employees",()=>SetPage("Employees"));
-                if(config!=null)
-                {
-                    foreach(var offer in config.purchases)
-                    {var purchase=offer;Add(purchase.displayName+(account.Owns(purchase.id)?" — owned":" — $"+purchase.cost),()=>Buy(purchase.id,purchase.cost));}
-
-                }
-                Add("Reset career",RequestCareerReset);
+                var day=hud.shift?.Day;var account=RestaurantAccounts.Current;
+                Add("Employee Management",()=>SetPage("Employees"));
+                Add("Arrange Kitchen — "+(account.ArrangementFee==0?"Free this break":"$100 this break"),()=>OpenKitchenLayout());
+                Add("Appliances, Counters & Dishes",()=>SetPage("Shop"));
+                Add("Next Day → Choose Menu",()=>{if(day!=null && day.AwaitingMenu)ChooseDailyMenu(()=>{if(day.StartService())Close();});else if(day!=null && !day.Closed)message="Finish this day before starting the next.";else if(day!=null && !day.Paid)message="Save today's earnings before continuing. Use Retry below.";else {var presentation=GetComponent<DayPresentation>(); Action start=()=>{SessionOptions.ShiftOrders=0;Close();Load("RestaurantShift");}; ChooseDailyMenu(()=>{if(presentation==null || day==null)start();else presentation.BeginNextDay(start);});}});
                 if(day!=null && day.Closed && !day.Paid)Add("Retry saving today's earnings",()=>message=day.RetryPayment()?"Earnings saved.":account.Problem);
-                Add("Back",()=>SetPage("Main"));return;
+                Add("Settings",()=>SetPage("Settings"));
+                Add("Quit to main menu",()=>Confirm("Return to main menu? Saved earnings and purchases are kept.",OpenFrontEnd));
+                Add("Reset career",RequestCareerReset);return;
             }
             if(Page=="Recipes")
             {
@@ -283,21 +295,21 @@ namespace ThrownTogether
                 Add("Garden salad — guided cold prep",()=>StartTraining("Garden salad"));
                 Add("Back",()=>SetPage("Session")); return;
             }
-            if(Page=="Confirm") { Add("Cancel — keep playing",()=>SetPage("Main")); Add("Confirm",()=>{var action=pending; Close(); action?.Invoke();}); return; }
+            if(Page=="Confirm") { Add("Cancel",()=>SetPage(confirmReturnPage)); Add("Confirm",()=>{var action=pending;SetPage(confirmReturnPage);action?.Invoke();}); return; }
             if(Page=="Display")
             {
                 var d=Display;
                 Add("Text size: "+new[]{"Standard","Large","Extra large"}[d.textSize],()=>d.textSize=(d.textSize+1)%3,dir=>d.textSize=Mathf.Clamp(d.textSize+dir,0,2));
                 Add("High contrast: "+(d.highContrast ? "ON":"OFF"),()=>d.highContrast=!d.highContrast);
                 Add("Reduced effects: "+(d.reducedEffects ? "ON":"OFF"),()=>d.reducedEffects=!d.reducedEffects);
-                Add("Save settings",Save); Add("Back",()=>SetPage("Main")); return;
+                Add("Save settings",Save); Add("Back",NavigateBack); return;
             }
             if(Page=="Audio")
             {
                 var a=hud.settings.Repository.Audio;
                 Volume("Master",()=>a.master,v=>a.master=v); Volume("Music",()=>a.music,v=>a.music=v);
                 Volume("SFX",()=>a.sfx,v=>a.sfx=v); Volume("UI",()=>a.ui,v=>a.ui=v); Volume("Ambience",()=>a.ambience,v=>a.ambience=v);
-                Add("Save settings",Save); Add("Back",()=>SetPage("Main")); return;
+                Add("Save settings",Save); Add("Back",NavigateBack); return;
             }
             Add("Play / Resume",Close);
             Add("Recipe book",OpenRecipeBook);
@@ -309,6 +321,27 @@ namespace ThrownTogether
             Add(hud.shift?.Day!=null ? "Earnings and restaurant improvements":"Session results",()=>SetPage(hud.shift?.Day!=null?"Restaurant":"Results"));
             Add("Return to main menu",()=>Confirm("Leave this level? Starting another level resets progress.",OpenFrontEnd));
             if(Page=="Results") { rows.Clear(); Add("Back",()=>SetPage("Main")); }
+        }
+        private void BuildShopRows()
+        {
+            var config=Resources.Load<DayServiceDefinition>("ServiceDay");var account=RestaurantAccounts.Current;
+            Add("Category: "+shopTabs[shopTab]+"   ← / →",()=>{shopTab=(shopTab+1)%shopTabs.Length;},dir=>shopTab=(shopTab+dir+shopTabs.Length)%shopTabs.Length);
+            if(shopTab==2)Add("Buy a plate — $20 • Total "+(5+account.Quantity("extra-plate")),()=>message=account.BuyEquipment("extra-plate",20)?"Plate purchased — available next day.":"Not enough money or service still active.");
+            foreach(var offer in config.purchases)
+            {
+                if(offer==null)continue;var item=offer;
+                bool station=item.stationPrefab!=null;
+                if(shopTab==0 && station && item.kind!=RestaurantPurchaseKind.CounterBay || shopTab==1 && item.kind==RestaurantPurchaseKind.CounterBay || shopTab==3 && !station)
+                {Add(item.displayName+" — $"+item.cost+" • Owned "+account.Quantity(item.id),()=>{if(station){var f=GetComponent<KitchenFurniture>();message=f.TryPurchase(item)?f.Message:f.Message;}else Buy(item.id,item.cost);});if(!station)rows[rows.Count-1].enabled=!account.Owns(item.id);}
+                if(shopTab==4 && station)foreach(var owned in account.Equipment(item.id,item.cost)){var copy=owned;Add("Sell "+item.displayName+" — $"+RestaurantAccount.Resale(copy.paid),()=>Confirm("Sell "+item.displayName+" for $"+RestaurantAccount.Resale(copy.paid)+"? Recipes may lock if this is your last one.",()=>Sell(copy,item.cost)));}
+            }
+            if(shopTab==4)foreach(var owned in account.Equipment("extra-plate",20)){var copy=owned;Add("Sell extra plate — $"+RestaurantAccount.Resale(copy.paid),()=>Confirm("Sell one extra plate for $"+RestaurantAccount.Resale(copy.paid)+"? Applies next day.",()=>Sell(copy,20)));}
+            Add("Back to Day Complete",NavigateBack);
+        }
+        private void Sell(OwnedEquipment item,int legacyPrice)
+        {
+            if(!RestaurantAccounts.Current.SellEquipment(item.instanceId,item.offerId,legacyPrice)){message=RestaurantAccounts.Current.Problem;return;}
+            GetComponent<KitchenFurniture>()?.RemovePurchased(item.instanceId);message="Sold for $"+RestaurantAccount.Resale(item.paid)+".";BuildRows();
         }
         private static void CycleLength(int direction)
         {
@@ -334,10 +367,10 @@ namespace ThrownTogether
         private void Buy(string id,int cost)
         {
             var account=RestaurantAccounts.Current;
-            if(hud.shift?.Day!=null && !hud.shift.Day.Closed){message="Purchases open after the 10 PM close.";return;}
+            if(hud.shift?.Day!=null && !hud.shift.Day.Closed && !hud.shift.Day.AwaitingMenu){message="Purchases open after the 10 PM close.";return;}
             message=account.Buy(id,cost)?"Purchased — available next day. "+System.Array.FindAll(DailyMenu.Catalog,r=>r.Unlocked(account)).Length+" recipes now unlocked.":!string.IsNullOrEmpty(account.Problem)?account.Problem:"Already owned, insufficient cash, or today's earnings are not yet saved.";
         }
-        private void Confirm(string text,Action action) { if(!IsOpen) Open(); pending=action; confirmation=text; SetPage("Confirm"); }
+        private void Confirm(string text,Action action) { if(!IsOpen) Open(); pending=action; confirmation=text;confirmReturnPage=Page; SetPage("Confirm"); }
         public void ActivateSelection() { if(StartupSequence.BlocksMenu)return; if(GetComponent<DayPresentation>()?.Transitioning==true)return; if(!rows[Mathf.Clamp(Selection,0,rows.Count-1)].enabled) return; rows[Mathf.Clamp(Selection,0,rows.Count-1)].select(); hud.audioFeedback?.Click(); if(IsOpen) BuildRows(); }
         private void Update()
         {
@@ -359,7 +392,7 @@ namespace ThrownTogether
                 else if(!navigationHeld || Time.unscaledTime>=nextNavigation){furniture.Navigate(Mathf.Abs(movement.x)>Mathf.Abs(movement.y)?new Vector2(Mathf.Sign(movement.x),0):new Vector2(0,Mathf.Sign(movement.y)));nextNavigation=Time.unscaledTime+(navigationHeld ? .16f:.35f);navigationHeld=true;}
                 if(accept.WasPressedThisFrame()){furniture.Confirm();if(!furniture.Editing)SetPage("Restaurant");}return;
             }
-            if(toggle.WasPressedThisFrame()) { if(IsOpen) {if(IsFrontEnd) NavigateBack(); else Close();} else Open(); return; }
+            if(toggle.WasPressedThisFrame()) { if(IsOpen) {if(IsFrontEnd || BetweenDays) NavigateBack(); else Close();} else Open(); return; }
             if(!IsOpen) return;
             if(back.WasPressedThisFrame()) { NavigateBack(); return; }
             var axis=navigate.ReadValue<Vector2>();
@@ -399,25 +432,31 @@ namespace ThrownTogether
             if(buttonStyle==null) { buttonStyle=new GUIStyle(GUI.skin.button) {alignment=TextAnchor.MiddleLeft}; textStyle=new GUIStyle(GUI.skin.label) {fontSize=22,wordWrap=true,alignment=TextAnchor.MiddleCenter}; }
             var style=buttonStyle; style.fontSize=Mathf.RoundToInt(21*Display.TextScale); var text=textStyle;
             text.normal.textColor=Color.white; style.normal.textColor=Color.white; style.hover.textColor=Color.white; style.active.textColor=Color.white;
-            GUI.Label(new Rect(260,25,760,48),Page=="Title" ? "THROWN TOGETHER" : Page=="Main" ? "PAUSED" : Page=="Levels" ? (practiceLevel ? "CHOOSE A PRACTICE KITCHEN":"CHOOSE YOUR LEVEL") : Page=="Recipes" ? "RECIPE BOOK" : Page.ToUpperInvariant(),text);
-            GUI.Label(Page=="Restaurant"?new Rect(180,73,920,60):new Rect(260,73,760,60),Page=="Reset career" ? "Erase all career days, money, purchases, hires, menu choices and saved kitchen layouts? Settings and chef appearance stay." : Page=="Confirm" ? confirmation : Page=="Today's Menu" ? DailyMenu.Resolve(RestaurantAccounts.Current).Length+" selected • Minimum 3 • A: toggle dish\nServe 4 different menu dishes: +5% meal revenue (max $15)" : Page=="Restaurant" && hud.shift?.Day?.Closed==true ? "10:00 PM — Closed • "+hud.shift.Day.Served+" meals • Earned $"+hud.shift.Day.NetIncome+" (speed $"+hud.shift.Day.Bonuses+", variety $"+hud.shift.Day.VarietyBonus+", waste $"+hud.shift.Day.WasteFees+")\nD-pad / stick: navigate • A: select • Y / Escape: view restaurant" : IsFrontEnd ? "D-pad / stick: navigate • A: select • B: back\nChoose a kitchen and start cooking." : "Paused • D-pad / stick: navigate • A: select • B: back\nY / Escape: close • Xbox Menu belongs to Edge",text);
-            int visible=Page=="Recipes"?6:(Page=="Restaurant" || Page=="Today's Menu")?8:9;
-            int first=rows.Count>visible?(Selection/visible)*visible:0;
-            for(int i=first;i<Mathf.Min(rows.Count,first+visible);i++)
+            GUI.Label(new Rect(260,25,760,48),Page=="Title" ? "THROWN TOGETHER" : Page=="Main" ? "PAUSED" : Page=="Levels" ? (practiceLevel ? "CHOOSE A PRACTICE KITCHEN":"CHOOSE YOUR LEVEL") : Page=="Recipes" ? "RECIPE BOOK" : Page=="Restaurant" ? "DAY "+(hud.shift?.Day?.DayNumber??0)+" COMPLETE" : Page=="Shop" ? "APPLIANCES, COUNTERS & DISHES" : Page.ToUpperInvariant(),text);
+            GUI.Label(Page=="Restaurant"?new Rect(180,73,920,60):new Rect(260,73,760,60),Page=="Reset career" ? "Erase all career days, money, purchases, hires, menu choices and saved kitchen layouts? Settings and chef appearance stay." : Page=="Confirm" ? confirmation : Page=="Today's Menu" ? DailyMenu.Resolve(RestaurantAccounts.Current).Length+" selected • Minimum 3 • A: toggle dish\nServe 4 different menu dishes: +5% meal revenue (max $15)" : Page=="Restaurant" && hud.shift?.Day?.Closed==true ? "10:00 PM • "+hud.shift.Day.Served+" served / "+hud.shift.Day.LostCustomers+" lost • Earned $"+hud.shift.Day.NetIncome+" (speed $"+hud.shift.Day.Bonuses+", variety $"+hud.shift.Day.VarietyBonus+", waste $"+hud.shift.Day.WasteFees+")\nAvailable $"+RestaurantAccounts.Current.Data.cash+" • B returns here" : IsFrontEnd ? "D-pad / stick: navigate • A: select • B: back\nChoose a kitchen and start cooking." : BetweenDays?"Available $"+RestaurantAccounts.Current.Data.cash+" • D-pad: navigate • A: select • B: Day Complete":"Paused • D-pad / stick: navigate • A: select • B: back\nY / Escape: close • Xbox Menu belongs to Edge",text);
+            int visible=Page=="Recipes"?6:Page=="Shop"?7:(Page=="Restaurant" || Page=="Today's Menu")?8:9;
+            bool menu=Page=="Today's Menu";
+            int begin=menu?1:0, end=menu?rows.Count-1:rows.Count;
+            int first=Mathf.Clamp(Selection-visible+1,begin,Mathf.Max(begin,end-visible));
+            for(int n=0;n<(menu?Mathf.Min(visible,end-first)+2:Mathf.Min(visible,end-first));n++)
             {
+                int i=menu && n>=Mathf.Min(visible,end-first)?(n==Mathf.Min(visible,end-first)?0:rows.Count-1):first+n;
                 GUI.enabled=rows[i].enabled && !StartupSequence.BlocksMenu && (presentation==null || !presentation.Transitioning);
                 GUI.backgroundColor=i==Selection ? new Color(.2f,.8f,.6f):Color.gray;
                 var rowRect=Page=="Recipes" ? new Rect(35,160+(i-first)*55,345,48):WardrobePage ? new Rect(65,145+(i-first)*47,670,42):(Page=="Restaurant" || Page=="Today's Menu") ? new Rect(260,140+(i-first)*42,760,37):new Rect(260,145+(i-first)*47,760,42);
+                if(menu && (i==0 || i==rows.Count-1))rowRect=new Rect(i==0?260:650,500,370,40);
+                if(Page=="Shop")rowRect.y+=40;
                 GUI.color=new Color(.025f,.035f,.05f,.94f*opacity);GUI.DrawTexture(rowRect,Texture2D.whiteTexture);GUI.color=new Color(1,1,1,opacity);
                 if(GUI.Button(rowRect,(i==Selection ? ">  ":"    ")+rows[i].label,style)) { Selection=i; ActivateSelection(); break; }
             }
             GUI.enabled=true; GUI.backgroundColor=Color.white;
-            if(rows.Count>visible)
+            if(Page=="Shop")for(int tab=0;tab<shopTabs.Length;tab++){GUI.backgroundColor=tab==shopTab?new Color(.2f,.8f,.6f):Color.gray;if(GUI.Button(new Rect(260+tab*152,140,148,34),shopTabs[tab])){shopTab=tab;Selection=0;BuildRows();}}GUI.backgroundColor=Color.white;
+            if(end-begin>visible)
             {
                 bool recipes=Page=="Recipes";
-                if(GUI.Button(recipes?new Rect(35,520,165,32):new Rect(260,575,170,30),"Previous"))Selection=Mathf.Max(0,Selection-visible);
-                GUI.Label(recipes?new Rect(35,558,345,32):new Rect(435,575,400,30),(first+1)+" - "+Mathf.Min(rows.Count,first+visible)+" / "+rows.Count,text);
-                if(GUI.Button(recipes?new Rect(210,520,170,32):new Rect(850,575,170,30),"Next"))Selection=Mathf.Min(rows.Count-1,Selection+visible);
+                if(GUI.Button(recipes?new Rect(35,520,165,32):new Rect(260,575,170,30),"↑ Scroll up"))Selection=Mathf.Max(0,Selection-visible);
+                GUI.Label(recipes?new Rect(35,558,345,32):new Rect(435,575,400,30),(first>begin?"↑ More above   ":"")+(first-begin+1)+"–"+Mathf.Min(end-begin,first-begin+visible)+" / "+(end-begin)+(first+visible<end?"   More below ↓":""),text);
+                if(GUI.Button(recipes?new Rect(210,520,170,32):new Rect(850,575,170,30),"↓ Scroll down"))Selection=Mathf.Min(rows.Count-1,Selection+visible);
             }
             if(WardrobePage && wardrobePreview!=null && wardrobePreview.Image!=null)
             {
@@ -437,7 +476,7 @@ namespace ThrownTogether
             }
             if(Page=="Kitchen") GUI.Label(new Rect(260,370,760,135),hud.GetComponent<KitchenLayout>().choices[Mathf.Min(Selection,2)].description,text);
             if(Page=="Co-op") GUI.Label(new Rect(200,390,880,145),"1. Xbox Edge: hold Menu, then Use game controls.\n2. Resume. First pad controls P1; A on another joins P2.\nChoose both looks in Choose your chef. A: use. Y: menu.\nDisconnected? Food stays safe. Reconnect that pad or press A on an unused one.",text);
-            GUI.Label(new Rect(240,545,800,70),message,text);
+            GUI.Label(new Rect(240,610,800,65),message,text);
             if(Page=="Results")
             {
                 var summary=hud.GetComponent<SessionSummary>();
@@ -445,7 +484,7 @@ namespace ThrownTogether
                 GUI.Label(new Rect(200,215,880,240),"Dishes completed: "+completed+"\nTime: "+TimeSpan.FromSeconds(summary.ElapsedSeconds).ToString(@"mm\:ss")+
                     "\n\nP1  "+summary.PlayerOne.Description+"\nP2  "+summary.PlayerTwo.Description+"\n\nTeam contributions count successful actions, not points.",text);
             }
-            if(hud.coop!=null) GUI.Label(new Rect(180,620,920,75),hud.coop.DeviceSummary,text);
+            if(hud.coop!=null && !BetweenDays && Page!="Shop" && Page!="Today's Menu") GUI.Label(new Rect(180,620,920,75),hud.coop.DeviceSummary,text);
             GUI.matrix=matrix; GUI.depth=0; GUI.color=previousColor; GUI.enabled=previousEnabled;
         }
     }

@@ -3,6 +3,8 @@ using System.Linq;
 using UnityEngine;
 namespace ThrownTogether
 {
+    [Serializable] public sealed class OwnedEquipment { public string instanceId, offerId; public int paid; }
+    [Serializable] public sealed class StaffTraining { public string role; public int level; }
     [Serializable] public sealed class RestaurantSave
     {
         public int schemaVersion=1, cash, nextDay=1, activeDay, settledDay, completedDays;
@@ -10,6 +12,8 @@ namespace ThrownTogether
         public string[] purchases=new string[0];
         public string[] selectedMenu=new string[0];
         public FurniturePlacement[] furniture=new FurniturePlacement[0];
+        public OwnedEquipment[] equipment=new OwnedEquipment[0];
+        public StaffTraining[] training=new StaffTraining[0];
     }
     // Separate from audio/display settings. Writes commit a copy, never partially debit live state.
     public sealed class RestaurantAccount
@@ -29,6 +33,8 @@ namespace ThrownTogether
                 if(loaded==null||loaded.schemaVersion!=1||loaded.completedDays<0||loaded.completedDays>loaded.settledDay||loaded.cash<0||loaded.nextDay<1||loaded.activeDay<0||loaded.settledDay<0||loaded.settledDay>loaded.activeDay||loaded.activeDay>=loaded.nextDay||loaded.purchases==null)throw new ArgumentException("Unsupported save");
                 if(loaded.furniture==null)loaded.furniture=new FurniturePlacement[0];
                 if(loaded.selectedMenu==null)loaded.selectedMenu=new string[0];
+                if(loaded.equipment==null)loaded.equipment=new OwnedEquipment[0];
+                if(loaded.training==null)loaded.training=new StaffTraining[0];
                 // Optional schema-1 addition: preserve old saves and begin with their existing dishes.
                 if(!json.Contains("\"selectedMenu\""))loaded.selectedMenu=System.Array.ConvertAll(System.Array.FindAll(DailyMenu.Catalog,r=>r.requiredPurchases.Length==0),r=>r.id);
                 Data=loaded;
@@ -54,7 +60,7 @@ namespace ThrownTogether
             if(ids==null || System.Array.Exists(ids,string.IsNullOrWhiteSpace))return false;
             var next=Copy();next.selectedMenu=System.Linq.Enumerable.ToArray(System.Linq.Enumerable.Distinct(ids));return Commit(next);
         }
-        public int ArrangementFee=>Data.completedDays==0 || Data.arrangementPaidBreak==Data.settledDay?0:10;
+        public int ArrangementFee=>Data.completedDays==0 || Data.arrangementPaidBreak==Data.settledDay?0:100;
         public bool SetFurniture(int kitchen,FurniturePlacement[] placements,bool charge=false)
         {
             if(Data.activeDay>Data.settledDay || kitchen<0 || kitchen>2 || placements==null)return false;
@@ -64,7 +70,32 @@ namespace ThrownTogether
             if(Data.cash<fee){Problem="Rearranging costs $"+fee+" for this break. Your draft is retained.";return false;}
             var next=Copy();next.cash-=fee;if(charge)next.arrangementPaidBreak=next.settledDay;next.furniture=System.Linq.Enumerable.ToArray(System.Linq.Enumerable.Concat(System.Linq.Enumerable.Where(next.furniture??new FurniturePlacement[0],p=>p!=null && p.kitchen!=kitchen),placements));return Commit(next);
         }
-        public bool Owns(string id)=>Array.IndexOf(Data.purchases,id)>=0;
+        public bool Owns(string id)=>Array.IndexOf(Data.purchases,id)>=0 || Data.equipment.Any(e=>e.offerId==id);
+        public int Quantity(string id)=>Data.equipment.Count(e=>e.offerId==id)+(Array.IndexOf(Data.purchases,id)>=0?1:0);
+        public OwnedEquipment[] Equipment(string id,int legacyPrice)=>Data.equipment.Where(e=>e.offerId==id).Concat(Array.IndexOf(Data.purchases,id)>=0?new[]{new OwnedEquipment{instanceId=id,offerId=id,paid=legacyPrice}}:new OwnedEquipment[0]).ToArray();
+        public bool BuyEquipment(string id,int cost,string instanceId=null,FurniturePlacement[] placements=null,int kitchen=0)
+        {
+            if(string.IsNullOrWhiteSpace(id)||cost<0||Data.cash<cost||Data.activeDay>Data.settledDay)return false;
+            var next=Copy();next.cash-=cost;next.equipment=next.equipment.Concat(new[]{new OwnedEquipment{instanceId=instanceId??Guid.NewGuid().ToString("N"),offerId=id,paid=cost}}).ToArray();if(placements!=null)next.furniture=next.furniture.Where(p=>p.kitchen!=kitchen).Concat(placements).ToArray();return Commit(next);
+        }
+        public bool SellEquipment(string instanceId,string offerId,int legacyPrice)
+        {
+            if(Data.activeDay>Data.settledDay)return false;
+            var item=Equipment(offerId,legacyPrice).FirstOrDefault(e=>e.instanceId==instanceId);if(item==null)return false;
+            var next=Copy();next.cash=checked(next.cash+Resale(item.paid));next.equipment=next.equipment.Where(e=>e.instanceId!=instanceId).ToArray();
+            if(instanceId==offerId)next.purchases=next.purchases.Where(p=>p!=offerId).ToArray();
+            next.furniture=next.furniture.Where(p=>p.id!="purchase:"+instanceId).ToArray();return Commit(next);
+        }
+        public static int Resale(int cost)=>Mathf.FloorToInt(cost*.75f);
+        public int TrainingLevel(string role)=>Data.training.FirstOrDefault(t=>t.role==role)?.level??0;
+        public float StaffSpeed(string role)=>1+.1f*TrainingLevel(role);
+        public int TrainingPrice(string role)=>50*(TrainingLevel(role)+1);
+        public bool Train(string role)
+        {
+            int level=TrainingLevel(role),price=TrainingPrice(role);
+            if(!Owns(role)||level>=3||Data.cash<price||Data.activeDay>Data.settledDay)return false;
+            var next=Copy();next.cash-=price;next.training=next.training.Where(t=>t.role!=role).Concat(new[]{new StaffTraining{role=role,level=level+1}}).ToArray();return Commit(next);
+        }
         public int StartDay()
         {
             var next=Copy();next.activeDay=next.nextDay++;return Commit(next)?next.activeDay:0;

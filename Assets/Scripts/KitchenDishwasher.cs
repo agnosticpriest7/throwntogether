@@ -73,13 +73,14 @@ namespace ThrownTogether
         {
             if(day.Closed || walker==null || seconds<=0)return;
             if(retry>0){retry-=seconds;return;}
-            walker.Advance(seconds,day.Settings.walkingSpeed,hands.Item!=null);if(!walker.Arrived)return;
+            float speed=RestaurantAccounts.Current.StaffSpeed(day.Settings.dishwasherRole.id);
+            walker.Advance(seconds,day.Settings.walkingSpeed*speed,hands.Item!=null);if(!walker.Arrived)return;
             if(hands.Item!=null)
             {
                 var target=hands.Item.Payload.dirty?sink.transform:stock.transform;
                 if(destination!=target){Travel(target);return;}
                 if(hands.Item.Payload.dirty){if(sink.Enqueue(hands.Item))Travel(sink.transform);}
-                else if(stock.ReturnCleanPlate(hands.Item))Travel(sink.transform);
+                else if(stock.ReturnCleanPlate(hands.Item))Travel(sink.Count==0 && rack.Count>0?rack.transform:sink.transform);
                 return;
             }
             if(destination==rack.transform)
@@ -89,7 +90,7 @@ namespace ThrownTogether
             if(sink.Count>0)
             {
                 if(!sink.Busy){if(sink.TakeClean(hands))Travel(stock.transform);}
-                else sink.WashBy(this,seconds);
+                else sink.WashBy(this,seconds*speed);
             }
             else if(rack.Count>0)Travel(rack.transform);
         }

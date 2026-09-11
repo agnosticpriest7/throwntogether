@@ -15,15 +15,17 @@ namespace ThrownTogether
             walker=go.AddComponent<DiningWalker>();walker.Initialize(day.Settings.walkingVisual,2);
             var grip=new GameObject("Carried plate");grip.transform.SetParent(go.transform,false);grip.transform.localPosition=new Vector3(0,1.25f,.65f);hands=grip.AddComponent<CarrySlot>();
         }
+        bool HasWork()=>pass.pickupSlot.Item!=null && day.Tables.Any(t=>!t.ReservedForServer && t.CanServe(pass.pickupSlot.Item.Payload));
         public void Advance(float seconds)
         {
             if(day.Closed)return;
-            walker.Advance(seconds,day.Settings.walkingSpeed,hands.Item!=null);if(!walker.Arrived)return;
+            if(destination==Destination.Idle && HasWork())Travel(Destination.Pass,Pickup);
+            walker.Advance(seconds,day.Settings.walkingSpeed*RestaurantAccounts.Current.StaffSpeed(day.Settings.serverRole.id),hands.Item!=null);if(!walker.Arrived)return;
             if(destination==Destination.Table)
             {
                 if(hands.Item!=null)target.Deliver(hands.Item);
                 target.ReservedForServer=false;target=null;
-                Travel(hands.Item!=null?Destination.Pass:Destination.Idle,hands.Item!=null?Pickup:Home);return;
+                bool more=hands.Item!=null || HasWork();Travel(more?Destination.Pass:Destination.Idle,more?Pickup:Home);return;
             }
             if(destination==Destination.Idle)
             {

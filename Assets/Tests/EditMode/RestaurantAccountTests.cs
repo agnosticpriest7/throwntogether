@@ -5,14 +5,31 @@ namespace ThrownTogether.Tests
     public sealed class RestaurantAccountTests
     {
         sealed class Memory:ISettingsStorage {public string json="";public bool fail;public string Read()=>json;public void Write(string value){if(fail)throw new Exception("Storage unavailable");json=value;}}
+        [Test] public void RepeatPurchasesResaleAndTrainingPersistAtomically()
+        {
+            var store=new Memory();var a=new RestaurantAccount(store);int day=a.StartDay();a.Settle(day,2000,0);
+            Assert.That(a.BuyEquipment("grill",150),Is.True);Assert.That(a.BuyEquipment("grill",150),Is.True);
+            Assert.That(a.Quantity("grill"),Is.EqualTo(2));var first=a.Data.equipment[0];
+            store.fail=true;Assert.That(a.SellEquipment(first.instanceId,"grill",150),Is.False);Assert.That(a.Data.cash,Is.EqualTo(1700));store.fail=false;
+            Assert.That(a.SellEquipment(first.instanceId,"grill",150),Is.True);Assert.That(a.Data.cash,Is.EqualTo(1812));Assert.That(a.Owns("grill"),Is.True);
+            a=new RestaurantAccount(store);Assert.That(a.Quantity("grill"),Is.EqualTo(1));Assert.That(a.SellEquipment(first.instanceId,"grill",150),Is.False);
+            a.Buy("server",150);Assert.That(a.Train("server"),Is.True);Assert.That(a.Train("server"),Is.True);Assert.That(a.Train("server"),Is.True);Assert.That(a.Train("server"),Is.False);
+            a=new RestaurantAccount(store);Assert.That(a.StaffSpeed("server"),Is.EqualTo(1.3f).Within(.001));Assert.That(a.Train("busser"),Is.False);
+            day=a.StartDay();Assert.That(a.BuyEquipment("extra-plate",20),Is.False);Assert.That(a.SellEquipment(a.Data.equipment[0].instanceId,"grill",150),Is.False);
+        }
+        [Test] public void LegacyEquipmentCanSellAndLastCopyRelocksOwnership()
+        {
+            var store=new Memory();var a=new RestaurantAccount(store);int day=a.StartDay();a.Settle(day,200,0);a.Buy("grill",150);
+            a=new RestaurantAccount(store);Assert.That(a.Equipment("grill",150).Length,Is.EqualTo(1));Assert.That(a.SellEquipment("grill","grill",150),Is.True);Assert.That(a.Owns("grill"),Is.False);Assert.That(a.Data.cash,Is.EqualTo(162));
+        }
         [Test] public void ArrangementFeeIsOncePerPaidBreakAtomicAndFreeBeforeDayOne()
         {
             var store=new Memory();var a=new RestaurantAccount(store);Assert.That(a.ArrangementFee,Is.Zero);var records=new[]{new FurniturePlacement{id="base:3",slot=4}};
-            int day=a.StartDay();a.Settle(day,100,0);Assert.That(a.ArrangementFee,Is.EqualTo(10));
-            store.fail=true;Assert.That(a.SetFurniture(0,records,true),Is.False);Assert.That(a.Data.cash,Is.EqualTo(100));Assert.That(a.ArrangementFee,Is.EqualTo(10));
-            store.fail=false;Assert.That(a.SetFurniture(0,records,true),Is.True);Assert.That(a.Data.cash,Is.EqualTo(90));
-            a=new RestaurantAccount(store);Assert.That(a.ArrangementFee,Is.Zero);a.SetFurniture(0,records,true);Assert.That(a.Data.cash,Is.EqualTo(90));
-            day=a.StartDay();a.Settle(day,0,0);Assert.That(a.ArrangementFee,Is.EqualTo(10));
+            int day=a.StartDay();a.Settle(day,100,0);Assert.That(a.ArrangementFee,Is.EqualTo(100));
+            store.fail=true;Assert.That(a.SetFurniture(0,records,true),Is.False);Assert.That(a.Data.cash,Is.EqualTo(100));Assert.That(a.ArrangementFee,Is.EqualTo(100));
+            store.fail=false;Assert.That(a.SetFurniture(0,records,true),Is.True);Assert.That(a.Data.cash,Is.Zero);
+            a=new RestaurantAccount(store);Assert.That(a.ArrangementFee,Is.Zero);a.SetFurniture(0,records,true);Assert.That(a.Data.cash,Is.Zero);
+            day=a.StartDay();a.Settle(day,0,0);Assert.That(a.ArrangementFee,Is.EqualTo(100));
         }
         [Test] public void CareerResetClearsProgressAndFailedResetPreservesIt()
         {

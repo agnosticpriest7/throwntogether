@@ -51,6 +51,23 @@ namespace ThrownTogether
         {for(int i=0;i<Slots.Length;i++)if(Vector3.Distance(position,Slots[i])<.15f)return i;return -1;}
         Piece At(int slot)=>pieces.FirstOrDefault(p=>p.slot==slot);
         public Transform Find(string id)=>pieces.FirstOrDefault(p=>p.id==id)?.root;
+        public bool TryPurchase(RestaurantUpgradeDefinition offer)
+        {
+            if(!CanEdit || offer==null || offer.stationPrefab==null)return false;
+            var instance=Instantiate(offer.stationPrefab);instance.name=offer.displayName;
+            var piece=new Piece{id="candidate",root=instance.transform};pieces.Add(piece);
+            bool fits=false;
+            foreach(int slot in Enumerable.Range(0,Slots.Length).Where(s=>At(s)==null).ToArray())
+            {Place(piece,slot,0);if(Validate(out var unused)){fits=true;break;}}
+            if(!fits){pieces.Remove(piece);instance.SetActive(false);Destroy(instance);Message="No safe free bay. Sell equipment or rearrange first.";return false;}
+            var account=RestaurantAccounts.Current;
+            string key=Guid.NewGuid().ToString("N");piece.id="purchase:"+key;
+            var records=pieces.Select(p=>new FurniturePlacement{kitchen=SessionOptions.Kitchen,id=p.id,slot=p.slot,turns=p.turns}).ToArray();
+            if(!account.BuyEquipment(offer.id,offer.cost,key,records,SessionOptions.Kitchen)){pieces.Remove(piece);instance.SetActive(false);Destroy(instance);Message=string.IsNullOrEmpty(account.Problem)?"Not enough money.":account.Problem;return false;}
+            piece.id="purchase:"+account.Data.equipment.Last().instanceId;piece.before=piece.root.position;piece.rotation=piece.root.rotation;Message="Purchased and placed in bay "+(piece.slot+1)+".";return true;
+        }
+        public void RemovePurchased(string instanceId)
+        {var piece=pieces.FirstOrDefault(p=>p.id=="purchase:"+instanceId);if(piece==null)return;pieces.Remove(piece);piece.root.gameObject.SetActive(false);Destroy(piece.root.gameObject);}
         public void ApplySaved()
         {
             var records=RestaurantAccounts.Current.Data.furniture??new FurniturePlacement[0];
@@ -71,12 +88,14 @@ namespace ThrownTogether
             if(!valid || !Validate(out var unused))
             {for(int i=0;i<pieces.Count;i++){var p=pieces[i];p.root.SetPositionAndRotation(old[i].position,old[i].rotation);p.slot=old[i].slot;p.turns=old[i].turns;}Physics.SyncTransforms();Message="Saved layout no longer fits; original positions restored. Your save is preserved.";}
         }
-        void IncludeNewPurchases()
+        public void IncludeNewPurchases()
         {
             foreach(var offer in day.Settings.purchases)
-                if(offer!=null && offer.stationPrefab!=null && RestaurantAccounts.Current.Owns(offer.id) && Find("purchase:"+offer.id)==null)
+                if(offer!=null && offer.stationPrefab!=null)
+                foreach(var owned in RestaurantAccounts.Current.Equipment(offer.id,offer.cost))
+                if(Find("purchase:"+owned.instanceId)==null)
                 {
-                    var instance=Instantiate(offer.stationPrefab,offer.layoutPositions[Mathf.Clamp(SessionOptions.Kitchen,0,offer.layoutPositions.Length-1)],Quaternion.identity);instance.name=offer.displayName;Register("purchase:"+offer.id,instance.transform);
+                    var instance=Instantiate(offer.stationPrefab,offer.layoutPositions[Mathf.Clamp(SessionOptions.Kitchen,0,offer.layoutPositions.Length-1)],Quaternion.identity);instance.name=offer.displayName;Register("purchase:"+owned.instanceId,instance.transform);
                 }
         }
         public bool Begin()

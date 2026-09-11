@@ -19,16 +19,17 @@ namespace ThrownTogether
         public bool plates;
         public const int PlateCapacity=5;
         private int issued;
+        public int TotalCapacity=>PlateCapacity+RestaurantAccounts.Current.Quantity("extra-plate");
         private readonly HashSet<Carryable> pool=new HashSet<Carryable>();
         private readonly Stack<Carryable> returned=new Stack<Carryable>();
-        public int CleanPlatesRemaining => PlateCapacity-issued+returned.Count;
+        public int CleanPlatesRemaining => Mathf.Max(0,TotalCapacity-issued+returned.Count);
         public override string Prompt(ChefController chef)
         {
             if(plates && chef.Hands.Item!=null && chef.Hands.Item.Payload.EmptyPlate && !chef.Hands.Item.Payload.dirty) return "Return clean plate to stack";
             if(plates && ItemPayload.CanPlate(ItemPayload.Plate(),chef.Hands.Item?.Payload)) return CleanPlatesRemaining>0 ? "Plate food in hands" : "No clean plates — wash a dirty plate";
             if(chef.Hands.Item!=null) return "Hands full — use a counter";
             if(!plates) return storage!=null?"Choose ingredient — "+storage.displayName:"Take "+ingredient.displayName.ToLowerInvariant();
-            return CleanPlatesRemaining>0 ? "Take clean plate ("+CleanPlatesRemaining+" / 5)" : "No clean plates — collect and wash a dirty plate";
+            return CleanPlatesRemaining>0 ? "Take clean plate ("+CleanPlatesRemaining+" / "+TotalCapacity+")" : "No clean plates — collect and wash a dirty plate";
         }
         public override bool Interact(ChefController chef)
         {
@@ -56,7 +57,7 @@ namespace ThrownTogether
         {
             if(!plates)return null;
             if(returned.Count>0){var item=returned.Pop();item.gameObject.SetActive(true);return item;}
-            if(issued>=PlateCapacity)return null;
+            if(issued>=TotalCapacity)return null;
             var created=Instantiate(itemPrefab);created.Configure(ItemPayload.Plate());issued++;pool.Add(created);return created;
         }
         public bool ReturnCleanPlate(Carryable item)

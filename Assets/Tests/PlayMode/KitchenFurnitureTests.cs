@@ -39,6 +39,21 @@ namespace ThrownTogether.Tests
             SceneManager.SetActiveScene(original);foreach(var g in suspended)if(g!=null)g.SetActive(true);
             Time.timeScale=1;SessionOptions.ShiftOrders=6;SessionOptions.Kitchen=0;RestaurantAccounts.ResetCache();
         }
+        [UnityTest] public IEnumerator ManagementHubRepeatEquipmentAndPlateSupplySurviveReload()
+        {
+            var account=RestaurantAccounts.Current;int paid=account.StartDay();account.Settle(paid,3000,0);
+            var menu=hud.GetComponent<RestaurantMenu>();menu.OpenRestaurant();menu.NavigateBack();Assert.That(menu.Page,Is.EqualTo("Restaurant"));
+            Assert.That(menu.VisibleOptions[0],Is.EqualTo("Employee Management"));Assert.That(menu.VisibleOptions[3],Does.StartWith("Next Day"));
+            menu.SelectRow(0);menu.ActivateSelection();Assert.That(menu.Page,Is.EqualTo("Employees"));menu.NavigateBack();Assert.That(menu.Page,Is.EqualTo("Restaurant"));
+            var f=hud.GetComponent<KitchenFurniture>();var offer=day.Settings.purchases.First(p=>p.stationPrefab!=null && p.kind==RestaurantPurchaseKind.FryerBay);
+            Assert.That(f.TryPurchase(offer),Is.True,f.Message);Assert.That(f.TryPurchase(offer),Is.True,f.Message);Assert.That(account.Quantity(offer.id),Is.EqualTo(2));
+            var owned=account.Equipment(offer.id,offer.cost);var position=f.Find("purchase:"+owned[0].instanceId).position;
+            account.BuyEquipment("extra-plate",20);account.BuyEquipment("extra-plate",20);
+            RestaurantAccounts.UseStorage(memory);yield return Load();f=hud.GetComponent<KitchenFurniture>();
+            Assert.That(f.Find("purchase:"+owned[0].instanceId).position,Is.EqualTo(position));Assert.That(f.Validate(out var why),Is.True,why);
+            var stock=Object.FindObjectsByType<SourceStation>().First(x=>x.gameObject.scene==scene && x.plates);Assert.That(stock.TotalCapacity,Is.EqualTo(7));
+            for(int i=0;i<7;i++)Assert.That(stock.TakeCleanPlate(),Is.Not.Null);Assert.That(stock.TakeCleanPlate(),Is.Null);
+        }
         [UnityTest] public IEnumerator AllKitchenEquipmentStartsOnBaysAndEveryUiControlIsReachable()
         {
             var f=hud.GetComponent<KitchenFurniture>();Assert.That(f.Validate(out var why),Is.True,why);Assert.That(f.Begin(),Is.True);
