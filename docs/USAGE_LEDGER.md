@@ -89,3 +89,7 @@ Implemented the explicitly requested gameplay batch using existing assets, plate
 
 ### 2026-09-11 — Studio/publisher intro
 Extended both logo holds to three seconds, imported supplied Twist artwork, and prevented Unity splash time consuming the studio hold. Reused Boot UI; focused changes, full existing pipeline and browser deployment verification. Account-wide usage unavailable; no estimated usage recorded.
+
+
+### 2026-09-11 — Numbered kitchen arrangement and studio artwork
+Reused management, colliders, staff routes and atomic account storage. Added focused placement/controller tests, live MCP cooking verification and full pipeline verification. Used supplied artwork directly; no art generation. Account-wide usage not available; no usage estimate recorded.

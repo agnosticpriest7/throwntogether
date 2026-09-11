@@ -5,6 +5,17 @@ namespace ThrownTogether.Tests
     public sealed class RestaurantAccountTests
     {
         sealed class Memory:ISettingsStorage {public string json="";public bool fail;public string Read()=>json;public void Write(string value){if(fail)throw new Exception("Storage unavailable");json=value;}}
+        [Test] public void FurnitureIsAtomicPerKitchenAndCannotChangeDuringService()
+        {
+            var storage=new Memory();var account=new RestaurantAccount(storage);
+            var placement=new FurniturePlacement{id="base:3",kitchen=0,slot=2,turns=1};
+            Assert.That(account.SetFurniture(0,new[]{placement}),Is.True);
+            var loaded=new RestaurantAccount(storage);Assert.That(loaded.Data.furniture[0].slot,Is.EqualTo(2));
+            Assert.That(account.SetFurniture(0,new[]{placement,placement}),Is.False);
+            storage.fail=true;Assert.That(account.SetFurniture(0,new FurniturePlacement[0]),Is.False);Assert.That(account.Data.furniture.Length,Is.EqualTo(1));storage.fail=false;
+            int day=account.StartDay();Assert.That(account.SetFurniture(0,new FurniturePlacement[0]),Is.False);account.Settle(day,0,0);
+            Assert.That(account.SetFurniture(1,new[]{new FurniturePlacement{id="base:3",kitchen=1,slot=4}}),Is.True);Assert.That(account.Data.furniture.Length,Is.EqualTo(2));
+        }
         [Test] public void DayPaysOnceAndPurchasesSurviveReload()
         {
             var storage=new Memory();var account=new RestaurantAccount(storage);int day=account.StartDay();

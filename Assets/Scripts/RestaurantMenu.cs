@@ -26,7 +26,7 @@ namespace ThrownTogether
         public string Page { get; private set; }="Main";
         private RestaurantHud hud;
         private InputActionMap controls;
-        private InputAction toggle, navigate, accept, back;
+        private InputAction toggle, navigate, accept, back, rotateLayout, cycleFurniture;
         private float savedTimeScale=1, nextNavigation;
         private int blockThroughFrame=-1;
         private Action pending;
@@ -48,6 +48,8 @@ namespace ThrownTogether
             hud=GetComponent<RestaurantHud>(); Instance=this;
             recipeBook=Resources.Load<RecipeBook>("RecipeBook");
             controls=new InputActionMap("Restaurant menu");
+            rotateLayout=controls.AddAction("Rotate furniture",InputActionType.Button);rotateLayout.AddBinding("<Gamepad>/buttonWest");rotateLayout.AddBinding("<Keyboard>/r");
+            cycleFurniture=controls.AddAction("Choose furniture",InputActionType.Button);cycleFurniture.AddBinding("<Gamepad>/rightShoulder");cycleFurniture.AddBinding("<Keyboard>/tab");
             toggle=controls.AddAction("Menu",InputActionType.Button); toggle.AddBinding("<Gamepad>/buttonNorth"); toggle.AddBinding("<Keyboard>/escape");
             navigate=controls.AddAction("Navigate",InputActionType.Value); navigate.AddBinding("<Gamepad>/dpad"); navigate.AddBinding("<Gamepad>/leftStick");
             navigate.AddCompositeBinding("2DVector").With("Up","<Keyboard>/upArrow").With("Down","<Keyboard>/downArrow").With("Left","<Keyboard>/leftArrow").With("Right","<Keyboard>/rightArrow");
@@ -125,6 +127,7 @@ namespace ThrownTogether
         public void Close()
         {
             if(!IsOpen) return;
+            GetComponent<KitchenFurniture>()?.Cancel();
             if(IsOpen) Time.timeScale=savedTimeScale;
             IsOpen=false; blockThroughFrame=Time.frameCount+1;
             hud.coop?.RefreshPlayerOneAssignment();
@@ -136,6 +139,7 @@ namespace ThrownTogether
         private void BuildRows()
         {
             rows.Clear();
+            if(Page=="Kitchen layout")return;
             if(Page=="Title")
             {
                 AddUnavailable("Tutorial");
@@ -204,6 +208,7 @@ namespace ThrownTogether
             {
                 var day=hud.shift?.Day;var config=Resources.Load<DayServiceDefinition>("ServiceDay");var account=RestaurantAccounts.Current;
                 Add("Next day — bank $"+account.Data.cash,()=>{if(day!=null && day.AwaitingMenu)ChooseDailyMenu(()=>{if(day.StartService())Close();});else if(day!=null && !day.Closed)message="Finish this day before starting the next.";else if(day!=null && !day.Paid)message="Save today's earnings before continuing. Use Retry below.";else {var presentation=GetComponent<DayPresentation>(); Action start=()=>{SessionOptions.ShiftOrders=0;Close();Load("RestaurantShift");}; ChooseDailyMenu(()=>{if(presentation==null || day==null)start();else presentation.BeginNextDay(start);});}});
+                Add("Arrange kitchen",()=>OpenKitchenLayout());
                 if(config!=null)
                 {
                     foreach(var offer in config.purchases)
@@ -295,6 +300,12 @@ namespace ThrownTogether
         }
         private void Save() { message=hud.settings.Save() ? "Settings saved." : "Settings could not be saved; existing saved data was preserved."; }
         public void RequestRestart() => Confirm("Restart this mode? Unpaid earnings and current food/orders will be lost. Saved money and purchases stay.",()=>hud.chef.GetComponent<ChefInput>().RestartSlice());
+        public bool OpenKitchenLayout()
+        {
+            var furniture=GetComponent<KitchenFurniture>();
+            if(furniture==null || !furniture.Begin()){message="Arrange equipment between paid service days.";return false;}
+            if(!IsOpen)Open();SetPage("Kitchen layout");return true;
+        }
         public void OpenRestaurant(){if(!IsOpen)Open();SetPage("Restaurant");}
         private void Buy(string id,int cost)
         {
@@ -308,6 +319,18 @@ namespace ThrownTogether
         public void Tick(bool focused)
         {
             if(StartupSequence.BlocksMenu || !focused || GetComponent<DayPresentation>()?.Transitioning==true) return;
+            if(IsOpen && Page=="Kitchen layout")
+            {
+                var furniture=GetComponent<KitchenFurniture>();
+                if(back.WasPressedThisFrame()){if(furniture.Back())SetPage("Restaurant");return;}
+                if(toggle.WasPressedThisFrame()){if(furniture.Save())SetPage("Restaurant");return;}
+                if(rotateLayout.WasPressedThisFrame())furniture.Rotate();
+                if(cycleFurniture.WasPressedThisFrame())furniture.CyclePiece();
+                var movement=navigate.ReadValue<Vector2>();
+                if(movement.sqrMagnitude<.25f)navigationHeld=false;
+                else if(!navigationHeld || Time.unscaledTime>=nextNavigation){furniture.Navigate(Mathf.Abs(movement.x)>Mathf.Abs(movement.y)?new Vector2(Mathf.Sign(movement.x),0):new Vector2(0,Mathf.Sign(movement.y)));nextNavigation=Time.unscaledTime+(navigationHeld ? .16f:.35f);navigationHeld=true;}
+                if(accept.WasPressedThisFrame())furniture.Confirm();return;
+            }
             if(toggle.WasPressedThisFrame()) { if(IsOpen) {if(IsFrontEnd) NavigateBack(); else Close();} else Open(); return; }
             if(!IsOpen) return;
             if(back.WasPressedThisFrame()) { NavigateBack(); return; }
@@ -333,6 +356,7 @@ namespace ThrownTogether
         private void OnGUI()
         {
             if(!IsOpen) return;
+            if(Page=="Kitchen layout"){GetComponent<KitchenFurniture>().Draw(()=>SetPage("Restaurant"),()=>SetPage("Restaurant"));return;}
             var presentation=GetComponent<DayPresentation>();
             var opacity=presentation!=null ? presentation.MenuOpacity:1;
             var previousColor=GUI.color; var previousEnabled=GUI.enabled;

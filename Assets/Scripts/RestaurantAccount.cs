@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using UnityEngine;
 namespace ThrownTogether
 {
@@ -7,6 +8,7 @@ namespace ThrownTogether
         public int schemaVersion=1, cash, nextDay=1, activeDay, settledDay, completedDays;
         public string[] purchases=new string[0];
         public string[] selectedMenu=new string[0];
+        public FurniturePlacement[] furniture=new FurniturePlacement[0];
     }
     // Separate from audio/display settings. Writes commit a copy, never partially debit live state.
     public sealed class RestaurantAccount
@@ -24,6 +26,7 @@ namespace ThrownTogether
                 if(!json.Contains("\"schemaVersion\""))throw new ArgumentException("Missing schema");
                 var loaded=JsonUtility.FromJson<RestaurantSave>(json);
                 if(loaded==null||loaded.schemaVersion!=1||loaded.completedDays<0||loaded.completedDays>loaded.settledDay||loaded.cash<0||loaded.nextDay<1||loaded.activeDay<0||loaded.settledDay<0||loaded.settledDay>loaded.activeDay||loaded.activeDay>=loaded.nextDay||loaded.purchases==null)throw new ArgumentException("Unsupported save");
+                if(loaded.furniture==null)loaded.furniture=new FurniturePlacement[0];
                 if(loaded.selectedMenu==null)loaded.selectedMenu=new string[0];
                 // Optional schema-1 addition: preserve old saves and begin with their existing dishes.
                 if(!json.Contains("\"selectedMenu\""))loaded.selectedMenu=System.Array.ConvertAll(System.Array.FindAll(DailyMenu.Catalog,r=>r.requiredPurchases.Length==0),r=>r.id);
@@ -42,6 +45,13 @@ namespace ThrownTogether
         {
             if(ids==null || System.Array.Exists(ids,string.IsNullOrWhiteSpace))return false;
             var next=Copy();next.selectedMenu=System.Linq.Enumerable.ToArray(System.Linq.Enumerable.Distinct(ids));return Commit(next);
+        }
+        public bool SetFurniture(int kitchen,FurniturePlacement[] placements)
+        {
+            if(Data.activeDay>Data.settledDay || kitchen<0 || kitchen>2 || placements==null)return false;
+            if(Array.Exists(placements,p=>p==null || p.kitchen!=kitchen || string.IsNullOrWhiteSpace(p.id) || p.slot<0 || p.slot>=KitchenFurniture.Slots.Length || p.turns<0 || p.turns>3))return false;
+            if(System.Linq.Enumerable.Distinct(System.Linq.Enumerable.Select(placements,p=>p.id)).Count()!=placements.Length || System.Linq.Enumerable.Distinct(System.Linq.Enumerable.Select(placements,p=>p.slot)).Count()!=placements.Length)return false;
+            var next=Copy();next.furniture=System.Linq.Enumerable.ToArray(System.Linq.Enumerable.Concat(System.Linq.Enumerable.Where(next.furniture??new FurniturePlacement[0],p=>p!=null && p.kitchen!=kitchen),placements));return Commit(next);
         }
         public bool Owns(string id)=>Array.IndexOf(Data.purchases,id)>=0;
         public int StartDay()

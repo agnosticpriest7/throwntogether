@@ -52,6 +52,7 @@ namespace ThrownTogether
                 // which owns the plate slot, so player focus, highlights and server routes agree.
                 var table=o.tableSlot.transform.parent.gameObject.AddComponent<DiningTable>();table.day=this;table.order=o;table.stationName="Dining table";table.SetGuestVisible(false);return table;
             }).ToArray();
+            gameObject.AddComponent<KitchenFurniture>().Initialize(GetComponent<KitchenLayout>());
             ApplyPurchases();StartService();
         }
         void ApplyPurchases()
@@ -63,11 +64,13 @@ namespace ThrownTogether
                 int layout=Mathf.Clamp(SessionOptions.Kitchen,0,purchase.layoutPositions.Length-1);
                 if(layout<0)continue;
                 var station=Instantiate(purchase.stationPrefab,purchase.layoutPositions[layout],Quaternion.identity);station.name=purchase.displayName;
+                GetComponent<KitchenFurniture>().Register("purchase:"+purchase.id,station.transform);
             }
             foreach(var purchase in Settings.purchases)
                 if(purchase!=null && account.Owns(purchase.id) && purchase.kind==RestaurantPurchaseKind.FasterFryers)
                     foreach(var fryer in FindObjectsByType<ProcessingStation>(FindObjectsSortMode.None))
                         if(fryer.gameObject.scene==gameObject.scene && !fryer.requiresAttendance && fryer.appliance!=null && fryer.appliance.id.Contains("fryer"))fryer.processingSpeed=purchase.processingSpeed;
+            GetComponent<KitchenFurniture>().ApplySaved();
             if(Settings.serverRole!=null && account.Owns(Settings.serverRole.id))
             {
                 var pass=FindObjectsByType<ServiceStation>(FindObjectsSortMode.None).First(s=>s.gameObject.scene==gameObject.scene);
@@ -120,7 +123,7 @@ namespace ThrownTogether
                         guest.walker.Go(new Vector3(Settings.entrance.x,0,-5),new Vector3(TableApproach(table).x,0,-5),new Vector3(TableApproach(table).x,0,Chair(table).z),Chair(table));
                     }
                     else if(Elapsed-guest.arrived>=Settings.outsidePatience)
-                    {LostCustomers++;LastLostAt=Elapsed;guest.phase=5;guest.walker.name="Customer left — waited too long";guest.walker.Go(new Vector3(Settings.entrance.x,0,Settings.sidewalkExit.z),Settings.sidewalkExit);}
+                    {LostCustomers++;LastLostAt=Elapsed;guest.phase=5;guest.walker.name="Customer left â€” waited too long";guest.walker.Go(new Vector3(Settings.entrance.x,0,Settings.sidewalkExit.z),Settings.sidewalkExit);}
                 }
                 if(guest.phase==1 || guest.phase==3 || guest.phase==4 || guest.phase==5)
                 {
@@ -135,7 +138,7 @@ namespace ThrownTogether
                 }
                 else if(guest.phase==2 && (guest.table.order.Phase==OrderPhase.Dirty || guest.table.WaitingForMeal && guest.table.PatienceRemaining<=0))
                 {
-                    if(guest.table.WaitingForMeal){LostCustomers++;LastLostAt=Elapsed;guest.walker.name="Customer left — not served";}
+                    if(guest.table.WaitingForMeal){LostCustomers++;LastLostAt=Elapsed;guest.walker.name="Customer left â€” not served";}
                     guest.phase=3;guest.table.BeginDeparture();guest.walker.gameObject.SetActive(true);
                     guest.walker.Go(new Vector3(TableApproach(guest.table).x,0,guest.walker.transform.position.z),new Vector3(TableApproach(guest.table).x,0,-5),new Vector3(Settings.entrance.x,0,-5),Settings.entrance);
                 }
