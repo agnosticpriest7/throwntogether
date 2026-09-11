@@ -40,6 +40,74 @@ namespace ThrownTogether.Tests
             var fryer=stations.OfType<ProcessingStation>().Single(s=>!s.requiresAttendance);Use(fryer);fryer.Advance(5);Use(fryer);
             var counter=stations.OfType<CounterStation>().First(s=>s.GetType()==typeof(CounterStation));Use(counter);Use(stations.OfType<SourceStation>().Single(s=>s.plates));Use(counter);Use(counter);return chef.Hands.Item;
         }
+
+        void FinishDay()
+        {
+            for(int i=0;i<8000 && !day.Closed;i++)
+            {
+                foreach(var table in day.Tables)table.order.Advance(.1f);
+                day.Advance(.1f);
+            }
+            Assert.That(day.Closed,Is.True,"Service should settle once the final guest reaches the street exit");
+            Assert.That(day.CustomersRemaining,Is.Zero);
+        }
+        [UnityTest] public IEnumerator ClosingKeepsExistingOrdersPlayableUntilTheLastStreetDeparture()
+        {
+            var originalSettings=day.Settings;
+            float duration=originalSettings.durationSeconds;
+            try
+            {
+                day.Advance(18);var table=day.Tables.First(t=>t.WaitingForMeal);
+                originalSettings.durationSeconds=day.Elapsed+1;
+                int arrived=day.CustomersArrived;day.Advance(2);
+                Assert.That(day.AdmissionsClosed,Is.True);Assert.That(day.Closed,Is.False);Assert.That(day.Paid,Is.False);
+                var dish=CookDish(table.order.recipe);Use(table);
+                Assert.That(day.Served,Is.EqualTo(1),"A matching meal must still be accepted after closing");
+                Assert.That(table.order.tableSlot.Item,Is.SameAs(dish));
+                day.Advance(3);Assert.That(day.Closed,Is.False,"An eating customer prevents settlement");
+                table.order.Advance(day.Settings.eatingSeconds);
+                day.Advance(2);
+                Assert.That(table.Occupied,Is.False);Assert.That(day.CustomersRemaining,Is.GreaterThan(0));
+                Assert.That(day.Closed,Is.False,"Walking out of the dining room is not the end of the day");
+                FinishDay();Assert.That(day.Paid,Is.True);Assert.That(day.CustomersArrived,Is.EqualTo(arrived));
+                int cash=RestaurantAccounts.Current.Data.cash;day.Advance(100);day.RetryPayment();
+                Assert.That(RestaurantAccounts.Current.Data.cash,Is.EqualTo(cash));
+            }
+            finally{originalSettings.durationSeconds=duration;}
+            yield return null;LogAssert.NoUnexpectedReceived();
+        }
+        [UnityTest] public IEnumerator ClearedSeatIsReusedBeforePreviousGuestReachesTheDoor()
+        {
+            day.Advance(60);Assert.That(day.WaitingOutside,Is.GreaterThan(0));
+            var table=day.Tables.First(t=>t.WaitingForMeal);
+            var dish=CookDish(table.order.recipe);Use(table);table.order.Advance(day.Settings.eatingSeconds);
+            day.Advance(.1f);Assert.That(table.Leaving,Is.True);
+            Use(table);Assert.That(chef.Hands.Item,Is.SameAs(dish));
+            var departing=day.GetComponentsInChildren<DiningWalker>().First(w=>w.gameObject.activeSelf && Vector3.Distance(w.transform.position,table.transform.position)<3);
+            for(int i=0;i<40 && !table.Arriving;i++)day.Advance(.1f);
+            Assert.That(table.Arriving,Is.True,"Queue should reserve the cleared seat immediately after its former diner reaches the aisle");
+            Assert.That(departing.transform.position.z,Is.GreaterThan(day.Settings.entrance.z+1),"Former diner is still inside");
+            day.Advance(12);Assert.That(table.WaitingForMeal,Is.True,"Former diner leaving must not reset the replacement order");
+            Assert.That(table.order.recipe,Is.Not.Null);yield return null;LogAssert.NoUnexpectedReceived();
+        }
+        [UnityTest] public IEnumerator ClosingTurnsAwayUnseatedArrivalsAndFirstDayStartsAtTen()
+        {
+            Assert.That(day.TargetCustomers,Is.EqualTo(10));
+            Assert.That(day.Settings.CustomersForDay(2),Is.EqualTo(12));
+            float duration=day.Settings.durationSeconds;
+            try
+            {
+                day.Advance(2);Assert.That(day.CustomersRemaining,Is.EqualTo(1));
+                day.Settings.durationSeconds=day.Elapsed+1;day.Advance(2);
+                Assert.That(day.AdmissionsClosed,Is.True);Assert.That(day.Tables.All(t=>t.Clean),Is.True);
+                Assert.That(day.Closed,Is.False);FinishDay();
+                Assert.That(day.CustomersArrived,Is.EqualTo(1));Assert.That(day.Served,Is.Zero);
+                Assert.That(day.LostCustomers,Is.Zero,"Closing the door is not a patience penalty");
+            }
+            finally{day.Settings.durationSeconds=duration;}
+            yield return null;
+        }
+
         void WalkTo(float x,float z)
         {
             var target=new Vector3(x,0,z);
@@ -58,8 +126,8 @@ namespace ThrownTogether.Tests
             var sun=Object.FindObjectsByType<Light>().First(l=>l.gameObject.scene==scene && l.type==LightType.Directional);
             float intensity=sun.intensity;var color=sun.color;
             day.Advance(18);CookFirstDish();Use(day.Tables.First(t=>t.WaitingForMeal));Assert.That(day.Served,Is.EqualTo(1));
-            CaptureTransition(hud,"service");day.Advance(300);presentation.AdvancePresentation(0);
-            Assert.That(day.Clock,Is.EqualTo("10:00 PM"));Assert.That(day.Paid,Is.True);
+            CaptureTransition(hud,"service");FinishDay();presentation.AdvancePresentation(0);
+            Assert.That(day.AdmissionsClosed,Is.True);Assert.That(day.Paid,Is.True);
             Assert.That(presentation.Current,Is.EqualTo(DayPresentation.Phase.Closing));Assert.That(Time.timeScale,Is.Zero);
             presentation.AdvancePresentation(1.25f);
             Assert.That(hud.gameplayCamera.orthographicSize,Is.EqualTo(size*1.0625f).Within(.001f));
@@ -149,13 +217,13 @@ namespace ThrownTogether.Tests
             Use(stations.OfType<DishReturnStation>().Single());Use(stations.OfType<DishReturnStation>().Single());
             var sink=stations.OfType<WashingStation>().Single();Use(sink);sink.Advance(3);Use(sink);Use(stations.OfType<SourceStation>().Single(s=>s.plates));
             Assert.That(stations.OfType<SourceStation>().Single(s=>s.plates).CleanPlatesRemaining,Is.EqualTo(5));
-            day.Advance(300);Assert.That(day.Clock,Is.EqualTo("10:00 PM"));Assert.That(day.Paid,Is.True);int cash=RestaurantAccounts.Current.Data.cash;day.Advance(300);day.RetryPayment();Assert.That(RestaurantAccounts.Current.Data.cash,Is.EqualTo(cash));
+            FinishDay();Assert.That(day.AdmissionsClosed,Is.True);Assert.That(day.Paid,Is.True);int cash=RestaurantAccounts.Current.Data.cash;day.Advance(300);day.RetryPayment();Assert.That(RestaurantAccounts.Current.Data.cash,Is.EqualTo(cash));
             LogAssert.NoUnexpectedReceived();yield return null;
         }
         [UnityTest] public IEnumerator UnservedGuestsAndOutsideQueueEventuallyLeave()
         {
             day.Advance(150);Assert.That(day.LostCustomers,Is.GreaterThan(0));Assert.That(day.Served,Is.Zero);
-            day.Advance(150);Assert.That(day.Closed,Is.True);Assert.That(RestaurantAccounts.Current.Data.cash,Is.Zero);Assert.That(day.WaitingOutside,Is.LessThanOrEqualTo(3));yield return null;
+            FinishDay();Assert.That(day.Closed,Is.True);Assert.That(RestaurantAccounts.Current.Data.cash,Is.Zero);Assert.That(day.WaitingOutside,Is.LessThanOrEqualTo(3));yield return null;
         }
         [UnityTest] public IEnumerator ServerChainsQueuedMealsWithoutReturningHome()
         {
@@ -234,7 +302,7 @@ namespace ThrownTogether.Tests
             Assert.That(day.DayNumber,Is.EqualTo(2));Assert.That(account.Data.cash,Is.EqualTo(470));
             Assert.That(day.GetComponent<DiningServer>(),Is.Not.Null);
             Assert.That(day.GetComponent<KitchenDishwasher>(),Is.Not.Null);
-            Assert.That(day.GetComponent<DiningBusser>(),Is.Not.Null);Assert.That(day.Tables.Length,Is.EqualTo(4));Assert.That(day.TargetCustomers,Is.EqualTo(14));
+            Assert.That(day.GetComponent<DiningBusser>(),Is.Not.Null);Assert.That(day.Tables.Length,Is.EqualTo(4));Assert.That(day.TargetCustomers,Is.EqualTo(12));
             foreach(var table in day.Tables)
             {var approach=day.TableApproach(table);Assert.That(KitchenStaffRoute.Clear(approach),Is.True);var path=day.DiningRoute(new Vector3(day.Settings.diningAisleX,0,1),approach);
                 var previous=new Vector3(day.Settings.diningAisleX,0,1);foreach(var point in path){for(float t=0;t<=1;t+=.02f)Assert.That(KitchenStaffRoute.Clear(Vector3.Lerp(previous,point,t)),Is.True,"Staff dining corridor");previous=point;}}
@@ -252,7 +320,7 @@ namespace ThrownTogether.Tests
             Assert.That(chef.Hands.Item,Is.SameAs(plate));Assert.That(plate.Payload.dirty,Is.True);Assert.That(plate.Payload.IngredientCount,Is.Zero);Assert.That(day.WasteFees,Is.EqualTo(2));
             Assert.That(bin.Interact(chef),Is.False);Assert.That(day.WasteFees,Is.EqualTo(2));
             var sink=stations.OfType<WashingStation>().Single();Use(sink);sink.Advance(3);Use(sink);Assert.That(chef.Hands.Item,Is.SameAs(plate));Assert.That(bin.Interact(chef),Is.False);Use(stock);Assert.That(stock.CleanPlatesRemaining,Is.EqualTo(5));
-            day.RecordMeal(day.GetComponent<RestaurantShift>().definition.orders[0],0);int expected=day.BaseIncome+day.Bonuses-2;day.Advance(300);Assert.That(RestaurantAccounts.Current.Data.cash,Is.EqualTo(expected));day.RetryPayment();Assert.That(RestaurantAccounts.Current.Data.cash,Is.EqualTo(expected));
+            day.RecordMeal(day.GetComponent<RestaurantShift>().definition.orders[0],0);int expected=day.BaseIncome+day.Bonuses-2;FinishDay();Assert.That(RestaurantAccounts.Current.Data.cash,Is.EqualTo(expected));day.RetryPayment();Assert.That(RestaurantAccounts.Current.Data.cash,Is.EqualTo(expected));
             Use(potato);Assert.That(bin.Interact(chef),Is.False,"No uncharged disposal after settlement");yield return null;LogAssert.NoUnexpectedReceived();
         }
         [UnityTest] public IEnumerator DiningStaffIdleRightOfEntranceAndFetchWithoutTeleporting()

@@ -16,7 +16,7 @@ MonoBehaviour:
   displayName: Restaurant day
   description:
   durationSeconds: 300
-  arrivals: 12
+  arrivals: 10
   wasteCost: 1
   serverIdle: {x: 10.2, y: 0, z: -5.1}
   busserIdle: {x: 11.5, y: 0, z: -5.1}

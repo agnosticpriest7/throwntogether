@@ -9,6 +9,9 @@ namespace ThrownTogether
         public DiningTable[] Tables {get;private set;}
         public float Elapsed {get;private set;}
         public bool Closed {get;private set;}
+        public bool AdmissionsClosed=>Elapsed>=Settings.durationSeconds;
+        public int CustomersRemaining=>guests.Count;
+        public int CustomersArrived=>spawned;
         public bool Paid {get;private set;}
         public int Served {get;private set;}
         public int BaseIncome {get;private set;}
@@ -35,7 +38,7 @@ namespace ThrownTogether
         public int TargetCustomers=>Settings.CustomersForDay(ServiceDayNumber);
         public int WaitingOutside=>guests.Count(g=>g.phase==0);
         public float OldestWait=>guests.Where(g=>g.phase==0).Select(g=>Elapsed-g.arrived).DefaultIfEmpty(0).Max();
-        public string Clock {get {int m=660+Mathf.FloorToInt(Mathf.Clamp01(Elapsed/Settings.durationSeconds)*660);return ((m/60+11)%12+1)+":"+(m%60).ToString("00")+(m<720?" AM":" PM");}}
+        public string Clock {get {int m=660+Mathf.FloorToInt(Mathf.Max(0,Elapsed/Settings.durationSeconds)*660);return ((m/60+11)%12+1)+":"+(m%60).ToString("00")+(m%1440<720?" AM":" PM");}}
         readonly List<Guest> guests=new List<Guest>();
         sealed class Guest {public DiningWalker walker;public DiningTable table;public RecipeDefinition recipe;public float arrived;public int phase,look;}
         RestaurantShift shift;int spawned;float nextArrival;DiningServer server;KitchenDishwasher dishwasher;DiningBusser busser;
@@ -102,11 +105,15 @@ namespace ThrownTogether
         }
         void Tick(float dt)
         {
-            Elapsed=Mathf.Min(Settings.durationSeconds,Elapsed+dt);
-            if(Elapsed>=Settings.durationSeconds){Closed=true;RetryPayment();return;}
-            while(spawned<TargetCustomers && Elapsed>=nextArrival){Spawn();nextArrival+=Settings.IntervalForDay(ServiceDayNumber);}
+            Elapsed+=dt;
+            while(!AdmissionsClosed && spawned<TargetCustomers && Elapsed>=nextArrival){Spawn();nextArrival+=Settings.IntervalForDay(ServiceDayNumber);}
             foreach(var guest in guests.ToArray())
             {
+                // Guests already admitted may finish; unseated arrivals go home at closing.
+                if(AdmissionsClosed && (guest.phase==0 || guest.phase==4))
+                {
+                    guest.phase=5;guest.walker.Go(new Vector3(guest.walker.transform.position.x,0,Settings.sidewalkExit.z),Settings.sidewalkExit);
+                }
                 if(guest.phase==0)
                 {
                     var table=Tables.FirstOrDefault(t=>t.Clean);
@@ -118,25 +125,33 @@ namespace ThrownTogether
                     else if(Elapsed-guest.arrived>=Settings.outsidePatience)
                     {LostCustomers++;LastLostAt=Elapsed;guest.phase=5;guest.walker.name="Customer left â€” waited too long";guest.walker.Go(new Vector3(Settings.entrance.x,0,Settings.sidewalkExit.z),Settings.sidewalkExit);}
                 }
-                if(guest.phase==1 || guest.phase==3 || guest.phase==4 || guest.phase==5)
+                if(guest.phase==1 || guest.phase==3 || guest.phase==4 || guest.phase==5 || guest.phase==6)
                 {
                     guest.walker.Advance(dt,Settings.walkingSpeed);
                     if(guest.walker.Arrived)
                     {
                         if(guest.phase==1){guest.phase=2;guest.walker.gameObject.SetActive(false);guest.table.Seat(guest.recipe,guest.look);}
                         else if(guest.phase==4){guest.phase=0;guest.arrived=Elapsed;}
-                        else if(guest.phase==3){guest.table.Depart();guest.phase=5;guest.walker.Go(new Vector3(Settings.entrance.x,0,Settings.sidewalkExit.z),Settings.sidewalkExit);}
+                        else if(guest.phase==6)
+                        {
+                            // Release the seat at the aisle, not at the front door. Detach ownership
+                            // so this guest can never reset the next diner's order while walking out.
+                            guest.table.Depart();guest.table=null;guest.phase=3;
+                            guest.walker.Go(new Vector3(guest.walker.transform.position.x,0,-5),new Vector3(Settings.entrance.x,0,-5),Settings.entrance);
+                        }
+                        else if(guest.phase==3){guest.phase=5;guest.walker.Go(new Vector3(Settings.entrance.x,0,Settings.sidewalkExit.z),Settings.sidewalkExit);}
                         else{guests.Remove(guest);Destroy(guest.walker.gameObject);}
                     }
                 }
                 else if(guest.phase==2 && (guest.table.order.Phase==OrderPhase.Dirty || guest.table.WaitingForMeal && guest.table.PatienceRemaining<=0))
                 {
                     if(guest.table.WaitingForMeal){LostCustomers++;LastLostAt=Elapsed;guest.walker.name="Customer left â€” not served";}
-                    guest.phase=3;guest.table.BeginDeparture();guest.walker.gameObject.SetActive(true);
-                    guest.walker.Go(new Vector3(TableApproach(guest.table).x,0,guest.walker.transform.position.z),new Vector3(TableApproach(guest.table).x,0,-5),new Vector3(Settings.entrance.x,0,-5),Settings.entrance);
+                    guest.phase=6;guest.table.BeginDeparture();guest.walker.gameObject.SetActive(true);
+                    guest.walker.Go(new Vector3(TableApproach(guest.table).x,0,guest.walker.transform.position.z));
                 }
             }
             server?.Advance(dt);dishwasher?.Advance(dt);busser?.Advance(dt);
+            if(AdmissionsClosed && guests.Count==0){Closed=true;RetryPayment();}
         }
         public void RecordMeal(RecipeDefinition recipe,float waiting)
         {

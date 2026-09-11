@@ -55,7 +55,7 @@ namespace ThrownTogether.Tests
             BaseMenu();Assert.That(menu.StartSelectedMenu(),Is.True);yield return null;yield return null;
             Assert.That(day.AwaitingMenu,Is.False);Assert.That(day.Menu.Length,Is.EqualTo(3));
             day.Advance(18);Assert.That(day.Tables.Where(t=>t.order.Active).All(t=>day.Menu.Contains(t.order.recipe)),Is.True);
-            foreach(var r in day.Menu)day.RecordMeal(r,0);day.Advance(300);Assert.That(day.VarietyBonus,Is.Zero);Assert.That(day.Paid,Is.True);
+            foreach(var r in day.Menu)day.RecordMeal(r,0);day.Advance(600);Assert.That(day.VarietyBonus,Is.Zero);Assert.That(day.Paid,Is.True);
             var a=RestaurantAccounts.Current;int funding=a.StartDay();Assert.That(a.Settle(funding,300,0),Is.True);
             var offer=day.Settings.purchases.Single(p=>p.id=="grill");Assert.That(a.Buy(offer.id,offer.cost),Is.True);
             var chosen=DailyMenu.Catalog.Where(r=>r.Unlocked(a)).Take(4).ToArray();Assert.That(a.SetMenu(chosen.Select(r=>r.id).ToArray()),Is.True);
@@ -66,7 +66,7 @@ namespace ThrownTogether.Tests
             Assert.That(RestaurantAccounts.Current.SetMenu(new string[0]),Is.True);
             for(int i=0;i<8;i++){day.Advance(8);Assert.That(day.Tables.Where(t=>t.order.Active).All(t=>chosen.Contains(t.order.recipe)),Is.True);}
             foreach(var r in chosen)day.RecordMeal(r,0);int income=day.BaseIncome,bonus=day.Bonuses,cash=RestaurantAccounts.Current.Data.cash;
-            day.Advance(300);Assert.That(day.VarietyBonus,Is.EqualTo(income/20));Assert.That(RestaurantAccounts.Current.Data.cash,Is.EqualTo(cash+income+bonus+income/20));
+            day.Advance(600);Assert.That(day.VarietyBonus,Is.EqualTo(income/20));Assert.That(RestaurantAccounts.Current.Data.cash,Is.EqualTo(cash+income+bonus+income/20));
             day.RetryPayment();Assert.That(RestaurantAccounts.Current.Data.cash,Is.EqualTo(cash+income+bonus+income/20));LogAssert.NoUnexpectedReceived();
         }
         [UnityTest] public IEnumerator AllThirteenRecipesCookPlateAndServeWithRealStationsAndFinitePlates()

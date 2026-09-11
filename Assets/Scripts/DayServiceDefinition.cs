@@ -5,7 +5,7 @@ namespace ThrownTogether
     public sealed class DayServiceDefinition : ContentDefinition
     {
         public float durationSeconds=300;
-        public int arrivals=12;
+        public int arrivals=10;
         public int wasteCost=1;
         public Vector3 serverIdle=new Vector3(10.2f,0,-5.1f), busserIdle=new Vector3(11.5f,0,-5.1f);
         public int additionalCustomersPerDay=2;
