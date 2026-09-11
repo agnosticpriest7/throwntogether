@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "sourceCommit": "03eb67a8ad26f346adcaa614361043b25d8ac1e6",
-  "totalBytes": 63448305,
+  "sourceCommit": "6b5cd35d757a91d8be78cfeb4ce08b2278ca1a1a",
+  "totalBytes": 63447626,
   "files": [
     {
       "path": ".nojekyll",
@@ -11,22 +11,22 @@
     {
       "path": "build-info.json",
       "bytes": 340,
-      "sha256": "e4f0151c6402b2bfdc8e99b79d82c42749d21d49adb844d67e67eab4dee33d24"
+      "sha256": "1c7ebd649d33c884ff07f87e73ec8cb5f9cb4ef87a22cd088e44a829a1dea450"
     },
     {
-      "path": "Build/3612d157e05efa54c6227db7e9482fc6.wasm",
-      "bytes": 35478036,
-      "sha256": "98cc6d7786aa1b07c35fc1dc51d77bc459ff67d248c2e8b6375c474a36807491"
-    },
-    {
-      "path": "Build/9975c5100fee616916c64e4c0a85dd1c.loader.js",
+      "path": "Build/3023510bc439ba88dfbe7686f58c65af.loader.js",
       "bytes": 20263,
-      "sha256": "1fbfe91f15cd7910e5c31bdf1dc84b729615d7f2ded8002b7f1ff71767065b89"
+      "sha256": "0ede81dbe606e566a8181df088d5df2aff402674c7481d1d9261ea57e4d10259"
     },
     {
-      "path": "Build/bfa9342572fff2b9e2f03546f6daa1a4.data",
-      "bytes": 19412467,
-      "sha256": "6be93ae055c13f2a07933ce54da3ab567f69aa789831fe836fa470a0bc72767d"
+      "path": "Build/42edb3b085b06fc41494400f99fd55f9.data",
+      "bytes": 19411387,
+      "sha256": "f7bf674ba842e92201d36fb79728c91fe770ec75b9525a9d7cc1a3ea36ecddf6"
+    },
+    {
+      "path": "Build/6709902e77b08ef3ad58f1384c1fd5cf.wasm",
+      "bytes": 35478437,
+      "sha256": "619630f70fcccc8515aa57ac3d43bc7acaa96267c2e5a6ae9677f87d51e97b0d"
     },
     {
       "path": "Build/ca7b1661e492f4541f1062019976c7b8.framework.js",
@@ -36,7 +36,7 @@
     {
       "path": "index.html",
       "bytes": 3179,
-      "sha256": "c10f8527e7ad73aa70056ec0a23df1ba26292000c6458348f7229b03ab96c434"
+      "sha256": "f3616723b139b03d12d102d8bbf21061ab9886c5a96bb95e173f7e4b34333994"
     },
     {
       "path": "StreamingAssets/Music/first-service.ogg",
