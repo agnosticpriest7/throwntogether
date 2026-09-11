@@ -16,7 +16,7 @@ namespace ThrownTogether
             new Vector3(-5.3f,0,-4.4f),new Vector3(-3.4f,0,-4.4f),
             new Vector3(-.8f,0,-1.4f),new Vector3(-.8f,0,.55f),new Vector3(-.8f,0,2.5f),
             new Vector3(-2.75f,0,2.5f),new Vector3(-2.75f,0,.55f),new Vector3(-2.75f,0,-1.4f),
-            new Vector3(3.6f,0,.75f),new Vector3(3.6f,0,-1.2f)
+            new Vector3(2.45f,0,1),new Vector3(2.45f,0,-1)
         };
         sealed class Piece { public string id; public Transform root; public Vector3 before; public Quaternion rotation; public int slot=-1,turns; }
         readonly List<Piece> pieces=new List<Piece>();
@@ -42,8 +42,9 @@ namespace ThrownTogether
             var piece=new Piece{id=id,root=root,before=root.position,rotation=root.rotation,slot=-1};
             int[] anchors={0,1,3,4,5,6,7,8,10,11}, bays={5,4,7,2,14,12,13,18,8,19};
             int preferred=-1;
-            for(int i=0;i<anchors.Length;i++)if(id=="base:"+anchors[i])preferred=bays[i];
-            if(preferred<0 || At(preferred)!=null)preferred=Enumerable.Range(0,Slots.Length).Where(i=>At(i)==null).OrderBy(i=>Vector3.SqrMagnitude(Slots[i]-root.position)).First();
+            for(int i=0;i<anchors.Length;i++)if(id=="base:"+anchors[i] && (SessionOptions.Kitchen==0 || anchors[i]==8 || anchors[i]==11))preferred=bays[i];
+            bool SpawnSafe(int i)=>new[]{layout.choices[SessionOptions.Kitchen].playerOneSpawn,layout.choices[SessionOptions.Kitchen].playerTwoSpawn}.All(p=>Mathf.Abs(p.x-Slots[i].x)>1.3f || Mathf.Abs(p.z-Slots[i].z)>1.3f);
+            if(preferred<0 || At(preferred)!=null || !SpawnSafe(preferred))preferred=Enumerable.Range(0,Slots.Length).Where(i=>At(i)==null && SpawnSafe(i) && (i<18 || id=="base:8" || id=="base:11")).OrderBy(i=>Vector3.SqrMagnitude(Slots[i]-root.position)).First();
             pieces.Add(piece);Place(piece,preferred,0);piece.before=root.position;piece.rotation=root.rotation;
         }
         static int Nearest(Vector3 position)

@@ -18,7 +18,12 @@ namespace ThrownTogether
         {int steps=Mathf.CeilToInt(Vector3.Distance(a,b)/.1f);for(int i=0;i<=steps;i++)if(!Clear(Vector3.Lerp(a,b,steps==0?0:(float)i/steps)))return false;return true;}
         public static Vector3[] ToStation(Vector3 from,Transform target)
             =>Search(from,p=>{var delta=target.position-p;delta.y=0;return delta.magnitude<=1.75f && Clear(p);});
-        public static Vector3[] ToPoint(Vector3 from,Vector3 target)=>Search(from,p=>Vector3.Distance(p,new Vector3(target.x,0,target.z))<.3f && Clear(p));
+        public static Vector3[] ToPoint(Vector3 from,Vector3 target)
+        {
+            var exact=new Vector3(target.x,0,target.z);var route=Search(from,p=>Vector3.Distance(p,exact)<.3f && Clear(p));
+            if(route==null || !Segment(route[route.Length-1],exact))return null;
+            return route.Concat(new[]{exact}).ToArray();
+        }
         static Vector3[] Search(Vector3 from,System.Func<Vector3,bool> reached)
         {
             var start=Cell(from);var queue=new Queue<Vector2Int>();var parents=new Dictionary<Vector2Int,Vector2Int>();

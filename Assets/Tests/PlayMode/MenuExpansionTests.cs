@@ -191,7 +191,7 @@ namespace ThrownTogether.Tests
                 Send(one,input,new GamepadState());Send(two,inputTwo,new GamepadState());
                 Send(two,inputTwo,new GamepadState().WithButton(GamepadButton.DpadRight));Assert.That(inputTwo.StorageIndex,Is.EqualTo(1));Assert.That(input.StorageIndex,Is.Zero);
                 Send(one,input,new GamepadState().WithButton(GamepadButton.South));Send(two,inputTwo,new GamepadState().WithButton(GamepadButton.South));
-                Assert.That(chef.Hands.Item.Payload.ingredient.visualKind,Is.EqualTo(IngredientVisualKind.Potato));Assert.That(second.Hands.Item.Payload.ingredient.visualKind,Is.EqualTo(IngredientVisualKind.Tomato));
+                Assert.That(chef.Hands.Item.Payload.ingredient.visualKind,Is.EqualTo(IngredientVisualKind.Lettuce));Assert.That(second.Hands.Item.Payload.ingredient.visualKind,Is.EqualTo(IngredientVisualKind.Mushroom));
                 Object.Destroy(chef.Hands.Release().gameObject);Object.Destroy(second.Hands.Release().gameObject);
                 inputTwo.OpenStorage(produce);Assert.That(inputTwo.StorageIndex,Is.EqualTo(1));inputTwo.SetInputFocus(false);inputTwo.Tick(0);Assert.That(inputTwo.Storage,Is.Null);
                 input.OpenStorage(produce);Send(one,input,new GamepadState().WithButton(GamepadButton.East));Assert.That(input.Storage,Is.Null);
