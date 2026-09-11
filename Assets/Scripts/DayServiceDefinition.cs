@@ -6,6 +6,8 @@ namespace ThrownTogether
     {
         public float durationSeconds=300;
         public int arrivals=12;
+        public int wasteCost=1;
+        public Vector3 serverIdle=new Vector3(10.2f,0,-5.1f), busserIdle=new Vector3(11.5f,0,-5.1f);
         public int additionalCustomersPerDay=2;
         public int CustomersForDay(int day)=>Mathf.Clamp(arrivals+Mathf.Clamp(day-1,0,10000)*additionalCustomersPerDay,1,120);
         public float IntervalForDay(int day)=>arrivalInterval*Mathf.Max(1,arrivals-1)/Mathf.Max(1,CustomersForDay(day)-1);

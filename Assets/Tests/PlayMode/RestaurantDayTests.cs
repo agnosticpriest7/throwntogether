@@ -113,7 +113,7 @@ namespace ThrownTogether.Tests
                 layout.Apply(index);var added=offers.Select(p=>Object.Instantiate(p.stationPrefab,p.layoutPositions[index],Quaternion.identity)).ToArray();Physics.SyncTransforms();
                 try
                 {
-                    foreach(var bay in added)
+                    foreach(var bay in added.Concat(new[]{stations.OfType<TrashStation>().Single().gameObject}))
                     {
                         var station=bay.GetComponent<Interactable>();KitchenTestAccess.Approach(chef,station);
                         foreach(var collider in bay.GetComponentsInChildren<Collider>())
@@ -159,6 +159,41 @@ namespace ThrownTogether.Tests
             Assert.That(fryers.Length,Is.EqualTo(2));Assert.That(fryers.All(f=>Mathf.Approximately(f.processingSpeed,1.25f)),Is.True);
             Assert.That(Object.FindObjectsByType<CounterStation>().Count(s=>s.gameObject.scene==scene && s.GetType()==typeof(CounterStation)),Is.EqualTo(3));
             LogAssert.NoUnexpectedReceived();
+        }
+        [UnityTest] public IEnumerator TrashDiscardsFoodChargesOnceAndPreservesEveryPlate()
+        {
+            var bin=stations.OfType<TrashStation>().Single();var stock=stations.OfType<SourceStation>().Single(s=>s.plates);var potato=stations.OfType<SourceStation>().First(s=>s.ingredient!=null && s.ingredient.id=="ingredient.potato");
+            Assert.That(bin.Interact(chef),Is.False);Use(potato);Use(bin);Assert.That(chef.Hands.Item,Is.Null);Assert.That(day.WasteFees,Is.EqualTo(1));
+            Use(potato);chef.Hands.Item.Payload.state=FoodState.Cooked;Use(stock);var plate=chef.Hands.Item;
+            plate.Payload.additions.Add(new IngredientPortion{ingredient=potato.ingredient,state=FoodState.Cooked});Use(bin);
+            Assert.That(chef.Hands.Item,Is.SameAs(plate));Assert.That(plate.Payload.dirty,Is.True);Assert.That(plate.Payload.IngredientCount,Is.Zero);Assert.That(day.WasteFees,Is.EqualTo(2));
+            Assert.That(bin.Interact(chef),Is.False);Assert.That(day.WasteFees,Is.EqualTo(2));
+            var sink=stations.OfType<WashingStation>().Single();Use(sink);sink.Advance(3);Use(sink);Assert.That(chef.Hands.Item,Is.SameAs(plate));Assert.That(bin.Interact(chef),Is.False);Use(stock);Assert.That(stock.CleanPlatesRemaining,Is.EqualTo(5));
+            day.RecordMeal(day.GetComponent<RestaurantShift>().definition.orders[0],0);int expected=day.BaseIncome+day.Bonuses-2;day.Advance(300);Assert.That(RestaurantAccounts.Current.Data.cash,Is.EqualTo(expected));day.RetryPayment();Assert.That(RestaurantAccounts.Current.Data.cash,Is.EqualTo(expected));
+            Use(potato);Assert.That(bin.Interact(chef),Is.False,"No uncharged disposal after settlement");yield return null;LogAssert.NoUnexpectedReceived();
+        }
+        [UnityTest] public IEnumerator DiningStaffIdleRightOfEntranceAndFetchWithoutTeleporting()
+        {
+            var pass=stations.OfType<ServiceStation>().Single();var server=day.gameObject.AddComponent<DiningServer>();server.Initialize(day,pass);
+            var busser=day.gameObject.AddComponent<DiningBusser>();busser.Initialize(day);
+            var serverBody=server.transform.Find("Hired server");var busserBody=busser.transform.Find("Hired busser");
+            foreach(var body in new[]{serverBody,busserBody}){Assert.That(body.position.x,Is.GreaterThan(day.Settings.entrance.x+2));Assert.That(body.position.z,Is.InRange(-5.2f,-4.8f));Assert.That(KitchenStaffRoute.Clear(body.position),Is.True);}
+            Assert.That(Vector3.Distance(serverBody.position,busserBody.position),Is.GreaterThan(1));
+            day.Advance(18);var dish=CookFirstDish();Use(pass);server.Advance(.1f);server.Advance(.5f);Assert.That(pass.pickupSlot.Item,Is.SameAs(dish),"Server must physically reach the pass");
+            for(int i=0;i<400 && day.Served==0;i++)server.Advance(.1f);Assert.That(day.Served,Is.EqualTo(1));
+            for(int i=0;i<250;i++)server.Advance(.1f);Assert.That(Vector3.Distance(serverBody.position,day.Settings.serverIdle),Is.LessThan(.05f));
+            var table=day.Tables.Single(t=>t.order.tableSlot.Item==dish);table.order.Advance(8);day.Advance(18);var rack=stations.OfType<DishReturnStation>().Single();
+            for(int i=0;i<600 && rack.Count==0;i++)busser.Advance(.1f);Assert.That(rack.Count,Is.EqualTo(1));
+            for(int i=0;i<250;i++)busser.Advance(.1f);Assert.That(Vector3.Distance(busserBody.position,day.Settings.busserIdle),Is.LessThan(.05f));yield return null;LogAssert.NoUnexpectedReceived();
+        }
+        [UnityTest] public IEnumerator ServerReturnsCancelledDeliveryToPassBeforeGoingIdle()
+        {
+            day.Advance(18);var table=day.Tables.First(t=>t.WaitingForMeal);var dish=CookFirstDish();var pass=stations.OfType<ServiceStation>().Single();Use(pass);
+            var server=day.gameObject.AddComponent<DiningServer>();server.Initialize(day,pass);
+            for(int i=0;i<200 && pass.pickupSlot.Item!=null;i++)server.Advance(.1f);
+            Assert.That(pass.pickupSlot.Item,Is.Null);Assert.That(day.Served,Is.Zero);table.BeginDeparture();
+            for(int i=0;i<500;i++)server.Advance(.1f);
+            Assert.That(pass.pickupSlot.Item,Is.SameAs(dish));Assert.That(day.Served,Is.Zero);Assert.That(Vector3.Distance(server.transform.Find("Hired server").position,day.Settings.serverIdle),Is.LessThan(.05f));yield return null;
         }
         [UnityTest] public IEnumerator PausingStopsClockAndArrivalSchedule()
         {

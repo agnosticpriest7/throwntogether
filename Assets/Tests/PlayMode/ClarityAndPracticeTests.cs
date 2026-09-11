@@ -158,10 +158,12 @@ namespace ThrownTogether.Tests
             {
                 var art=station.GetComponent<StationArt>();Assert.That(art,Is.Not.Null,station.name);
                 Assert.That(art.visual,Is.Not.Null);Assert.That(art.visual.GetComponentsInChildren<Collider>(),Is.Empty);
-                Assert.That(station.transform.Find("Cabinet").GetComponent<Collider>().enabled,Is.True);
+                if(station is TrashStation)Assert.That(station.GetComponent<BoxCollider>().enabled,Is.True);
+                else
+                {Assert.That(station.transform.Find("Cabinet").GetComponent<Collider>().enabled,Is.True);
                 Assert.That(station.transform.Find("Worktop").GetComponent<Collider>().enabled,Is.True);
                 Assert.That(station.transform.Find("Cabinet").GetComponent<Renderer>().enabled,Is.False);
-                Assert.That(station.transform.Find("Worktop").GetComponent<Renderer>().enabled,Is.False);
+                Assert.That(station.transform.Find("Worktop").GetComponent<Renderer>().enabled,Is.False);}
                 Assert.That(station.transform.Find("Door seam"),Is.Null,"Legacy dressing must not duplicate authored doors.");
                 foreach(var renderer in art.visual.GetComponentsInChildren<Renderer>())Assert.That(renderer.sharedMaterials.All(m=>m!=null && m.shader!=null),Is.True);
             }

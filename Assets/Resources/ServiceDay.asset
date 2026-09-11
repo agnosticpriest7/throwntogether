@@ -17,6 +17,9 @@ MonoBehaviour:
   description:
   durationSeconds: 300
   arrivals: 12
+  wasteCost: 1
+  serverIdle: {x: 10.2, y: 0, z: -5.1}
+  busserIdle: {x: 11.5, y: 0, z: -5.1}
   additionalCustomersPerDay: 2
   firstArrival: 1
   arrivalInterval: 24

@@ -26,8 +26,8 @@ namespace ThrownTogether
             {
                 var station=stations[i]; Dress(station);
                 var marker=new Marker {station=station}; markers[i]=marker;
-                marker.one=Border(station.transform,"P1 target",new Color(.15f,1,.68f),1.08f,.05f);
-                marker.two=Border(station.transform,"P2 target",new Color(1,.38f,.3f),1.18f,.07f);
+                marker.one=Border(station.transform,"P1 target",new Color(.15f,1,.68f),station is TrashStation?.48f:1.08f,.05f);
+                marker.two=Border(station.transform,"P2 target",new Color(1,.38f,.3f),station is TrashStation?.56f:1.18f,.07f);
                 marker.ready=Part(station.transform,"Ready indicator",assets.sphereMesh,new Vector3(.77f,1.28f,-.64f),Vector3.one*.14f,new Color(.2f,1,.5f)).gameObject;
                 marker.one.SetActive(false); marker.two.SetActive(false); marker.ready.SetActive(false);
             }

@@ -13,6 +13,10 @@ namespace ThrownTogether
         public int Served {get;private set;}
         public int BaseIncome {get;private set;}
         public int Bonuses {get;private set;}
+        public int WasteFees {get;private set;}
+        public int NetIncome=>Mathf.Max(0,BaseIncome+Bonuses-WasteFees);
+        public float LastWasteAt {get;private set;}=-100;
+        public bool RecordWaste(){if(Closed)return false;WasteFees+=Mathf.Max(0,Settings.wasteCost);LastWasteAt=Elapsed;return true;}
         public int LostCustomers {get;private set;}
         public float LastLostAt {get;private set;}=-100;
         public int DayNumber {get;private set;}
@@ -135,7 +139,7 @@ namespace ThrownTogether
         public bool RetryPayment()
         {
             if(!Closed)return false;if(Paid)return true;
-            Paid=RestaurantAccounts.Current.Settle(DayNumber,BaseIncome,Bonuses);return Paid;
+            Paid=RestaurantAccounts.Current.Settle(DayNumber,BaseIncome,Bonuses,WasteFees);return Paid;
         }
     }
 }

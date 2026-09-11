@@ -39,10 +39,10 @@ namespace ThrownTogether
         {
             var next=Copy();next.activeDay=next.nextDay++;return Commit(next)?next.activeDay:0;
         }
-        public bool Settle(int day,int baseIncome,int bonus)
+        public bool Settle(int day,int baseIncome,int bonus,int waste=0)
         {
-            if(day<=0||day!=Data.activeDay||day<=Data.settledDay||baseIncome<0||bonus<0)return false;
-            var next=Copy();next.cash=checked(next.cash+baseIncome+bonus);next.settledDay=day;next.completedDays++;return Commit(next);
+            if(day<=0||day!=Data.activeDay||day<=Data.settledDay||baseIncome<0||bonus<0||waste<0)return false;
+            var next=Copy();next.cash=checked(next.cash+Math.Max(0,checked(baseIncome+bonus)-waste));next.settledDay=day;next.completedDays++;return Commit(next);
         }
         public bool Buy(string id,int cost)
         {

@@ -40,6 +40,12 @@ namespace ThrownTogether.Tests
             try{Assert.That(definition.CustomersForDay(1),Is.EqualTo(12));Assert.That(definition.CustomersForDay(2),Is.EqualTo(14));Assert.That(definition.CustomersForDay(3),Is.EqualTo(16));Assert.That(definition.IntervalForDay(3),Is.LessThan(definition.IntervalForDay(1)));}
             finally{UnityEngine.Object.DestroyImmediate(definition);}
         }
+        [Test] public void WasteFeesReduceOnlyTodaysPayoutWithoutDebtAndRemainAtomic()
+        {
+            var store=new Memory();var account=new RestaurantAccount(store);int day=account.StartDay();Assert.That(account.Settle(day,10,5,2),Is.True);Assert.That(account.Data.cash,Is.EqualTo(13));
+            day=account.StartDay();store.fail=true;Assert.That(account.Settle(day,10,5,2),Is.False);Assert.That(account.Data.cash,Is.EqualTo(13));store.fail=false;Assert.That(account.Settle(day,10,5,2),Is.True);Assert.That(account.Data.cash,Is.EqualTo(26));
+            day=account.StartDay();Assert.That(account.Settle(day,0,0,3),Is.True);Assert.That(account.Data.cash,Is.EqualTo(26));Assert.That(new RestaurantAccount(store).Data.cash,Is.EqualTo(26));
+        }
         [Test] public void RestartCannotPayAnAbandonedDay()
         {
             var account=new RestaurantAccount(new Memory());int abandoned=account.StartDay();int current=account.StartDay();

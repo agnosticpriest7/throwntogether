@@ -77,3 +77,5 @@ Implemented the explicitly requested gameplay batch using existing assets, plate
 2026-09-10 — Owner-requested service quality-of-life and character variety batch. Reused plate ownership, attendance, account purchases, rig/materials and current menus; isolated Unity validation, no delegation. Account-wide usage and token cost are unavailable and were not inferred. Release verification is in DEVELOPMENT_NOTES.md.
 
 2026-09-10 — Owner-requested dining capacity, daily demand, busser/rack workflow, sidewalk arrivals and work-audio batch. Reused room kit, plate ownership, account schema and audio pool; no delegation. Isolated Unity regression and visual checks used because Unity MCP did not respond. Account-wide usage/token cost unavailable; no percentage inferred. Release verification recorded in DEVELOPMENT_NOTES.md.
+
+2026-09-11 — Owner-requested trash/$1 waste and dining staff standby batch. Reused interaction, physical plate ownership, settlement and dining routes; no delegation. Unity MCP unresponsive; isolated Unity verification used. Account-wide usage unavailable; no percentage inferred.

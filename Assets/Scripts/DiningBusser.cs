@@ -4,8 +4,10 @@ namespace ThrownTogether
 {
     public sealed class DiningBusser : MonoBehaviour
     {
-        RestaurantDay day;DishReturnStation rack;DiningWalker walker;CarrySlot hands;DiningTable target;
-        Vector3 Home=>new Vector3(day.Settings.diningAisleX,0,rack.transform.position.z);
+        RestaurantDay day;DishReturnStation rack;DiningWalker walker;CarrySlot hands;DiningTable target;bool returning;
+        Vector3 Home=>day.Settings.busserIdle;
+        Vector3 DropOff=>new Vector3(day.Settings.diningAisleX,0,rack.transform.position.z);
+        void Travel(Vector3 point)=>walker.Go(day.DiningRoute(walker.transform.position,point));
         public void Initialize(RestaurantDay owner)
         {
             day=owner;rack=FindObjectsByType<DishReturnStation>().First(s=>s.gameObject.scene==gameObject.scene);
@@ -18,10 +20,10 @@ namespace ThrownTogether
             if(day.Closed || walker==null)return;
             walker.Advance(seconds,day.Settings.walkingSpeed,hands.Item!=null);if(!walker.Arrived)return;
             if(target!=null)
-            {target.TakeDirty(hands);target=null;walker.Go(day.DiningRoute(walker.transform.position,Home));return;}
-            if(hands.Item!=null){rack.Return(hands.Item);return;}
+            {target.TakeDirty(hands);target=null;returning=hands.Item!=null;Travel(returning?DropOff:Home);return;}
+            if(returning){if(hands.Item!=null)rack.Return(hands.Item);returning=false;Travel(Home);return;}
             target=day.Tables.FirstOrDefault(t=>t.order.tableSlot.Item?.Payload.dirty==true);
-            if(target!=null)walker.Go(day.DiningRoute(walker.transform.position,day.TableApproach(target)));
+            if(target!=null)Travel(day.TableApproach(target));
         }
     }
 }
