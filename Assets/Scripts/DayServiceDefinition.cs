@@ -11,7 +11,7 @@ namespace ThrownTogether
         public int maximumBonus=5;
         public float walkingSpeed=2.4f;
         public Vector3 entrance=new Vector3(6.3f,0,-6.1f);
-        public float diningAisleX=4.9f;
+        public float diningAisleX=5.25f;
         public RestaurantUpgradeDefinition[] purchases;
         public GameObject walkingVisual;
         public EmployeeRoleDefinition serverRole;

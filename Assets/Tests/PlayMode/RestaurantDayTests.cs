@@ -124,5 +124,15 @@ namespace ThrownTogether.Tests
             float time=day.Elapsed;Time.timeScale=0;yield return new WaitForSecondsRealtime(.15f);
             Assert.That(day.Elapsed,Is.EqualTo(time));Assert.That(day.Tables.All(t=>t.Clean),Is.True);Time.timeScale=1;
         }
+        [UnityTest] public IEnumerator DiningRouteClearsTheOpenDoorAndTableEdges()
+        {
+            Physics.SyncTransforms();
+            for(float z=-5;z<=6.5f;z+=.15f)
+            {
+                var p=new Vector3(day.Settings.diningAisleX,0,z);
+                Assert.That(Physics.CheckCapsule(p+Vector3.up*.4f,p+Vector3.up*1.3f,.32f),Is.False,"NPC body corridor blocked at "+p);
+            }
+            yield return null;
+        }
     }
 }
