@@ -32,6 +32,8 @@ namespace ThrownTogether
         }
         private void Update()
         {
+            // Unity may update Boot behind its native splash; count only visible intro time.
+            if(studioIntro && !UnityEngine.Rendering.SplashScreen.isFinished)return;
             if(revealing)
             {
                 revealTime+=Time.unscaledDeltaTime;

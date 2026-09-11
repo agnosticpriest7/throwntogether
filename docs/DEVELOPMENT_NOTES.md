@@ -480,3 +480,5 @@ Web review confirmed service rendering, recipe instructions, locked-dish labels,
 
 ## 0.14.1 — Studio and publisher intro
 Agnostic Studios now holds fully visible for 3 seconds, followed by the supplied Twist Publishing logo for another 3 seconds. Each uses the existing 0.5-second fade-in and 0.75-second fade-out (8.5 seconds total without skipping). Artwork switches only at black on the same Boot canvas, preserving aspect ratio. A/Enter/Space/click may advance the current card through its fade; the publisher still appears before the unchanged title/Press A screen. Gameplay and scene order are unchanged. Verification results follow.
+
+The Boot timer waits until Unity's native splash finishes, so loading cannot consume the studio hold behind that splash.
