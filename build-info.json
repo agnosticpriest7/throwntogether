@@ -1,9 +1,9 @@
 {
-  "developmentVersion": "0.10.1-dev",
-  "sourceCommit": "5f87514cbccea83f3a404577561de9632276e533",
   "scenes": [
     "Assets/Scenes/RestaurantDevelopment.unity",
     "Assets/Scenes/RestaurantShift.unity"
   ],
-  "builtAtUtc": "2026-09-11T02:02:55.2966216Z"
+  "sourceCommit": "8981dffe7489bdbae3e70d1c0616f2269871cee6",
+  "builtAtUtc": "2026-09-11T03:07:52.9620346Z",
+  "developmentVersion": "0.11.0-dev"
 }
