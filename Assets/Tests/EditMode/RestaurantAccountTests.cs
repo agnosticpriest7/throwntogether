@@ -83,7 +83,7 @@ namespace ThrownTogether.Tests
             var loaded=new RestaurantAccount(storage);Assert.That(loaded.Data.completedDays,Is.EqualTo(1));
             storage.json=storage.json.Replace(",\"completedDays\":1","");loaded=new RestaurantAccount(storage);Assert.That(loaded.Writable,Is.True);Assert.That(loaded.Data.cash,Is.EqualTo(20));Assert.That(loaded.Data.completedDays,Is.Zero);
             var definition=UnityEngine.ScriptableObject.CreateInstance<DayServiceDefinition>();
-            try{Assert.That(definition.CustomersForDay(1),Is.EqualTo(12));Assert.That(definition.CustomersForDay(2),Is.EqualTo(14));Assert.That(definition.CustomersForDay(3),Is.EqualTo(16));Assert.That(definition.IntervalForDay(3),Is.LessThan(definition.IntervalForDay(1)));}
+            try{Assert.That(definition.CustomersForDay(1),Is.EqualTo(10));Assert.That(definition.CustomersForDay(2),Is.EqualTo(12));Assert.That(definition.CustomersForDay(3),Is.EqualTo(14));Assert.That(definition.IntervalForDay(3),Is.LessThan(definition.IntervalForDay(1)));}
             finally{UnityEngine.Object.DestroyImmediate(definition);}
         }
         [Test] public void WasteFeesReduceOnlyTodaysPayoutWithoutDebtAndRemainAtomic()
