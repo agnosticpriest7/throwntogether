@@ -27,6 +27,7 @@ namespace ThrownTogether
             gameObject.AddComponent<DevelopmentDiagnostics>();
 #endif
         }
+        public bool ShowControlHelp => guide!=null && guide.Active;
         private void Update()
         {
             int completed=shift!=null ? shift.CompletedCount : order.Phase==OrderPhase.Complete ? 1:0;
@@ -55,7 +56,7 @@ namespace ThrownTogether
             if(day!=null)
             {
                 Panel(new Rect(340,12,690,48));
-                GUI.Label(new Rect(350,15,670,42),"Day "+day.DayNumber+" | Bank $"+RestaurantAccounts.Current.Data.cash+" | Today $"+(day.BaseIncome+day.Bonuses)+" | Outside "+day.WaitingOutside+" ("+Mathf.CeilToInt(Mathf.Max(0,day.Settings.outsidePatience-day.OldestWait))+"s) | Left "+day.LostCustomers,small);
+                GUI.Label(new Rect(350,15,670,42),"Day "+day.ServiceDayNumber+" | Bank $"+RestaurantAccounts.Current.Data.cash+" | Today $"+(day.BaseIncome+day.Bonuses)+" | Outside "+day.WaitingOutside+" ("+Mathf.CeilToInt(Mathf.Max(0,day.Settings.outsidePatience-day.OldestWait))+"s) | Left "+day.LostCustomers,small);
                 if(day.Elapsed-day.LastLostAt<3){Panel(new Rect(390,66,500,28));GUI.Label(new Rect(395,66,490,28),"Customer left unhappy — waited too long",small);}
             }
             if(GUI.Button(new Rect(1060,18,182,39),"Y / Esc: Menu")) menu.Open();
@@ -72,8 +73,11 @@ namespace ThrownTogether
             DrawSuccessCues();
             // Identity is carried by apron colors and target borders; no floating panels cover chefs.
             bool two=coop!=null && coop.PlayerTwo!=null;
-            DrawPlayer(chef,"P1",new Color(.2f,1,.7f),two?20:240,two ? 612:800);
-            if(two) DrawPlayer(coop.PlayerTwo,"P2",new Color(1,.42f,.32f),648,612);
+            if(ShowControlHelp)
+            {
+                DrawPlayer(chef,"P1",new Color(.2f,1,.7f),two?20:240,two ? 612:800);
+                if(two) DrawPlayer(coop.PlayerTwo,"P2",new Color(1,.42f,.32f),648,612);
+            }
             if(coop!=null && !string.IsNullOrEmpty(coop.ConnectionHelp))
             {
                 Panel(new Rect(160,93,960,45)); GUI.Label(new Rect(170,93,940,45),coop.ConnectionHelp,small);
@@ -93,7 +97,7 @@ namespace ThrownTogether
             if(complete && day!=null)
             {
                 Panel(new Rect(340,170,600,285));
-                GUI.Label(new Rect(355,180,570,45),"10 PM — DAY "+day.DayNumber+" COMPLETE",title);
+                GUI.Label(new Rect(355,180,570,45),"10 PM — DAY "+day.ServiceDayNumber+" COMPLETE",title);
                 GUI.Label(new Rect(355,230,570,90),day.Served+" meals: $"+day.BaseIncome+"\nQuick-service bonus: $"+day.Bonuses+"  |  Customers lost: "+day.LostCustomers,label);
                 GUI.Label(new Rect(355,325,570,45),day.Paid?"Paid to your bank: $"+(day.BaseIncome+day.Bonuses):RestaurantAccounts.Current.Problem,small);
                 if(GUI.Button(new Rect(395,385,490,45),"Y / Esc menu — improvements and next day"))menu.OpenRestaurant();

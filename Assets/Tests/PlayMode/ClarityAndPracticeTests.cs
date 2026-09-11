@@ -136,7 +136,7 @@ namespace ThrownTogether.Tests
             Assert.That(root.GetComponentsInChildren<Collider>(),Is.Empty);
             Assert.That(root.GetComponentsInChildren<Interactable>(),Is.Empty);
             Assert.That(root.GetComponentsInChildren<Light>(),Is.Empty,"Reuse emissive sconces without extra realtime lights");
-            Assert.That(root.GetComponentsInChildren<Renderer>().Length,Is.LessThanOrEqualTo(25));
+            Assert.That(root.GetComponentsInChildren<Renderer>().Length,Is.LessThanOrEqualTo(34));
             foreach(var mesh in root.GetComponentsInChildren<MeshFilter>())Assert.That(mesh.sharedMesh.vertexCount,Is.LessThan(10000));
             var exterior=root.transform.Find("Exterior framing");
             foreach(var renderer in exterior.GetComponentsInChildren<Renderer>())

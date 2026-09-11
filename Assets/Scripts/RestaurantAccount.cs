@@ -4,7 +4,7 @@ namespace ThrownTogether
 {
     [Serializable] public sealed class RestaurantSave
     {
-        public int schemaVersion=1, cash, nextDay=1, activeDay, settledDay;
+        public int schemaVersion=1, cash, nextDay=1, activeDay, settledDay, completedDays;
         public string[] purchases=new string[0];
     }
     // Separate from audio/display settings. Writes commit a copy, never partially debit live state.
@@ -22,7 +22,7 @@ namespace ThrownTogether
                 string json=storage.Read();if(string.IsNullOrEmpty(json))return;
                 if(!json.Contains("\"schemaVersion\""))throw new ArgumentException("Missing schema");
                 var loaded=JsonUtility.FromJson<RestaurantSave>(json);
-                if(loaded==null||loaded.schemaVersion!=1||loaded.cash<0||loaded.nextDay<1||loaded.activeDay<0||loaded.settledDay<0||loaded.settledDay>loaded.activeDay||loaded.activeDay>=loaded.nextDay||loaded.purchases==null)throw new ArgumentException("Unsupported save");
+                if(loaded==null||loaded.schemaVersion!=1||loaded.completedDays<0||loaded.completedDays>loaded.settledDay||loaded.cash<0||loaded.nextDay<1||loaded.activeDay<0||loaded.settledDay<0||loaded.settledDay>loaded.activeDay||loaded.activeDay>=loaded.nextDay||loaded.purchases==null)throw new ArgumentException("Unsupported save");
                 Data=loaded;
             }
             catch(Exception){Writable=false;Problem="Restaurant save cannot be read safely. Existing data preserved; earnings/purchases disabled.";}
@@ -42,7 +42,7 @@ namespace ThrownTogether
         public bool Settle(int day,int baseIncome,int bonus)
         {
             if(day<=0||day!=Data.activeDay||day<=Data.settledDay||baseIncome<0||bonus<0)return false;
-            var next=Copy();next.cash=checked(next.cash+baseIncome+bonus);next.settledDay=day;return Commit(next);
+            var next=Copy();next.cash=checked(next.cash+baseIncome+bonus);next.settledDay=day;next.completedDays++;return Commit(next);
         }
         public bool Buy(string id,int cost)
         {

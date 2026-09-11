@@ -7,6 +7,9 @@ namespace ThrownTogether
     {
         private readonly System.Random random=new System.Random();
         private AudioSource[] voices;
+        readonly System.Collections.Generic.HashSet<AudioSource> loops=new System.Collections.Generic.HashSet<AudioSource>();
+        public int StartedCount {get;private set;}
+        public void StopLoop(AudioSource voice){if(voice==null)return;voice.Stop();loops.Remove(voice);}
         private void Awake()
         {
             voices=new AudioSource[10];
@@ -23,15 +26,15 @@ namespace ThrownTogether
             if(clip == null) return null;
             foreach(var voice in voices)
             {
-                if(voice.isPlaying) continue;
+                if(voice.isPlaying || loops.Contains(voice)) continue;
                 voice.clip=clip; voice.loop=cue.loop; voice.outputAudioMixerGroup=cue.group;
                 voice.volume=Mathf.Clamp01(cue.volume+Variation(cue.volumeVariation));
                 voice.pitch=Mathf.Clamp(1+Variation(cue.pitchVariation),.8f,1.2f);
-                voice.Play(); return voice;
+                voice.Play();if(cue.loop)loops.Add(voice);StartedCount++; return voice;
             }
             return null; // Saturation drops feedback, never an in-progress loop.
         }
         private float Variation(float amount) => ((float)random.NextDouble()*2-1)*amount;
-        private void OnDisable() { if(voices != null) foreach(var voice in voices) if(voice != null) voice.Stop(); }
+        private void OnDisable() { loops.Clear(); if(voices != null) foreach(var voice in voices) if(voice != null) voice.Stop(); }
     }
 }

@@ -10,13 +10,14 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: c51ec7ab860b3cf42a42cbd5a5aeb5fd, type: 3}
-  m_Name: place
+  m_Name: footsteps
   m_EditorClassIdentifier: ThrownTogether.Runtime::ThrownTogether.AudioCue
   clips:
-  - {fileID: 8300000, guid: 0a5fa847bb1e0ae49b538fc6d590123b, type: 3}
-  - {fileID: 8300000, guid: f225f7264d8f7644d967a09aa12b84ce, type: 3}
+  - {fileID: 8300000, guid: 00f89bc0f0c6a7e4bbc944f50f3e3f9e, type: 3}
+  - {fileID: 8300000, guid: ba172b692a2512b4198c9ab6ba7d344f, type: 3}
+  pcmClips: []
   group: {fileID: -3549611856582843773, guid: 2fd06ac794904d549b669564d2f161b6, type: 2}
-  volume: 0.28
+  volume: 0.18
   volumeVariation: 0.04
   pitchVariation: 0.03
   loop: 0

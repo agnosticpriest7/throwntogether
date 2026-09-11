@@ -42,12 +42,17 @@ namespace ThrownTogether
             if(order.Phase==OrderPhase.Eating)return "Customer eating";
             return chef.Hands.Item!=null && CanServe(chef.Hands.Item.Payload) ? "Serve "+order.recipe.displayName:"Needs "+order.recipe.displayName;
         }
+        public bool TakeDirty(CarrySlot hands)
+        {
+            if(day.Closed || order.tableSlot.Item?.Payload.dirty!=true || !hands.TryTake(order.tableSlot.Item))return false;
+            if(!Occupied)order.ResetOrder(null);return true;
+        }
         public override bool Interact(ChefController chef)
         {
             LastInteractionServed=false;
             if(day.Closed)return false;
             if(chef.Hands.Item==null && order.tableSlot.Item?.Payload.dirty==true)
-            {if(!chef.Hands.TryTake(order.tableSlot.Item))return false;if(!Occupied)order.ResetOrder(null);return true;}
+            {return TakeDirty(chef.Hands);}
             LastInteractionServed=Deliver(chef.Hands.Item);return LastInteractionServed;
         }
     }

@@ -29,6 +29,17 @@ namespace ThrownTogether.Tests
             var storage=new Memory {json=json};var account=new RestaurantAccount(storage);
             Assert.That(account.Writable,Is.False);Assert.That(account.StartDay(),Is.Zero);Assert.That(storage.json,Is.EqualTo(json));
         }
+        [Test] public void DifficultyCountsCompletedDaysOnlyAndOldSavesKeepMoney()
+        {
+            var storage=new Memory();var account=new RestaurantAccount(storage);account.StartDay();int current=account.StartDay();
+            Assert.That(account.Data.completedDays,Is.Zero);storage.fail=true;Assert.That(account.Settle(current,20,0),Is.False);Assert.That(account.Data.completedDays,Is.Zero);
+            storage.fail=false;Assert.That(account.Settle(current,20,0),Is.True);Assert.That(account.Settle(current,20,0),Is.False);Assert.That(account.Data.completedDays,Is.EqualTo(1));
+            var loaded=new RestaurantAccount(storage);Assert.That(loaded.Data.completedDays,Is.EqualTo(1));
+            storage.json=storage.json.Replace(",\"completedDays\":1","");loaded=new RestaurantAccount(storage);Assert.That(loaded.Writable,Is.True);Assert.That(loaded.Data.cash,Is.EqualTo(20));Assert.That(loaded.Data.completedDays,Is.Zero);
+            var definition=UnityEngine.ScriptableObject.CreateInstance<DayServiceDefinition>();
+            try{Assert.That(definition.CustomersForDay(1),Is.EqualTo(12));Assert.That(definition.CustomersForDay(2),Is.EqualTo(14));Assert.That(definition.CustomersForDay(3),Is.EqualTo(16));Assert.That(definition.IntervalForDay(3),Is.LessThan(definition.IntervalForDay(1)));}
+            finally{UnityEngine.Object.DestroyImmediate(definition);}
+        }
         [Test] public void RestartCannotPayAnAbandonedDay()
         {
             var account=new RestaurantAccount(new Memory());int abandoned=account.StartDay();int current=account.StartDay();

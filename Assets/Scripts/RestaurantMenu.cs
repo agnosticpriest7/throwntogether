@@ -180,7 +180,7 @@ namespace ThrownTogether
                 {
                     foreach(var offer in config.purchases)
                     {var purchase=offer;Add(purchase.displayName+(account.Owns(purchase.id)?" — owned":" — $"+purchase.cost),()=>Buy(purchase.id,purchase.cost));}
-                    foreach(var employee in new[]{config.serverRole,config.dishwasherRole})
+                    foreach(var employee in new[]{config.serverRole,config.dishwasherRole,config.busserRole})
                     {var role=employee;if(role!=null)Add(role.displayName+(account.Owns(role.id)?" — hired":" — $"+role.hireCost),()=>Buy(role.id,role.hireCost));}
                 }
                 if(day!=null && day.Closed && !day.Paid)Add("Retry saving today's earnings",()=>message=day.RetryPayment()?"Earnings saved.":account.Problem);
@@ -317,7 +317,7 @@ namespace ThrownTogether
             {
                 GUI.enabled=rows[i].enabled;
                 GUI.backgroundColor=i==Selection ? new Color(.2f,.8f,.6f):Color.gray;
-                var rowRect=Page=="Recipes" ? new Rect(35,160+i*55,345,48):WardrobePage ? new Rect(65,145+i*47,670,42):new Rect(260,145+i*47,760,42);
+                var rowRect=Page=="Recipes" ? new Rect(35,160+i*55,345,48):WardrobePage ? new Rect(65,145+i*47,670,42):Page=="Restaurant" ? new Rect(260,140+i*42,760,37):new Rect(260,145+i*47,760,42);
                 if(GUI.Button(rowRect,(i==Selection ? ">  ":"    ")+rows[i].label,style)) { Selection=i; ActivateSelection(); break; }
             }
             GUI.enabled=true; GUI.backgroundColor=Color.white;

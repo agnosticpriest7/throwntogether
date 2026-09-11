@@ -15,13 +15,15 @@ namespace ThrownTogether
             dish.transform.SetParent(stack,false);dish.transform.localPosition=Vector3.up*(dishes.Count*.07f);
             dishes.Enqueue(dish);
         }
+        public bool TakeDirty(CarrySlot hands)
+        {
+            if(Count==0 || !hands.TryTake(dishes.Peek()))return false;
+            dishes.Dequeue();int i=0;foreach(var remaining in dishes)remaining.transform.localPosition=Vector3.up*(i++*.07f);return true;
+        }
         public override bool Interact(ChefController chef)
         {
             if(chef.Hands.Item?.Payload.dirty==true){Return(chef.Hands.Item);return true;}
-            if(Count==0 || chef.Hands.Item!=null) return false;
-            var dish=dishes.Peek();if(!chef.Hands.TryTake(dish)) return false;
-            dishes.Dequeue();int i=0;foreach(var remaining in dishes) remaining.transform.localPosition=Vector3.up*(i++*.07f);
-            return true;
+            return TakeDirty(chef.Hands);
         }
     }
 }

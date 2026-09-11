@@ -10,16 +10,13 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 290d6a22633f0f6489912498fb6ff4a5, type: 3}
-  m_Name: counter-bay
+  m_Name: dining-tables
   m_EditorClassIdentifier: ThrownTogether.Runtime::ThrownTogether.RestaurantUpgradeDefinition
-  id: counter-bay
-  displayName: Extra counter bay
-  description:
-  kind: 0
-  cost: 50
-  stationPrefab: {fileID: 91465190647268826, guid: 5f8394d043dbda542a2ea41b2dbc4fe1, type: 3}
-  layoutPositions:
-  - {x: -6.4, y: 0, z: -4.3}
-  - {x: 0.8, y: 0, z: 3}
-  - {x: -2.5, y: 0, z: 2.7}
+  id: dining-tables
+  displayName: Two more dining tables
+  description: 'Opens the second dining column: four tables total.'
+  kind: 3
+  cost: 150
+  stationPrefab: {fileID: 0}
+  layoutPositions: []
   processingSpeed: 1.25

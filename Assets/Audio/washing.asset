@@ -10,13 +10,13 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: c51ec7ab860b3cf42a42cbd5a5aeb5fd, type: 3}
-  m_Name: place
+  m_Name: washing
   m_EditorClassIdentifier: ThrownTogether.Runtime::ThrownTogether.AudioCue
   clips:
-  - {fileID: 8300000, guid: 0a5fa847bb1e0ae49b538fc6d590123b, type: 3}
-  - {fileID: 8300000, guid: f225f7264d8f7644d967a09aa12b84ce, type: 3}
+  - {fileID: 8300000, guid: 1e4cd6950e6169546b780e55bcfda4a5, type: 3}
+  pcmClips: []
   group: {fileID: -3549611856582843773, guid: 2fd06ac794904d549b669564d2f161b6, type: 2}
-  volume: 0.28
+  volume: 0.25
   volumeVariation: 0.04
   pitchVariation: 0.03
-  loop: 0
+  loop: 1

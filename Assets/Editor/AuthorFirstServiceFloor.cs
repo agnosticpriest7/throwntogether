@@ -67,7 +67,7 @@ namespace ThrownTogether.Editor
             Quad(5,new Vector3(r,0,t),new Vector3(r,0,b),new Vector3(r-bevel,y,b+bevel),new Vector3(r-bevel,y,t-bevel));
             Quad(5,new Vector3(r,0,b),new Vector3(l,0,b),new Vector3(l+bevel,y,b+bevel),new Vector3(r-bevel,y,b+bevel));
         }
-        static void Floor(string scene,bool dining)
+        public static void Floor(string scene,bool dining)
         {
             string kind=dining?"Dining":"Kitchen",name=scene+kind+"Floor";
             var original=GameObject.Find(kind+" floor");var bounds=original.GetComponent<Collider>().bounds;
@@ -88,13 +88,13 @@ namespace ThrownTogether.Editor
             else
             {
                 const float width=.4f,length=1.65f;
-                for(int row=0;row<12;row++)
+                for(int row=0;row<Mathf.CeilToInt(bounds.size.x/width);row++)
                 {
                     float x=bounds.min.x+row*width,start=bounds.min.z-(row%3)*length/3;
                     for(int n=0;start+n*length<bounds.max.z;n++)
                     {
                         float z=Mathf.Max(bounds.min.z,start+n*length),end=Mathf.Min(bounds.max.z,start+(n+1)*length);
-                        if(end>z+.001f)Tile(x,z,width,end-z,(row*7+n*3)%5,true);
+                        if(end>z+.001f)Tile(x,z,Mathf.Min(width,bounds.max.x-x),end-z,(row*7+n*3)%5,true);
                     }
                 }
             }

@@ -2,7 +2,7 @@ using UnityEngine;
 
 namespace ThrownTogether
 {
-    public enum RestaurantPurchaseKind { CounterBay, FryerBay, FasterFryers }
+    public enum RestaurantPurchaseKind { CounterBay, FryerBay, FasterFryers, DiningTables }
     [CreateAssetMenu(menuName="Thrown Together/Restaurant upgrade")]
     public sealed class RestaurantUpgradeDefinition : ContentDefinition
     {

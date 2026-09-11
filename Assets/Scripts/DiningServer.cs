@@ -22,14 +22,14 @@ namespace ThrownTogether
             {
                 // A player may have served this table while the server was walking.
                 if(hands.Item!=null && !target.Deliver(hands.Item))
-                {target.ReservedForServer=false;target=null;walker.Go(Home);return;}
-                target.ReservedForServer=false;target=null;walker.Go(Home);return;
+                {target.ReservedForServer=false;target=null;walker.Go(day.DiningRoute(walker.transform.position,Home));return;}
+                target.ReservedForServer=false;target=null;walker.Go(day.DiningRoute(walker.transform.position,Home));return;
             }
             var dish=hands.Item??pass.pickupSlot.Item;if(dish==null)return;
             target=day.Tables.FirstOrDefault(t=>!t.ReservedForServer && t.CanServe(dish.Payload));
             if(target==null)return;
             target.ReservedForServer=true;hands.TryTake(dish);
-            walker.Go(new Vector3(day.Settings.diningAisleX,0,target.transform.position.z));
+            walker.Go(day.DiningRoute(walker.transform.position,day.TableApproach(target)));
         }
     }
 }

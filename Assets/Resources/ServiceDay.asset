@@ -17,7 +17,8 @@ MonoBehaviour:
   description:
   durationSeconds: 300
   arrivals: 12
-  firstArrival: 4
+  additionalCustomersPerDay: 2
+  firstArrival: 1
   arrivalInterval: 24
   outsidePatience: 45
   eatingSeconds: 8
@@ -31,6 +32,10 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 23bb209edd87c474dac5e6b902955414, type: 2}
   - {fileID: 11400000, guid: 7b4641db72770874588db945c750c2c0, type: 2}
   - {fileID: 11400000, guid: ec93092e6552ca943afed481d2f348b3, type: 2}
+  - {fileID: 11400000, guid: 2b5ff3dc0209a0e4f831f7e9a77699ff, type: 2}
   walkingVisual: {fileID: 2952335610465244968, guid: c0436b59516a1534d99a46c7fd5a0983, type: 3}
   serverRole: {fileID: 11400000, guid: 9347d4505819b0c45b715e6fb81cba5d, type: 2}
   dishwasherRole: {fileID: 11400000, guid: ef1bfba298fb32c499572d2fecceef75, type: 2}
+  busserRole: {fileID: 11400000, guid: c021d0c21036a2d478bf65af2d94f96c, type: 2}
+  sidewalkStart: {x: -14, y: 0, z: -7.1}
+  sidewalkExit: {x: 17, y: 0, z: -7.1}

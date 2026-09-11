@@ -8,6 +8,8 @@ namespace ThrownTogether
         public ShiftDefinition definition;
         public CustomerOrder[] seats;
         public DayServiceDefinition dayDefinition;
+        public CustomerOrder[] expansionSeats=new CustomerOrder[0];
+        public GameObject diningExpansion;
         public RestaurantDay Day {get;private set;}
         private int completedCount;
         public int CompletedCount { get=>Day!=null?Day.Served:completedCount; private set=>completedCount=value; }
@@ -21,7 +23,7 @@ namespace ThrownTogether
         {
             if(Day!=null)return;
             if(SessionOptions.ShiftOrders==0 && dayDefinition!=null)
-            {Day=gameObject.AddComponent<RestaurantDay>();Day.Begin(this,dayDefinition);TotalOrders=dayDefinition.arrivals;return;}
+            {Day=gameObject.AddComponent<RestaurantDay>();Day.Begin(this,dayDefinition);TotalOrders=Day.TargetCustomers;return;}
             CompletedCount=0; NextOrder=0; ElapsedSeconds=0;
             TotalOrders=SessionOptions.ShiftOrders==3 || SessionOptions.ShiftOrders==12 ? SessionOptions.ShiftOrders : 6;
             if(definition==null || definition.orders.Length==0) { TotalOrders=0; return; }

@@ -75,3 +75,5 @@ User last reported 48% remaining before music integration and asked for substant
 Implemented the explicitly requested gameplay batch using existing assets, plate ownership, recipes and menu systems. Isolated Unity compilation and 45 EditMode/53 PlayMode tests passed before build. No delegation used. Account-wide usage and token cost are unavailable; no percentage inferred. Web verification is recorded in development notes.
 
 2026-09-10 — Owner-requested service quality-of-life and character variety batch. Reused plate ownership, attendance, account purchases, rig/materials and current menus; isolated Unity validation, no delegation. Account-wide usage and token cost are unavailable and were not inferred. Release verification is in DEVELOPMENT_NOTES.md.
+
+2026-09-10 — Owner-requested dining capacity, daily demand, busser/rack workflow, sidewalk arrivals and work-audio batch. Reused room kit, plate ownership, account schema and audio pool; no delegation. Isolated Unity regression and visual checks used because Unity MCP did not respond. Account-wide usage/token cost unavailable; no percentage inferred. Release verification recorded in DEVELOPMENT_NOTES.md.
