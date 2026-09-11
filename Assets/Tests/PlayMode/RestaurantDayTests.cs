@@ -32,13 +32,44 @@ namespace ThrownTogether.Tests
             foreach(var root in suspended)if(root!=null)root.SetActive(true);RestaurantAccounts.ResetCache();SessionOptions.ShiftOrders=6;SessionOptions.Kitchen=0;
         }
         void Use(Interactable station){KitchenTestAccess.Approach(chef,station);Assert.That(chef.Use(),Is.True,station.name);}
-        Carryable CookFirstDish()
+        Carryable CookFirstDish()=>CookDish(day.Tables.First(t=>t.order.Active).order.recipe);
+        Carryable CookDish(RecipeDefinition recipe)
         {
-            var table=day.Tables.First(t=>t.order.Active);var recipe=table.order.recipe;
             Use(stations.OfType<SourceStation>().Single(s=>!s.plates && s.ingredient==recipe.ingredient));
             var prep=stations.OfType<ProcessingStation>().Single(s=>s.requiresAttendance);Use(prep);prep.Advance(2);Use(prep);
             var fryer=stations.OfType<ProcessingStation>().Single(s=>!s.requiresAttendance);Use(fryer);fryer.Advance(5);Use(fryer);
             var counter=stations.OfType<CounterStation>().First(s=>s.GetType()==typeof(CounterStation));Use(counter);Use(stations.OfType<SourceStation>().Single(s=>s.plates));Use(counter);Use(counter);return chef.Hands.Item;
+        }
+        void WalkTo(float x,float z)
+        {
+            var target=new Vector3(x,0,z);
+            for(int i=0;i<500;i++)
+            {
+                var delta=target-chef.transform.position;delta.y=0;if(delta.magnitude<.04f)return;
+                chef.Move(new Vector2(delta.x,delta.z).normalized,Mathf.Min(.02f,delta.magnitude/chef.speed));
+            }
+            Assert.Fail("Chef could not walk to "+target+"; stopped at "+chef.transform.position);
+        }
+        [UnityTest] public IEnumerator WalkThroughDiningDoorAndServeBothVisibleTablesThenClearTheirPlates()
+        {
+            day.Advance(45);
+            foreach(var table in day.Tables)
+            {
+                // The destination comes from the real plate slot, never the interaction component.
+                // This catches order-logic roots incorrectly registered as targets at (0,0,0).
+                var surface=table.order.tableSlot.transform.position;
+                var dish=CookDish(table.order.recipe);
+                var motor=chef.GetComponent<CharacterController>();motor.enabled=false;
+                chef.transform.position=new Vector3(0,.04f,-3.35f);motor.enabled=true;Physics.SyncTransforms();
+                WalkTo(3.6f,-3.35f);WalkTo(day.Settings.diningAisleX,-3.35f);WalkTo(day.Settings.diningAisleX,surface.z);
+                chef.Move(Vector2.right,0);chef.FindFocus();
+                Assert.That(chef.Focus,Is.SameAs(table),"Visible table must be targetable from its dining-side approach");
+                Assert.That(chef.Use(),Is.True);Assert.That(table.order.tableSlot.Item,Is.SameAs(dish));Assert.That(table.order.Phase,Is.EqualTo(OrderPhase.Eating));
+                table.order.Advance(8);day.Advance(18);chef.FindFocus();Assert.That(chef.Use(),Is.True,"Clear the dirty plate from this same visible table");
+                Assert.That(chef.Hands.Item,Is.SameAs(dish));Assert.That(dish.Payload.dirty,Is.True);
+                Use(stations.OfType<DishReturnStation>().Single());
+            }
+            Assert.That(day.Served,Is.EqualTo(2));LogAssert.NoUnexpectedReceived();yield return null;
         }
         [UnityTest] public IEnumerator ManualMealLeavesRealDirtyPlateAndWashingRestoresStock()
         {
@@ -61,8 +92,11 @@ namespace ThrownTogether.Tests
         {
             day.Advance(18);var dish=CookFirstDish();var pass=stations.OfType<ServiceStation>().Single();Use(pass);
             Assert.That(day.Served,Is.Zero);Assert.That(pass.pickupSlot.Item,Is.SameAs(dish));yield return new WaitForSeconds(2);Assert.That(day.Served,Is.Zero);
-            var server=day.gameObject.AddComponent<DiningServer>();server.Initialize(day,pass);for(int i=0;i<200;i++)server.Advance(.1f);
+            var server=day.gameObject.AddComponent<DiningServer>();server.Initialize(day,pass);for(int i=0;i<200 && day.Served==0;i++)server.Advance(.1f);
             Assert.That(day.Served,Is.EqualTo(1));Assert.That(day.Tables.Any(t=>t.order.tableSlot.Item==dish),Is.True);Assert.That(pass.pickupSlot.Item,Is.Null);yield return null;
+            var delivered=day.Tables.Single(t=>t.order.tableSlot.Item==dish);
+            var distance=delivered.order.tableSlot.transform.position-server.transform.Find("Hired server").position;distance.y=0;
+            Assert.That(distance.magnitude,Is.LessThanOrEqualTo(chef.reach),"Server must reach the visible table before delivering");
         }
         [UnityTest] public IEnumerator WrongFoodCannotCompleteMealAndBonusFallsWithWait()
         {

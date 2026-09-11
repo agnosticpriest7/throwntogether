@@ -28,7 +28,9 @@ namespace ThrownTogether
             Tables=owner.seats.Select(o=>
             {
                 o.manualService=true;o.mealSeconds=settings.eatingSeconds;o.ResetOrder(null);
-                var table=o.gameObject.AddComponent<DiningTable>();table.day=this;table.order=o;table.stationName="Dining table";table.SetGuestVisible(false);return table;
+                // CustomerOrder lives on a logic-only root at the origin. Target the authored table,
+                // which owns the plate slot, so player focus, highlights and server routes agree.
+                var table=o.tableSlot.transform.parent.gameObject.AddComponent<DiningTable>();table.day=this;table.order=o;table.stationName="Dining table";table.SetGuestVisible(false);return table;
             }).ToArray();
             ApplyPurchases();
         }

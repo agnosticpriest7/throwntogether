@@ -36,3 +36,6 @@ Reported by Kyle: development page remains in Browsing Controls; Unity Pads: 0; 
 Kyle reports co-op works great and distinct food shapes work great. Item/station nameplates and opaque panels obscure the chef; he requests recognizable objects without nameplates. He requests ordinary-counter plating instead of a dedicated plating station: put food down, then add a plate. Earlier room expansion was reported more comfortable. These are owner observations, not agent-performed physical tests.
 
 0.4.0 review focus: identify stations/food without labels, check visibility while holding each state, assemble in both orders on both counters, and assess the compact HUD at TV distance. Counter assembly now leaves the dish on the counter, requiring one pickup before serving. Confirm the updated interaction is intuitive in solo and co-op.
+
+### 2026-09-10 — Cannot serve at customer tables
+Kyle could not place/serve dishes at the visible dining tables in 0.10.0. Reproduced by walking to the authored table with a matching plated meal: no focus target. Fixed a misplaced runtime interaction component on the separate order-logic root. Regression now approaches real table surfaces, covers both tables and dirty-plate clearing, and verifies the server's delivery location. TV/controller confirmation required after a full Web-page refresh to 0.10.1.
