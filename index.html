@@ -5,11 +5,11 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Thrown Together — Web development test</title>
   <style>
-    html,body { margin:0; width:100%; height:100%; overflow:hidden; background:#101820; color:#eee; font:14px system-ui,sans-serif; }
-    #web-host { width:100%; height:100%; display:flex; align-items:center; justify-content:center; flex-direction:column; background:#101820; }
+    html,body { margin:0; width:100%; height:100%; overflow:hidden; background:#000000; color:#eee; font:14px system-ui,sans-serif; }
+    #web-host { width:100%; height:100%; display:flex; align-items:center; justify-content:center; flex-direction:column; background:#000000; }
     #game-frame { position:relative; flex:none; }
     canvas { display:block; width:100%; height:100%; outline:none; }
-    #loading { position:absolute; inset:0; display:grid; place-content:center; text-align:center; background:#101820; padding:24px; }
+    #loading { position:absolute; inset:0; display:grid; place-content:center; text-align:center; background:#000000; padding:24px; }
     #web-tools { min-height:32px; flex:none; flex-wrap:wrap; width:100%; box-sizing:border-box; display:flex; align-items:center; justify-content:center; gap:12px; padding:2px 8px; }
     #focus-hint { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   </style>
@@ -26,13 +26,13 @@
 
     </div>
   </main>
-  <script src="web-shell.js?build=2a653b0e0303ebf5cc5d9fd19a1c6e89.data"></script>
+  <script src="web-shell.js?build=bfb4193b2348ea92b29cd7068c766204.data"></script>
   <script>
     const canvas=document.getElementById("unity-canvas");
     const loading=document.getElementById("loading");
     const shell=ThrownTogetherWeb.attach(window,document);
     const config={
-      dataUrl:"Build/2a653b0e0303ebf5cc5d9fd19a1c6e89.data",
+      dataUrl:"Build/bfb4193b2348ea92b29cd7068c766204.data",
       frameworkUrl:"Build/2aab7cdc42a3a29ffedebe5d7d087285.framework.js",
       codeUrl:"Build/2d4eed09956b1c08cc84fc4ed8750b55.wasm",
       streamingAssetsUrl:"StreamingAssets",
