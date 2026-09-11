@@ -165,7 +165,7 @@ namespace ThrownTogether
             GUI.Box(new Rect(Screen.width*.2f,Screen.height-74,Screen.width*.6f,48),"Slot "+(Selected+1)+" — "+name+(Held>=0?" | Rotation "+(pendingTurns*90)+"°":""));
             // Out-of-plan equipment in alternate/older layouts remains selectable for its first move.
             int row=0;foreach(var p in pieces.Where(p=>p.slot<0))
-                if(GUI.Button(new Rect(18,100+row++*38,210,34),"Move "+p.root.name)){Held=pieces.IndexOf(p);pendingTurns=p.turns;}
+                if(GUI.Button(new Rect(Screen.width-245,100+row++*38,225,34),"Move "+p.root.name)){Held=pieces.IndexOf(p);pendingTurns=p.turns;}
             GUI.color=prior;
         }
     }
