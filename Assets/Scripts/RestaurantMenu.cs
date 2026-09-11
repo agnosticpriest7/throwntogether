@@ -93,7 +93,9 @@ namespace ThrownTogether
         public bool StartSelectedMenu()
         {
             if(!DailyMenu.CanStart(RestaurantAccounts.Current)){message=DailyMenu.StartProblem(RestaurantAccounts.Current);return false;}
-            var start=startMenuDay;startMenuDay=null;start?.Invoke();return start!=null;
+            var start=startMenuDay;if(start==null)return false;start.Invoke();
+            if(hud.shift?.Day?.AwaitingMenu==true){message=RestaurantAccounts.Current.Problem;return false;}
+            startMenuDay=null;return true;
         }
         public void ShowWardrobe()
         {
@@ -341,9 +343,9 @@ namespace ThrownTogether
             var style=buttonStyle; style.fontSize=Mathf.RoundToInt(21*Display.TextScale); var text=textStyle;
             text.normal.textColor=Color.white; style.normal.textColor=Color.white; style.hover.textColor=Color.white; style.active.textColor=Color.white;
             GUI.Label(new Rect(260,25,760,48),Page=="Title" ? "THROWN TOGETHER" : Page=="Main" ? "PAUSED" : Page=="Levels" ? (practiceLevel ? "CHOOSE A PRACTICE KITCHEN":"CHOOSE YOUR LEVEL") : Page=="Recipes" ? "RECIPE BOOK" : Page.ToUpperInvariant(),text);
-            GUI.Label(new Rect(260,73,760,60),Page=="Confirm" ? confirmation : Page=="Today's Menu" ? DailyMenu.Resolve(RestaurantAccounts.Current).Length+" selected • Minimum 3 • A: toggle dish\nServe 4 different menu dishes: +5% meal revenue (max $15)" : Page=="Restaurant" && hud.shift?.Day?.Closed==true ? "10:00 PM — Closed • "+hud.shift.Day.Served+" meals • Earned $"+hud.shift.Day.NetIncome+" (speed $"+hud.shift.Day.Bonuses+", variety $"+hud.shift.Day.VarietyBonus+", waste $"+hud.shift.Day.WasteFees+")\nD-pad / stick: navigate • A: select • Y / Escape: view restaurant" : IsFrontEnd ? "D-pad / stick: navigate • A: select • B: back\nChoose a kitchen and start cooking." : "Paused • D-pad / stick: navigate • A: select • B: back\nY / Escape: close • Xbox Menu belongs to Edge",text);
-            int visible=Page=="Recipes"?6:WardrobePage?9:8;
-            int first=rows.Count>visible?Mathf.Clamp(Selection-visible+1,0,rows.Count-visible):0;
+            GUI.Label(Page=="Restaurant"?new Rect(180,73,920,60):new Rect(260,73,760,60),Page=="Confirm" ? confirmation : Page=="Today's Menu" ? DailyMenu.Resolve(RestaurantAccounts.Current).Length+" selected • Minimum 3 • A: toggle dish\nServe 4 different menu dishes: +5% meal revenue (max $15)" : Page=="Restaurant" && hud.shift?.Day?.Closed==true ? "10:00 PM — Closed • "+hud.shift.Day.Served+" meals • Earned $"+hud.shift.Day.NetIncome+" (speed $"+hud.shift.Day.Bonuses+", variety $"+hud.shift.Day.VarietyBonus+", waste $"+hud.shift.Day.WasteFees+")\nD-pad / stick: navigate • A: select • Y / Escape: view restaurant" : IsFrontEnd ? "D-pad / stick: navigate • A: select • B: back\nChoose a kitchen and start cooking." : "Paused • D-pad / stick: navigate • A: select • B: back\nY / Escape: close • Xbox Menu belongs to Edge",text);
+            int visible=Page=="Recipes"?6:(Page=="Restaurant" || Page=="Today's Menu")?8:9;
+            int first=rows.Count>visible?(Selection/visible)*visible:0;
             for(int i=first;i<Mathf.Min(rows.Count,first+visible);i++)
             {
                 GUI.enabled=rows[i].enabled && !StartupSequence.BlocksMenu && (presentation==null || !presentation.Transitioning);
@@ -354,9 +356,10 @@ namespace ThrownTogether
             GUI.enabled=true; GUI.backgroundColor=Color.white;
             if(rows.Count>visible)
             {
-                if(GUI.Button(new Rect(260,575,170,30),"Previous"))Selection=Mathf.Max(0,Selection-visible);
-                GUI.Label(new Rect(435,575,400,30),(first+1)+"–"+Mathf.Min(rows.Count,first+visible)+" / "+rows.Count+" • D-pad/stick to scroll",text);
-                if(GUI.Button(new Rect(850,575,170,30),"Next"))Selection=Mathf.Min(rows.Count-1,Selection+visible);
+                bool recipes=Page=="Recipes";
+                if(GUI.Button(recipes?new Rect(35,520,165,32):new Rect(260,575,170,30),"Previous"))Selection=Mathf.Max(0,Selection-visible);
+                GUI.Label(recipes?new Rect(35,558,345,32):new Rect(435,575,400,30),(first+1)+" - "+Mathf.Min(rows.Count,first+visible)+" / "+rows.Count,text);
+                if(GUI.Button(recipes?new Rect(210,520,170,32):new Rect(850,575,170,30),"Next"))Selection=Mathf.Min(rows.Count-1,Selection+visible);
             }
             if(WardrobePage && wardrobePreview!=null && wardrobePreview.Image!=null)
             {

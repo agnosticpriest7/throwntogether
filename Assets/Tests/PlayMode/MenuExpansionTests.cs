@@ -13,7 +13,7 @@ namespace ThrownTogether.Tests
 {
     public sealed class MenuExpansionTests
     {
-        sealed class Memory:ISettingsStorage {public string json="";public string Read()=>json;public void Write(string s)=>json=s;}
+        sealed class Memory:ISettingsStorage {public string json="";public bool fail;public string Read()=>json;public void Write(string s){if(fail)throw new System.IO.IOException();json=s;}}
         Scene original,scene;GameObject[] suspended;Memory memory;RestaurantHud hud;RestaurantDay day;ChefController chef;
         [UnitySetUp] public IEnumerator Setup()
         {
@@ -111,6 +111,14 @@ namespace ThrownTogether.Tests
                 yield return null;Capture("layout-"+i);
             }
             LogAssert.NoUnexpectedReceived();
+        }
+        [UnityTest] public IEnumerator FailedDaySaveKeepsMenuOpenAndCanRetryWithoutLosingSelection()
+        {
+            BaseMenu();var menu=hud.GetComponent<RestaurantMenu>();memory.fail=true;
+            Assert.That(menu.StartSelectedMenu(),Is.False);Assert.That(menu.IsOpen,Is.True);Assert.That(day.AwaitingMenu,Is.True);
+            Assert.That(RestaurantAccounts.Current.Data.activeDay,Is.Zero);
+            memory.fail=false;Assert.That(menu.StartSelectedMenu(),Is.True);Assert.That(day.DayNumber,Is.EqualTo(1));Assert.That(menu.IsOpen,Is.False);
+            yield return null;
         }
         [UnityTest] public IEnumerator ControllerSelectsStartingMenuAndStartsWithoutMouse()
         {
