@@ -36,11 +36,13 @@ namespace ThrownTogether
         private void Start() { KeyboardPlayerOne=SessionOptions.KeyboardPlayerOne; BindPlayerOne(KeyboardPlayerOne ? null:Gamepad.all.FirstOrDefault()); }
         public void RefreshPlayerOneAssignment()
         {
+            if(playerOne==null)return; // Scene unload can destroy the chef before the open menu closes.
             if(!KeyboardPlayerOne && (PlayerOnePad==null || !PlayerOnePad.added))
                 BindPlayerOne(Gamepad.all.FirstOrDefault(p=>p!=PlayerTwoPad));
         }
         public void BindPlayerOne(Gamepad pad)
         {
+            if(playerOne==null)return;
             PlayerOnePad=pad;
             playerOne.GetComponent<ChefInput>().BindDevices(new InputDevice[]{Keyboard.current,pad}.Where(d=>d!=null).ToArray());
         }

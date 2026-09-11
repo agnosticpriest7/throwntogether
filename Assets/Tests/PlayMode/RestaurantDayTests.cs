@@ -15,7 +15,7 @@ namespace ThrownTogether.Tests
         Scene original,scene;GameObject[] suspended;RestaurantDay day;ChefController chef;Interactable[] stations;
         [UnitySetUp] public IEnumerator Setup()
         {
-            Time.timeScale=1;RestaurantAccounts.UseStorage(new Memory());SessionOptions.ShiftOrders=0;SessionOptions.Kitchen=0;
+            Time.timeScale=1;RestaurantAccounts.UseStorage(new Memory());RestaurantAccounts.Current.SetMenu(DailyMenu.Catalog.Where(r=>r.requiredPurchases.Length==0).Select(r=>r.id).ToArray());SessionOptions.ShiftOrders=0;SessionOptions.Kitchen=0;
             original=SceneManager.GetActiveScene();suspended=Object.FindObjectsByType<RestaurantHud>().Any(h=>h.gameObject.scene==original)?original.GetRootGameObjects().Where(g=>g.activeSelf).ToArray():new GameObject[0];foreach(var root in suspended)root.SetActive(false);
 #if UNITY_EDITOR
             yield return EditorSceneManager.LoadSceneAsyncInPlayMode("Assets/Scenes/RestaurantShift.unity",new LoadSceneParameters(LoadSceneMode.Additive));
@@ -31,11 +31,11 @@ namespace ThrownTogether.Tests
             Time.timeScale=1;SceneManager.SetActiveScene(original);yield return SceneManager.UnloadSceneAsync(scene);
             foreach(var root in suspended)if(root!=null)root.SetActive(true);RestaurantAccounts.ResetCache();SessionOptions.ShiftOrders=6;SessionOptions.Kitchen=0;
         }
-        void Use(Interactable station){KitchenTestAccess.Approach(chef,station);Assert.That(chef.Use(),Is.True,station.name);}
+        void Use(Interactable station){KitchenTestAccess.Approach(chef,station);Assert.That(chef.Use(),Is.True,station.name);KitchenTestAccess.SelectDefault(chef,station);}
         Carryable CookFirstDish()=>CookDish(day.Tables.First(t=>t.order.Active).order.recipe);
         Carryable CookDish(RecipeDefinition recipe)
         {
-            Use(stations.OfType<SourceStation>().Single(s=>!s.plates && s.ingredient==recipe.ingredient));
+            KitchenTestAccess.Take(chef,recipe.ingredient);
             var prep=stations.OfType<ProcessingStation>().Single(s=>s.requiresAttendance);Use(prep);prep.Advance(2);Use(prep);
             var fryer=stations.OfType<ProcessingStation>().Single(s=>!s.requiresAttendance);Use(fryer);fryer.Advance(5);Use(fryer);
             var counter=stations.OfType<CounterStation>().First(s=>s.GetType()==typeof(CounterStation));Use(counter);Use(stations.OfType<SourceStation>().Single(s=>s.plates));Use(counter);Use(counter);return chef.Hands.Item;
@@ -204,7 +204,7 @@ namespace ThrownTogether.Tests
         }
         [UnityTest] public IEnumerator PaidImprovementsApplyOnNextDayIncludingServerAndFryerSpeed()
         {
-            var account=RestaurantAccounts.Current;Assert.That(account.Settle(day.DayNumber,1000,0),Is.True);
+            var account=RestaurantAccounts.Current;Assert.That(account.Settle(day.DayNumber,1500,0),Is.True);
             foreach(var offer in day.Settings.purchases)Assert.That(account.Buy(offer.id,offer.cost),Is.True);
             Assert.That(account.Buy(day.Settings.serverRole.id,day.Settings.serverRole.hireCost),Is.True);
             Assert.That(account.Buy(day.Settings.dishwasherRole.id,day.Settings.dishwasherRole.hireCost),Is.True);
@@ -217,14 +217,14 @@ namespace ThrownTogether.Tests
 #endif
             scene=SceneManager.GetSceneAt(SceneManager.sceneCount-1);SceneManager.SetActiveScene(scene);yield return null;
             day=Object.FindObjectsByType<RestaurantDay>().Single(s=>s.gameObject.scene==scene);
-            Assert.That(day.DayNumber,Is.EqualTo(2));Assert.That(account.Data.cash,Is.EqualTo(245));
+            Assert.That(day.DayNumber,Is.EqualTo(2));Assert.That(account.Data.cash,Is.EqualTo(470));
             Assert.That(day.GetComponent<DiningServer>(),Is.Not.Null);
             Assert.That(day.GetComponent<KitchenDishwasher>(),Is.Not.Null);
             Assert.That(day.GetComponent<DiningBusser>(),Is.Not.Null);Assert.That(day.Tables.Length,Is.EqualTo(4));Assert.That(day.TargetCustomers,Is.EqualTo(14));
             foreach(var table in day.Tables)
             {var approach=day.TableApproach(table);Assert.That(KitchenStaffRoute.Clear(approach),Is.True);var path=day.DiningRoute(new Vector3(day.Settings.diningAisleX,0,1),approach);
                 var previous=new Vector3(day.Settings.diningAisleX,0,1);foreach(var point in path){for(float t=0;t<=1;t+=.02f)Assert.That(KitchenStaffRoute.Clear(Vector3.Lerp(previous,point,t)),Is.True,"Staff dining corridor");previous=point;}}
-            var fryers=Object.FindObjectsByType<ProcessingStation>().Where(s=>s.gameObject.scene==scene && !s.requiresAttendance).ToArray();
+            var fryers=Object.FindObjectsByType<ProcessingStation>().Where(s=>s.gameObject.scene==scene && !s.requiresAttendance && s.appliance.id.Contains("fryer")).ToArray();
             Assert.That(fryers.Length,Is.EqualTo(2));Assert.That(fryers.All(f=>Mathf.Approximately(f.processingSpeed,1.25f)),Is.True);
             Assert.That(Object.FindObjectsByType<CounterStation>().Count(s=>s.gameObject.scene==scene && s.GetType()==typeof(CounterStation)),Is.EqualTo(3));
             LogAssert.NoUnexpectedReceived();

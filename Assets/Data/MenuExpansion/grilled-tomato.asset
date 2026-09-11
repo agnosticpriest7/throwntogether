@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e3fb6ce36b0f3284e8a42896fdb41191, type: 3}
+  m_Name: grilled-tomato
+  m_EditorClassIdentifier: ThrownTogether.Runtime::ThrownTogether.RecipeDefinition
+  id: dish.grilled-tomato
+  displayName: Grilled Tomato
+  description:
+  ingredient: {fileID: 11400000, guid: d59fc79e3765848469ee63bebb057d38, type: 2}
+  requiredPurchases:
+  - grill
+  salePrice: 10
+  requiredState: 4
+  steps:
+  - {fileID: 11400000, guid: 92892ce930c1ecd4ea5bd1d0adf36947, type: 2}
+  - {fileID: 11400000, guid: 1af4c077cac12964087414613bcfc8fc, type: 2}
+  additionalIngredients: []

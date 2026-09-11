@@ -57,7 +57,7 @@ namespace ThrownTogether.Tests
             var input=chef.GetComponent<ChefInput>();
             try
             {
-                Use(Find<SourceStation>("POTATOES")); var item=chef.Hands.Item;
+                Use(Find<SourceStation>("Produce Rack")); var item=chef.Hands.Item;
                 input.BindDevices(pad); input.enabled=true;
                 InputSystem.QueueStateEvent(pad,new GamepadState().WithButton(GamepadButton.North)); InputSystem.Update();
                 menu.Tick(false); Assert.That(menu.IsOpen,Is.False,"Unfocused menu ignores input"); menu.Tick(true);
@@ -91,9 +91,9 @@ namespace ThrownTogether.Tests
             {
                 session.BindPlayerOne(one); Assert.That(session.Join(two),Is.True);
                 var second=session.PlayerTwo; second.GetComponent<ChefInput>().enabled=false;
-                Use(Find<SourceStation>("POTATOES")); second.Hands.TryTake(chef.Hands.Item);
+                Use(Find<SourceStation>("Produce Rack")); second.Hands.TryTake(chef.Hands.Item);
                 Assert.That(session.LeavePlayerTwo(),Is.False); var secondItem=second.Hands.Item;
-                Use(Find<SourceStation>("POTATOES")); var prep=Find<ProcessingStation>("PREP");
+                Use(Find<SourceStation>("Produce Rack")); var prep=Find<ProcessingStation>("PREP");
                 Assert.That(prep.Interact(chef),Is.True); Assert.That(prep.Interact(second),Is.False);
                 Assert.That(second.Hands.Item,Is.SameAs(secondItem)); prep.Advance(1.5f);
                 Assert.That(prep.Interact(second),Is.False,"A chef holding food cannot take another chef's prepared item");
@@ -127,13 +127,13 @@ namespace ThrownTogether.Tests
                 Assert.That(chef.transform.position.x,Is.EqualTo(before.x).Within(.001f));
                 Assert.That(second.transform.position.x,Is.GreaterThan(secondBefore.x));
                 firstInput.enabled=false; secondInput.enabled=false;
-                Use(Find<SourceStation>("POTATOES")); var item=chef.Hands.Item;
+                Use(Find<SourceStation>("Produce Rack")); var item=chef.Hands.Item;
                 Assert.That(second.Hands.TryTake(item),Is.True);
                 InputSystem.RemoveDevice(two); yield return null;
                 Assert.That(second.Hands.Item,Is.SameAs(item)); Assert.That(secondInput.enabled,Is.False);
                 replacement=InputSystem.AddDevice<Gamepad>(); Assert.That(session.Join(replacement),Is.True);
                 Assert.That(session.PlayerTwo,Is.SameAs(second)); Assert.That(second.Hands.Item,Is.SameAs(item));
-                Use(Find<SourceStation>("POTATOES")); var counter=Find<CounterStation>("SPARE");
+                Use(Find<SourceStation>("Produce Rack")); var counter=Find<CounterStation>("SPARE");
                 Assert.That(counter.Interact(chef),Is.True); Assert.That(counter.Interact(second),Is.False);
                 Assert.That(second.Hands.Item,Is.SameAs(item));
             }
@@ -174,7 +174,7 @@ namespace ThrownTogether.Tests
         {
             KitchenTestAccess.Approach(chef,station);
         }
-        private void Use(Interactable station) { Approach(station); Assert.That(chef.Use(),Is.True,station.stationName); }
+        private void Use(Interactable station) { Approach(station); Assert.That(chef.Use(),Is.True,station.stationName);KitchenTestAccess.SelectDefault(chef,station); }
         [UnityTest]
         public IEnumerator VirtualGamepadDrivesMovementAndSouthButtonPickup()
         {
@@ -202,14 +202,17 @@ namespace ThrownTogether.Tests
                 }
                 Assert.That(chef.transform.position.x,Is.GreaterThan(before.x+.1f));
                 InputSystem.QueueStateEvent(gamepad,new GamepadState()); InputSystem.Update();
-                Approach(Find<SourceStation>("POTATOES"));
+                Approach(Find<SourceStation>("Produce Rack"));
                 InputSystem.QueueStateEvent(gamepad,new GamepadState().WithButton(GamepadButton.South));
                 InputSystem.Update(); input.Tick(1f/60);
+                Assert.That(input.Storage,Is.Not.Null);
+                InputSystem.QueueStateEvent(gamepad,new GamepadState());InputSystem.Update();input.Tick(0);
+                InputSystem.QueueStateEvent(gamepad,new GamepadState().WithButton(GamepadButton.South));InputSystem.Update();input.Tick(0);
                 Assert.That(chef.Hands.Item,Is.Not.Null);
                 Assert.That(chef.Hands.Item.Payload.state,Is.EqualTo(FoodState.Raw));
                 Assert.That(input.LastActiveDevice,Is.SameAs(gamepad));
-                Assert.That(input.UseSignals,Is.EqualTo(1));
-                Assert.That(input.LastUseResult,Does.Contain("Accepted at "+Find<SourceStation>("POTATOES").stationName));
+                Assert.That(input.UseSignals,Is.EqualTo(2));
+                Assert.That(input.LastUseResult,Does.Contain("Accepted at "+Find<SourceStation>("Produce Rack").stationName));
                 var result=input.LastUseResult;
                 input.SetInputFocus(false); input.SetInputFocus(true);
                 Assert.That(input.LastUseResult,Is.EqualTo(result),"Focus changes retain interaction evidence");
@@ -250,7 +253,7 @@ namespace ThrownTogether.Tests
             var input=chef.GetComponent<ChefInput>(); input.BindDevices(pad); input.enabled=true;
             try
             {
-                Approach(Find<SourceStation>("POTATOES")); var before=chef.transform.position;
+                Approach(Find<SourceStation>("Produce Rack")); var before=chef.transform.position;
                 input.SetInputFocus(false);
                 InputSystem.QueueStateEvent(pad,new GamepadState {leftStick=Vector2.right}.WithButton(GamepadButton.South));
                 InputSystem.Update(); input.Tick(1f/60);
@@ -260,6 +263,9 @@ namespace ThrownTogether.Tests
                 Assert.That(chef.Hands.Item,Is.Null,"Focus gesture must not also pick up an item");
                 InputSystem.QueueStateEvent(pad,new GamepadState()); InputSystem.Update(); input.Tick(1f/60);
                 InputSystem.QueueStateEvent(pad,new GamepadState().WithButton(GamepadButton.South)); InputSystem.Update(); input.Tick(1f/60);
+                Assert.That(input.Storage,Is.Not.Null);
+                InputSystem.QueueStateEvent(pad,new GamepadState());InputSystem.Update();input.Tick(0);
+                InputSystem.QueueStateEvent(pad,new GamepadState().WithButton(GamepadButton.South));InputSystem.Update();input.Tick(0);
                 Assert.That(chef.Hands.Item,Is.Not.Null);
                 Assert.That(input.LastActiveDevice,Is.SameAs(pad));
             }
@@ -281,7 +287,7 @@ namespace ThrownTogether.Tests
             var input=chef.GetComponent<ChefInput>(); input.BindDevices(pad); input.enabled=true;
             try
             {
-                Approach(Find<SourceStation>("POTATOES"));
+                Approach(Find<SourceStation>("Produce Rack"));
                 input.SetInputFocus(false);
                 InputSystem.QueueStateEvent(pad,new GamepadState()); InputSystem.Update();
                 input.SetInputFocus(true);
@@ -290,6 +296,9 @@ namespace ThrownTogether.Tests
                 Assert.That(chef.Hands.Item,Is.Null,"Regaining focus must not act or restart");
                 InputSystem.QueueStateEvent(pad,new GamepadState().WithButton(GamepadButton.Start).WithButton(GamepadButton.South));
                 InputSystem.Update(); input.Tick(1f/60);
+                Assert.That(input.Storage,Is.Not.Null);
+                InputSystem.QueueStateEvent(pad,new GamepadState().WithButton(GamepadButton.Start));InputSystem.Update();input.Tick(0);
+                InputSystem.QueueStateEvent(pad,new GamepadState().WithButton(GamepadButton.Start).WithButton(GamepadButton.South));InputSystem.Update();input.Tick(0);
                 Assert.That(chef.Hands.Item,Is.Not.Null,"A released independently of Menu must remain usable");
                 Assert.That(chef.Hands.Item.Payload.state,Is.EqualTo(FoodState.Raw));
             }
@@ -324,7 +333,7 @@ namespace ThrownTogether.Tests
         [UnityTest]
         public IEnumerator FullLoopRejectsInvalidInputsThenDeliversPlatedFries()
         {
-            var source=Find<SourceStation>("POTATOES"); var prep=Find<ProcessingStation>("PREP"); var fryer=Find<ProcessingStation>("FRYER");
+            var source=Find<SourceStation>("Produce Rack"); var prep=Find<ProcessingStation>("PREP"); var fryer=Find<ProcessingStation>("FRYER");
             var counter=Find<CounterStation>("COUNTER"); var plates=Find<SourceStation>("PLATES"); var service=Find<ServiceStation>("PICKUP");
             Use(source); var potato=chef.Hands.Item; Assert.That(potato.Payload.state,Is.EqualTo(FoodState.Raw));
             Assert.That(potato.GetComponentsInChildren<Collider>(true),Is.Empty,"Item visuals must not require stripped collider types");
@@ -359,7 +368,7 @@ namespace ThrownTogether.Tests
         public IEnumerator InvalidSequenceNeverReservesOrCompletesOrder()
         {
             var service=Find<ServiceStation>("PICKUP");
-            Use(Find<SourceStation>("POTATOES"));
+            Use(Find<SourceStation>("Produce Rack"));
             Approach(Find<ProcessingStation>("FRYER")); Assert.That(chef.Use(),Is.False);
             Approach(service); Assert.That(chef.Use(),Is.False);
             Use(Find<CounterStation>("SPARE")); Use(Find<SourceStation>("PLATES"));
@@ -372,7 +381,7 @@ namespace ThrownTogether.Tests
         public IEnumerator RestartRestoresInitialSinglePlayerSlice()
         {
             var spawn=chef.transform.position;
-            Use(Find<SourceStation>("POTATOES")); Use(Find<ProcessingStation>("PREP"));
+            Use(Find<SourceStation>("Produce Rack")); Use(Find<ProcessingStation>("PREP"));
             Assert.That(Find<ProcessingStation>("PREP").Busy,Is.True);
             Use(Find<SourceStation>("PLATES"));
             Assert.That(Find<SourceStation>("PLATES").CleanPlatesRemaining,Is.EqualTo(4));
@@ -393,7 +402,7 @@ namespace ThrownTogether.Tests
 #if UNITY_EDITOR || THROWNTOGETHER_DIAGNOSTICS
             Assert.That(Object.FindObjectsByType<DevelopmentDiagnostics>().Single(x=>x.gameObject.scene==testScene).Expanded,Is.False);
 #endif
-            Use(Find<SourceStation>("POTATOES")); Assert.That(chef.Hands.Item.Payload.state,Is.EqualTo(FoodState.Raw));
+            Use(Find<SourceStation>("Produce Rack")); Assert.That(chef.Hands.Item.Payload.state,Is.EqualTo(FoodState.Raw));
         }
     }
 }

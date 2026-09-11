@@ -5,6 +5,16 @@ namespace ThrownTogether
     public sealed class SourceStation : Interactable
     {
         public IngredientDefinition ingredient;
+        public IngredientStorageDefinition storage;
+        public IngredientDefinition[] Ingredients=>storage!=null?storage.ingredients:new[]{ingredient};
+        public bool Offers(IngredientDefinition value)=>!plates && System.Array.IndexOf(Ingredients,value)>=0;
+        public bool Dispense(ChefController chef,IngredientDefinition choice)
+        {
+            if(!isActiveAndEnabled || !Offers(choice) || !choice.Unlocked || chef.Hands.Item!=null)return false;
+            var delta=chef.transform.position-transform.position;delta.y=0;if(delta.magnitude>chef.reach)return false;
+            var item=Instantiate(itemPrefab);item.Configure(ItemPayload.Food(choice));
+            if(chef.Hands.TryTake(item)){ShowSuccess(false);return true;}Destroy(item.gameObject);return false;
+        }
         public Carryable itemPrefab;
         public bool plates;
         public const int PlateCapacity=5;
@@ -17,7 +27,7 @@ namespace ThrownTogether
             if(plates && chef.Hands.Item!=null && chef.Hands.Item.Payload.EmptyPlate && !chef.Hands.Item.Payload.dirty) return "Return clean plate to stack";
             if(plates && ItemPayload.CanPlate(ItemPayload.Plate(),chef.Hands.Item?.Payload)) return CleanPlatesRemaining>0 ? "Plate food in hands" : "No clean plates — wash a dirty plate";
             if(chef.Hands.Item!=null) return "Hands full — use a counter";
-            if(!plates) return "Take "+ingredient.displayName.ToLowerInvariant();
+            if(!plates) return storage!=null?"Choose ingredient — "+storage.displayName:"Take "+ingredient.displayName.ToLowerInvariant();
             return CleanPlatesRemaining>0 ? "Take clean plate ("+CleanPlatesRemaining+" / 5)" : "No clean plates — collect and wash a dirty plate";
         }
         public override bool Interact(ChefController chef)
@@ -33,6 +43,7 @@ namespace ThrownTogether
                 }
                 return ReturnCleanPlate(held);
             }
+            if(storage!=null && !plates){chef.GetComponent<ChefInput>().OpenStorage(this);return true;}
             Carryable item;
             if(plates)
             {

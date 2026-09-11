@@ -60,3 +60,6 @@ Owner requested 11 AM–10 PM in about five minutes, manual seating/service/clea
 
 ### 2026-09-10 — Service quality-of-life batch
 Owner approved direct stock-to-hand plating, a multi-plate sink, seated customer patience, a dishwasher hire, broader player cosmetics and unique randomized customers. Initial seated patience: 90 seconds; dishwasher: $125 permanent hire applying next day. Washer handles sink plates and returns clean stock; players retain table clearing. Five-plate capacity, movement, reach, camera and recipe timing remain intact. No wages, new recipes or progression beyond this hire.
+
+
+2026-09-11 — Approved menu/storage progression pass: preserve three starting dishes, add ten appliance-gated dishes; Griddle $125, Grill $150. Separate griddled/grilled states and component-by-component plate assembly reuse current stations. Require three daily menu choices; reward four distinct served dishes with 5% base-revenue variety bonus capped $15. Two physical category sources with per-chef controller grids replace individual crates; unlimited free ingredients remain intentional for this pass. Prices are initial playtest tuning.

@@ -6,6 +6,7 @@ namespace ThrownTogether
     {
         public int schemaVersion=1, cash, nextDay=1, activeDay, settledDay, completedDays;
         public string[] purchases=new string[0];
+        public string[] selectedMenu=new string[0];
     }
     // Separate from audio/display settings. Writes commit a copy, never partially debit live state.
     public sealed class RestaurantAccount
@@ -23,6 +24,9 @@ namespace ThrownTogether
                 if(!json.Contains("\"schemaVersion\""))throw new ArgumentException("Missing schema");
                 var loaded=JsonUtility.FromJson<RestaurantSave>(json);
                 if(loaded==null||loaded.schemaVersion!=1||loaded.completedDays<0||loaded.completedDays>loaded.settledDay||loaded.cash<0||loaded.nextDay<1||loaded.activeDay<0||loaded.settledDay<0||loaded.settledDay>loaded.activeDay||loaded.activeDay>=loaded.nextDay||loaded.purchases==null)throw new ArgumentException("Unsupported save");
+                if(loaded.selectedMenu==null)loaded.selectedMenu=new string[0];
+                // Optional schema-1 addition: preserve old saves and begin with their existing dishes.
+                if(!json.Contains("\"selectedMenu\""))loaded.selectedMenu=System.Array.ConvertAll(System.Array.FindAll(DailyMenu.Catalog,r=>r.requiredPurchases.Length==0),r=>r.id);
                 Data=loaded;
             }
             catch(Exception){Writable=false;Problem="Restaurant save cannot be read safely. Existing data preserved; earnings/purchases disabled.";}
@@ -33,6 +37,11 @@ namespace ThrownTogether
             if(!Writable)return false;
             try{storage.Write(JsonUtility.ToJson(next));Data=next;Problem="";return true;}
             catch(Exception){Problem="Could not save. No money or purchase was changed. Retry when storage is available.";return false;}
+        }
+        public bool SetMenu(string[] ids)
+        {
+            if(ids==null || System.Array.Exists(ids,string.IsNullOrWhiteSpace))return false;
+            var next=Copy();next.selectedMenu=System.Linq.Enumerable.ToArray(System.Linq.Enumerable.Distinct(ids));return Commit(next);
         }
         public bool Owns(string id)=>Array.IndexOf(Data.purchases,id)>=0;
         public int StartDay()

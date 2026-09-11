@@ -95,6 +95,7 @@ namespace ThrownTogether
             }
             if(station is SourceStation source)
             {
+                if(source.storage!=null)return;
                 if(source.plates)
                 {
                     Tint(t,"Cabinet",new Color(.35f,.45f,.54f));

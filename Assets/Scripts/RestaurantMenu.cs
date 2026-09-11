@@ -11,7 +11,7 @@ namespace ThrownTogether
     public sealed class RestaurantMenu : MonoBehaviour
     {
         public static RestaurantMenu Instance { get; private set; }
-        public static bool GameplayBlocked => Instance!=null && (Instance.IsOpen || Instance.GetComponent<DayPresentation>()?.Transitioning==true || Instance.hud?.shift?.Day?.Closed==true || Time.frameCount<=Instance.blockThroughFrame);
+        public static bool GameplayBlocked => Instance!=null && (Instance.IsOpen || Instance.GetComponent<DayPresentation>()?.Transitioning==true || Instance.hud?.shift?.Day?.Closed==true || Instance.hud?.shift?.Day?.AwaitingMenu==true || Time.frameCount<=Instance.blockThroughFrame);
         public static DisplaySettingsData Display => Instance?.hud?.settings?.Repository?.Display ?? defaults;
         private static readonly DisplaySettingsData defaults=new DisplaySettingsData();
         private static bool booted;
@@ -33,6 +33,7 @@ namespace ThrownTogether
         private string confirmation, message="";
         private bool navigationHeld;
         private bool practiceLevel;
+        private Action startMenuDay;
         private RecipeBook recipeBook;
         private int recipeIndex;
         private int wardrobePlayer, pendingKitchen;
@@ -82,7 +83,17 @@ namespace ThrownTogether
         {
             int index=pendingKitchen;
             SessionOptions.Kitchen=index; SessionOptions.Training="Free practice";
-            IsFrontEnd=false; Close(); Load(practiceLevel ? "RestaurantDevelopment":"RestaurantShift");
+            Action launch=()=>{IsFrontEnd=false;Close();Load(practiceLevel ? "RestaurantDevelopment":"RestaurantShift");};
+            if(!practiceLevel && SessionOptions.ShiftOrders==0)ChooseDailyMenu(launch);else launch();
+        }
+        public void ChooseDailyMenu(Action start)
+        {
+            if(!IsOpen)Open();startMenuDay=start;SetPage("Today's Menu");
+        }
+        public bool StartSelectedMenu()
+        {
+            if(!DailyMenu.CanStart(RestaurantAccounts.Current)){message=DailyMenu.StartProblem(RestaurantAccounts.Current);return false;}
+            var start=startMenuDay;startMenuDay=null;start?.Invoke();return start!=null;
         }
         public void ShowWardrobe()
         {
@@ -174,10 +185,23 @@ namespace ThrownTogether
             }
             if(Page=="Settings")
             {Add("Audio",()=>SetPage("Audio"));Add("Text and accessibility",()=>SetPage("Display"));Add("Back",()=>SetPage("Main"));return;}
+            if(Page=="Today's Menu")
+            {
+                var account=RestaurantAccounts.Current;
+                Add(DailyMenu.CanStart(account)?"Start day — "+DailyMenu.Resolve(account).Length+" dishes":DailyMenu.StartProblem(account),()=>StartSelectedMenu());
+                rows[0].enabled=DailyMenu.CanStart(account);
+                foreach(var recipe in DailyMenu.Catalog)
+                {
+                    var choice=recipe;bool unlocked=choice.Unlocked(account);
+                    Add((System.Array.IndexOf(account.Data.selectedMenu,choice.id)>=0?"[x] ":"[ ] ")+choice.displayName+" — $"+choice.salePrice+(unlocked?"":" — "+choice.LockReason),()=>{if(!DailyMenu.Toggle(account,choice))message=account.Problem;});
+                    rows[rows.Count-1].enabled=unlocked;
+                }
+                Add("Back",()=>SetPage(IsFrontEnd?"Title":"Restaurant"));return;
+            }
             if(Page=="Restaurant")
             {
                 var day=hud.shift?.Day;var config=Resources.Load<DayServiceDefinition>("ServiceDay");var account=RestaurantAccounts.Current;
-                Add("Next day — bank $"+account.Data.cash,()=>{if(day!=null && !day.Closed)message="Finish this day before starting the next.";else if(day!=null && !day.Paid)message="Save today's earnings before continuing. Use Retry below.";else {var presentation=GetComponent<DayPresentation>(); Action start=()=>{SessionOptions.ShiftOrders=0;Close();Load("RestaurantShift");}; if(presentation==null || day==null)start();else presentation.BeginNextDay(start);}});
+                Add("Next day — bank $"+account.Data.cash,()=>{if(day!=null && day.AwaitingMenu)ChooseDailyMenu(()=>{if(day.StartService())Close();});else if(day!=null && !day.Closed)message="Finish this day before starting the next.";else if(day!=null && !day.Paid)message="Save today's earnings before continuing. Use Retry below.";else {var presentation=GetComponent<DayPresentation>(); Action start=()=>{SessionOptions.ShiftOrders=0;Close();Load("RestaurantShift");}; ChooseDailyMenu(()=>{if(presentation==null || day==null)start();else presentation.BeginNextDay(start);});}});
                 if(config!=null)
                 {
                     foreach(var offer in config.purchases)
@@ -274,7 +298,7 @@ namespace ThrownTogether
         {
             var account=RestaurantAccounts.Current;
             if(hud.shift?.Day!=null && !hud.shift.Day.Closed){message="Purchases open after the 10 PM close.";return;}
-            message=account.Buy(id,cost)?"Purchased — available next day.":!string.IsNullOrEmpty(account.Problem)?account.Problem:"Already owned, insufficient cash, or today's earnings are not yet saved.";
+            message=account.Buy(id,cost)?"Purchased — available next day. "+System.Array.FindAll(DailyMenu.Catalog,r=>r.Unlocked(account)).Length+" recipes now unlocked.":!string.IsNullOrEmpty(account.Problem)?account.Problem:"Already owned, insufficient cash, or today's earnings are not yet saved.";
         }
         private void Confirm(string text,Action action) { if(!IsOpen) Open(); pending=action; confirmation=text; SetPage("Confirm"); }
         public void ActivateSelection() { if(StartupSequence.BlocksMenu)return; if(GetComponent<DayPresentation>()?.Transitioning==true)return; if(!rows[Mathf.Clamp(Selection,0,rows.Count-1)].enabled) return; rows[Mathf.Clamp(Selection,0,rows.Count-1)].select(); hud.audioFeedback?.Click(); if(IsOpen) BuildRows(); }
@@ -317,15 +341,23 @@ namespace ThrownTogether
             var style=buttonStyle; style.fontSize=Mathf.RoundToInt(21*Display.TextScale); var text=textStyle;
             text.normal.textColor=Color.white; style.normal.textColor=Color.white; style.hover.textColor=Color.white; style.active.textColor=Color.white;
             GUI.Label(new Rect(260,25,760,48),Page=="Title" ? "THROWN TOGETHER" : Page=="Main" ? "PAUSED" : Page=="Levels" ? (practiceLevel ? "CHOOSE A PRACTICE KITCHEN":"CHOOSE YOUR LEVEL") : Page=="Recipes" ? "RECIPE BOOK" : Page.ToUpperInvariant(),text);
-            GUI.Label(new Rect(260,73,760,60),Page=="Confirm" ? confirmation : Page=="Restaurant" && hud.shift?.Day?.Closed==true ? "10:00 PM — Closed • "+hud.shift.Day.Served+" meals • Earned $"+hud.shift.Day.NetIncome+" (bonus $"+hud.shift.Day.Bonuses+", waste $"+hud.shift.Day.WasteFees+")\nD-pad / stick: navigate • A: select • Y / Escape: view restaurant" : IsFrontEnd ? "D-pad / stick: navigate • A: select • B: back\nChoose a kitchen and start cooking." : "Paused • D-pad / stick: navigate • A: select • B: back\nY / Escape: close • Xbox Menu belongs to Edge",text);
-            for(int i=0;i<rows.Count;i++)
+            GUI.Label(new Rect(260,73,760,60),Page=="Confirm" ? confirmation : Page=="Today's Menu" ? DailyMenu.Resolve(RestaurantAccounts.Current).Length+" selected • Minimum 3 • A: toggle dish\nServe 4 different menu dishes: +5% meal revenue (max $15)" : Page=="Restaurant" && hud.shift?.Day?.Closed==true ? "10:00 PM — Closed • "+hud.shift.Day.Served+" meals • Earned $"+hud.shift.Day.NetIncome+" (speed $"+hud.shift.Day.Bonuses+", variety $"+hud.shift.Day.VarietyBonus+", waste $"+hud.shift.Day.WasteFees+")\nD-pad / stick: navigate • A: select • Y / Escape: view restaurant" : IsFrontEnd ? "D-pad / stick: navigate • A: select • B: back\nChoose a kitchen and start cooking." : "Paused • D-pad / stick: navigate • A: select • B: back\nY / Escape: close • Xbox Menu belongs to Edge",text);
+            int visible=Page=="Recipes"?6:WardrobePage?9:8;
+            int first=rows.Count>visible?Mathf.Clamp(Selection-visible+1,0,rows.Count-visible):0;
+            for(int i=first;i<Mathf.Min(rows.Count,first+visible);i++)
             {
                 GUI.enabled=rows[i].enabled && !StartupSequence.BlocksMenu && (presentation==null || !presentation.Transitioning);
                 GUI.backgroundColor=i==Selection ? new Color(.2f,.8f,.6f):Color.gray;
-                var rowRect=Page=="Recipes" ? new Rect(35,160+i*55,345,48):WardrobePage ? new Rect(65,145+i*47,670,42):Page=="Restaurant" ? new Rect(260,140+i*42,760,37):new Rect(260,145+i*47,760,42);
+                var rowRect=Page=="Recipes" ? new Rect(35,160+(i-first)*55,345,48):WardrobePage ? new Rect(65,145+(i-first)*47,670,42):(Page=="Restaurant" || Page=="Today's Menu") ? new Rect(260,140+(i-first)*42,760,37):new Rect(260,145+(i-first)*47,760,42);
                 if(GUI.Button(rowRect,(i==Selection ? ">  ":"    ")+rows[i].label,style)) { Selection=i; ActivateSelection(); break; }
             }
             GUI.enabled=true; GUI.backgroundColor=Color.white;
+            if(rows.Count>visible)
+            {
+                if(GUI.Button(new Rect(260,575,170,30),"Previous"))Selection=Mathf.Max(0,Selection-visible);
+                GUI.Label(new Rect(435,575,400,30),(first+1)+"–"+Mathf.Min(rows.Count,first+visible)+" / "+rows.Count+" • D-pad/stick to scroll",text);
+                if(GUI.Button(new Rect(850,575,170,30),"Next"))Selection=Mathf.Min(rows.Count-1,Selection+visible);
+            }
             if(WardrobePage && wardrobePreview!=null && wardrobePreview.Image!=null)
             {
                 GUI.DrawTexture(new Rect(780,145,360,450),wardrobePreview.Image,ScaleMode.ScaleToFit);
@@ -337,7 +369,7 @@ namespace ThrownTogether
                 if(Selection<recipeBook.recipes.Length) recipeIndex=Selection;
                 var recipe=recipeBook.recipes[recipeIndex];
                 GUI.color=new Color(.12f,.17f,.18f);GUI.DrawTexture(new Rect(410,145,830,445),Texture2D.whiteTexture);GUI.color=Color.white;
-                FoodIcon.Draw(new Rect(438,158,70,60),recipe.ingredient);
+                FoodIcon.Draw(new Rect(438,158,70,60),recipe);
                 GUI.Label(new Rect(520,154,690,60),recipe.displayName+(recipe.requiredState==FoodState.Cut ? " — no frying":""),text);
                 var instructions=new GUIStyle(text) {alignment=TextAnchor.UpperLeft,fontSize=Mathf.RoundToInt(18*Display.TextScale)};
                 GUI.Label(new Rect(435,230,780,350),RecipeBook.Instructions(recipe),instructions);

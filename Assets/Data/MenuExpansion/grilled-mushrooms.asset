@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e3fb6ce36b0f3284e8a42896fdb41191, type: 3}
+  m_Name: grilled-mushrooms
+  m_EditorClassIdentifier: ThrownTogether.Runtime::ThrownTogether.RecipeDefinition
+  id: dish.grilled-mushrooms
+  displayName: Grilled Mushrooms
+  description:
+  ingredient: {fileID: 11400000, guid: 774a8cef9a9a6dd4ca0ff91166849847, type: 2}
+  requiredPurchases:
+  - grill
+  salePrice: 12
+  requiredState: 4
+  steps:
+  - {fileID: 11400000, guid: 2dc18f3118a7204409cef8c5d14852fb, type: 2}
+  - {fileID: 11400000, guid: 59a7e62a145f924419659fa60a0af75f, type: 2}
+  additionalIngredients: []

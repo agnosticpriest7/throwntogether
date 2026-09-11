@@ -158,7 +158,7 @@ namespace ThrownTogether.Tests
             {
                 var art=station.GetComponent<StationArt>();Assert.That(art,Is.Not.Null,station.name);
                 Assert.That(art.visual,Is.Not.Null);Assert.That(art.visual.GetComponentsInChildren<Collider>(),Is.Empty);
-                if(station is TrashStation)Assert.That(station.GetComponent<BoxCollider>().enabled,Is.True);
+                if(station is TrashStation || station is SourceStation source && source.storage!=null)Assert.That(station.GetComponent<BoxCollider>().enabled,Is.True);
                 else
                 {Assert.That(station.transform.Find("Cabinet").GetComponent<Collider>().enabled,Is.True);
                 Assert.That(station.transform.Find("Worktop").GetComponent<Collider>().enabled,Is.True);
@@ -233,7 +233,7 @@ namespace ThrownTogether.Tests
         [UnityTest] public IEnumerator SeatedCustomersKeepChairsFixedAndPreserveOrderTiming()
         {
             var orders=Object.FindObjectsByType<CustomerOrder>().Where(o=>o.gameObject.scene==scene).ToArray();
-            var source=Object.FindObjectsByType<SourceStation>().First(s=>s.gameObject.scene==scene&&!s.plates);
+            var source=Object.FindObjectsByType<SourceStation>().First(s=>s.gameObject.scene==scene&&!s.plates&&s.ingredient.visualKind==IngredientVisualKind.Potato);
             Assert.That(orders.Select(o=>o.GetComponent<CustomerPresentation>().variant).Distinct().Count(),Is.EqualTo(orders.Length));
             foreach(var order in orders)
             {
@@ -273,10 +273,10 @@ namespace ThrownTogether.Tests
         [UnityTest] public IEnumerator GardenSaladLooksIdenticalInEitherAssemblyOrder()
         {
             var sources=Object.FindObjectsByType<SourceStation>().Where(s=>s.gameObject.scene==scene&&!s.plates).ToArray();
-            var lettuce=sources.Single(s=>s.ingredient.visualKind==IngredientVisualKind.Lettuce);var tomato=sources.Single(s=>s.ingredient.visualKind==IngredientVisualKind.Tomato);
-            var a=Object.Instantiate(lettuce.itemPrefab);var b=Object.Instantiate(lettuce.itemPrefab);
-            var first=ItemPayload.Plate();first.AddFood(new ItemPayload{ingredient=lettuce.ingredient,state=FoodState.Cut});first.AddFood(new ItemPayload{ingredient=tomato.ingredient,state=FoodState.Cut});
-            var second=ItemPayload.Plate();second.AddFood(new ItemPayload{ingredient=tomato.ingredient,state=FoodState.Cut});second.AddFood(new ItemPayload{ingredient=lettuce.ingredient,state=FoodState.Cut});
+            var ingredients=sources.SelectMany(s=>s.Ingredients).ToArray();var lettuce=ingredients.Single(s=>s.visualKind==IngredientVisualKind.Lettuce);var tomato=ingredients.Single(s=>s.visualKind==IngredientVisualKind.Tomato);
+            var a=Object.Instantiate(sources[0].itemPrefab);var b=Object.Instantiate(sources[0].itemPrefab);
+            var first=ItemPayload.Plate();first.AddFood(new ItemPayload{ingredient=lettuce,state=FoodState.Cut});first.AddFood(new ItemPayload{ingredient=tomato,state=FoodState.Cut});
+            var second=ItemPayload.Plate();second.AddFood(new ItemPayload{ingredient=tomato,state=FoodState.Cut});second.AddFood(new ItemPayload{ingredient=lettuce,state=FoodState.Cut});
             a.Configure(first);b.Configure(second);
             var ar=a.GetComponentsInChildren<MeshFilter>();var br=b.GetComponentsInChildren<MeshFilter>();Assert.That(ar.Length,Is.EqualTo(br.Length));
             for(int i=0;i<ar.Length;i++){Assert.That(ar[i].sharedMesh,Is.SameAs(br[i].sharedMesh));Assert.That(ar[i].transform.localPosition,Is.EqualTo(br[i].transform.localPosition));Assert.That(ar[i].transform.localScale,Is.EqualTo(br[i].transform.localScale));}
@@ -306,7 +306,7 @@ namespace ThrownTogether.Tests
         }
         [UnityTest] public IEnumerator SuccessCuesRequireSuccessExpireAndRespectReducedEffects()
         {
-            var source=Interactable.Active.OfType<SourceStation>().First(s=>s.gameObject.scene==scene&&!s.plates);
+            var source=Interactable.Active.OfType<SourceStation>().First(s=>s.gameObject.scene==scene&&!s.plates&&s.ingredient.visualKind==IngredientVisualKind.Potato);
             var motor=chef.GetComponent<CharacterController>();motor.enabled=false;
             chef.transform.position=source.transform.position+Vector3.back*1.2f;
             chef.transform.rotation=Quaternion.identity;motor.enabled=true;
@@ -314,7 +314,7 @@ namespace ThrownTogether.Tests
             try
             {
                 RestaurantMenu.Display.reducedEffects=true;
-                Assert.That(chef.Use(),Is.True);Assert.That(chef.Focus,Is.SameAs(source));
+                Assert.That(chef.Use(),Is.True);Assert.That(chef.Focus,Is.SameAs(source));KitchenTestAccess.SelectDefault(chef,source);
                 var held=chef.Hands.Item;
                 Assert.That(source.SuccessOpacity,Is.EqualTo(1));Assert.That(source.SuccessCheck,Is.False);
                 yield return new WaitForSeconds(.2f);
@@ -333,7 +333,7 @@ namespace ThrownTogether.Tests
             var source=Interactable.Active.OfType<SourceStation>().First(s=>s.gameObject.scene==scene&&!s.plates&&s.ingredient.visualKind==IngredientVisualKind.Potato);
             var prep=Interactable.Active.OfType<ProcessingStation>().Single(s=>s.gameObject.scene==scene&&s.requiresAttendance);
             var fryer=Interactable.Active.OfType<ProcessingStation>().Single(s=>s.gameObject.scene==scene&&!s.requiresAttendance);
-            source.Interact(chef);Assert.That(prep.Interact(chef),Is.True);prep.Advance(.5f);float progress=prep.Progress;
+            SourceUse(source,chef);Assert.That(prep.Interact(chef),Is.True);prep.Advance(.5f);float progress=prep.Progress;
             chef.Move(Vector2.right,.05f);prep.Advance(20);Assert.That(prep.Progress,Is.EqualTo(progress));Assert.That(prep.Working,Is.False);
             chef.Move(Vector2.zero,0);prep.Advance(20);Assert.That(prep.Progress,Is.EqualTo(progress),"Stopping alone does not restart an abandoned job");
             Assert.That(prep.Interact(chef),Is.True);prep.Advance(1);Assert.That(prep.Busy,Is.False);Assert.That(prep.Interact(chef),Is.True);
@@ -343,7 +343,7 @@ namespace ThrownTogether.Tests
         }
         [UnityTest] public IEnumerator DirtyDishReturnsWashesAndCanBeReusedWithoutDuplication()
         {
-            var seat=hud.shift.seats[0];var source=Interactable.Active.OfType<SourceStation>().First(s=>s.gameObject.scene==scene&&!s.plates);
+            var seat=hud.shift.seats[0];var source=Interactable.Active.OfType<SourceStation>().First(s=>s.gameObject.scene==scene&&!s.plates&&s.ingredient.visualKind==IngredientVisualKind.Potato);
             var dish=Object.Instantiate(source.itemPrefab);dish.Configure(new ItemPayload{isPlate=true,ingredient=seat.recipe.ingredient,state=seat.recipe.requiredState});
             Assert.That(seat.Reserve(dish.Payload),Is.True);seat.Receive(dish);seat.Advance(2);hud.shift.Advance(0);
             var rack=seat.dishReturn;Assert.That(rack.Count,Is.EqualTo(1));Assert.That(dish.Payload.dirty,Is.True);Assert.That(seat.tableSlot.Item,Is.Null);
@@ -366,9 +366,9 @@ namespace ThrownTogether.Tests
             try
             {
                 hud.coop.BindPlayerOne(one);Assert.That(hud.coop.Join(two),Is.True);var second=hud.coop.PlayerTwo;second.GetComponent<ChefInput>().enabled=false;
-                var source=Interactable.Active.OfType<SourceStation>().First(s=>s.gameObject.scene==scene&&!s.plates);
+                var source=Interactable.Active.OfType<SourceStation>().First(s=>s.gameObject.scene==scene&&!s.plates&&s.ingredient.visualKind==IngredientVisualKind.Potato);
                 var prep=Interactable.Active.OfType<ProcessingStation>().Single(s=>s.gameObject.scene==scene&&s.requiresAttendance);
-                source.Interact(chef);prep.Interact(chef);prep.Advance(.5f);Assert.That(prep.Interact(second),Is.False,"Only one worker owns the job");
+                SourceUse(source,chef);prep.Interact(chef);prep.Advance(.5f);Assert.That(prep.Interact(second),Is.False,"Only one worker owns the job");
                 chef.Move(Vector2.right,.05f);Assert.That(prep.Interact(second),Is.True);prep.Advance(1);Assert.That(prep.Busy,Is.False);Assert.That(prep.Interact(second),Is.True);Assert.That(second.Hands.Item,Is.Not.Null);
             }
             finally {InputSystem.RemoveDevice(one);InputSystem.RemoveDevice(two);}
@@ -433,8 +433,8 @@ namespace ThrownTogether.Tests
         }
         [UnityTest] public IEnumerator PauseRecipeBookPreservesHeldItemAndSession()
         {
-            var source=Interactable.Active.OfType<SourceStation>().First(s=>s.gameObject.scene==scene&&!s.plates);
-            source.Interact(chef);var food=chef.Hands.Item;var menu=hud.GetComponent<RestaurantMenu>();
+            var source=Interactable.Active.OfType<SourceStation>().First(s=>s.gameObject.scene==scene&&!s.plates&&s.ingredient.visualKind==IngredientVisualKind.Potato);
+            SourceUse(source,chef);var food=chef.Hands.Item;var menu=hud.GetComponent<RestaurantMenu>();
             try
             {
                 menu.OpenRecipeBook();float elapsed=hud.shift.ElapsedSeconds;
@@ -477,7 +477,7 @@ namespace ThrownTogether.Tests
                     for(int x=0;x<width&&!reachable;x++) for(int z=0;z<height;z++)
                         if(visited[x,z] && Vector2.Distance(new Vector2(-8+x*cell,-5+z*cell),new Vector2(anchor.position.x,anchor.position.z))<1.8f) {reachable=true;break;}
                     Assert.That(reachable,Is.True,layout.CurrentName+": "+anchor.name);
-                    KitchenTestAccess.Approach(chef,anchor.GetComponent<Interactable>());
+                    var station=anchor.GetComponentInChildren<Interactable>();if(station!=null)KitchenTestAccess.Approach(chef,station);
                 }
                 Assert.That(chef.speed,Is.EqualTo(4.2f));Assert.That(chef.reach,Is.EqualTo(2));
                 Assert.That(hud.gameplayCamera.transform.position,Is.EqualTo(cameraPosition));Assert.That(hud.gameplayCamera.orthographicSize,Is.EqualTo(cameraSize));
@@ -492,8 +492,8 @@ namespace ThrownTogether.Tests
             try
             {
                 hud.coop.BindPlayerOne(one);Assert.That(hud.coop.Join(two),Is.True);var second=hud.coop.PlayerTwo;
-                var source=Interactable.Active.OfType<SourceStation>().First(s=>s.gameObject.scene==scene&&!s.plates);
-                Assert.That(source.Interact(second),Is.True);var item=second.Hands.Item;
+                var source=Interactable.Active.OfType<SourceStation>().First(s=>s.gameObject.scene==scene&&!s.plates&&s.ingredient.visualKind==IngredientVisualKind.Potato);
+                KitchenTestAccess.Take(second,source.ingredient);var item=second.Hands.Item;
                 InputSystem.RemoveDevice(two);yield return null;
                 Assert.That(hud.coop.ConnectionHelp,Does.Contain("P2 disconnected"));Assert.That(second.GetComponent<ChefInput>().enabled,Is.False);
                 replacement=InputSystem.AddDevice<Gamepad>();Assert.That(hud.coop.Join(replacement),Is.True);
@@ -508,18 +508,18 @@ namespace ThrownTogether.Tests
             var sources=Interactable.Active.OfType<SourceStation>().Where(s=>s.gameObject.scene==scene).ToArray();
             var plateSource=sources.Single(s=>s.plates);
             foreach(var counter in Interactable.Active.OfType<CounterStation>().Where(c=>c.gameObject.scene==scene && !(c is ProcessingStation)))
-            foreach(var source in sources.Where(s=>!s.plates))
+            foreach(var ingredient in sources.Where(s=>s.storage!=null && s.ingredient.visualKind==IngredientVisualKind.Potato).SelectMany(s=>s.Ingredients))
             foreach(bool plateFirst in new[]{false,true})
             {
-                Assert.That((plateFirst ? plateSource:source).Interact(chef),Is.True);
-                if(!plateFirst) chef.Hands.Item.Payload.state=source.ingredient.platingState;
+                if(plateFirst)Assert.That(plateSource.Interact(chef),Is.True);else KitchenTestAccess.Take(chef,ingredient);
+                if(!plateFirst) chef.Hands.Item.Payload.state=ingredient.platingState;
                 Assert.That(counter.Interact(chef),Is.True);
-                Assert.That((plateFirst ? source:plateSource).Interact(chef),Is.True);
-                if(plateFirst) chef.Hands.Item.Payload.state=source.ingredient.platingState;
+                if(plateFirst)KitchenTestAccess.Take(chef,ingredient);else Assert.That(plateSource.Interact(chef),Is.True);
+                if(plateFirst) chef.Hands.Item.Payload.state=ingredient.platingState;
                 Assert.That(counter.Interact(chef),Is.True);
                 Assert.That(chef.Hands.Item,Is.Null);
                 Assert.That(counter.slot.Item.Payload.isPlate,Is.True);
-                Assert.That(counter.slot.Item.Payload.ingredient,Is.SameAs(source.ingredient));
+                Assert.That(counter.slot.Item.Payload.ingredient,Is.SameAs(ingredient));
                 Assert.That(counter.slot.Item.Owner,Is.SameAs(counter.slot));
                 Assert.That(counter.Interact(chef),Is.True);
                 chef.Hands.Item.Configure(ItemPayload.Plate());Assert.That(plateSource.Interact(chef),Is.True);
@@ -533,7 +533,7 @@ namespace ThrownTogether.Tests
             var counter=Interactable.Active.OfType<CounterStation>().First(c=>c.gameObject.scene==scene && !(c is ProcessingStation));
             foreach(var state in new[]{FoodState.Raw,FoodState.Cut})
             {
-                source.Interact(chef); var food=chef.Hands.Item; food.Payload.state=state; counter.Interact(chef);
+                SourceUse(source,chef); var food=chef.Hands.Item; food.Payload.state=state; counter.Interact(chef);
                 plates.Interact(chef); var plate=chef.Hands.Item;
                 Assert.That(counter.Interact(chef),Is.False); Assert.That(counter.slot.Item,Is.SameAs(food)); Assert.That(chef.Hands.Item,Is.SameAs(plate));
                 Object.Destroy(counter.slot.Release().gameObject); Object.Destroy(chef.Hands.Release().gameObject);
@@ -570,8 +570,8 @@ namespace ThrownTogether.Tests
                     var seat=shift.seats.First(s=>s.Active && s.Phase==OrderPhase.Waiting);
                     Assert.That(recipes,Does.Contain(seat.recipe));
                     shift.Advance(1000); Assert.That(seat.Phase,Is.EqualTo(OrderPhase.Waiting),"No expiry/failure timer");
-                    var source=Interactable.Active.OfType<SourceStation>().First(s=>s.gameObject.scene==scene && !s.plates && s.ingredient==seat.recipe.ingredient);
-                    var dish=Object.Instantiate(source.itemPrefab); dish.Configure(new ItemPayload{isPlate=true,ingredient=source.ingredient,state=seat.recipe.requiredState});
+                    var source=Interactable.Active.OfType<SourceStation>().First(s=>s.gameObject.scene==scene && !s.plates && s.Offers(seat.recipe.ingredient));
+                    var dish=Object.Instantiate(source.itemPrefab); dish.Configure(new ItemPayload{isPlate=true,ingredient=seat.recipe.ingredient,state=seat.recipe.requiredState});
                     foreach(var extra in seat.recipe.additionalIngredients) dish.Payload.additions.Add(new IngredientPortion{ingredient=extra.ingredient,state=extra.state});
                     Assert.That(seat.Reserve(dish.Payload),Is.True); seat.Receive(dish); seat.Advance(2); shift.Advance(0);
                 }
@@ -586,13 +586,13 @@ namespace ThrownTogether.Tests
             var previews=Object.FindObjectsByType<Carryable>().Where(c=>c.gameObject.scene==scene && c.name=="Pantry ingredient display").ToArray();
             Assert.That(previews,Is.Empty,"Authored pantry meshes must not also spawn duplicate gameplay item previews.");
             var pantries=Interactable.Active.OfType<SourceStation>().Where(s=>s.gameObject.scene==scene&&!s.plates).ToArray();
-            Assert.That(pantries.Length,Is.EqualTo(4));
+            Assert.That(pantries.Length,Is.EqualTo(2));
             foreach(var pantry in pantries)
             {
                 var art=pantry.GetComponent<StationArt>();Assert.That(art.includesPantryDisplay,Is.True);
                 Assert.That(art.visual.GetComponentsInChildren<Collider>(),Is.Empty);
                 Assert.That(art.visual.GetComponentsInChildren<Carryable>(),Is.Empty);
-                Assert.That(art.visual.GetComponentInChildren<MeshFilter>().sharedMesh.name,Does.StartWith("Pantry"+pantry.ingredient.visualKind));
+                Assert.That(pantry.storage,Is.Not.Null);Assert.That(pantry.Ingredients.Length,Is.GreaterThanOrEqualTo(2));
             }
             foreach(var station in Interactable.Active.Where(s=>s.gameObject.scene==scene))
                 Assert.That(station.transform.Find("P1 target").GetComponentsInChildren<Collider>(),Is.Empty);
@@ -613,12 +613,12 @@ namespace ThrownTogether.Tests
                 hud=Object.FindObjectsByType<RestaurantHud>().Single(h=>h.gameObject.scene==scene); chef=hud.chef; chef.GetComponent<ChefInput>().enabled=false;
                 var guide=hud.GetComponent<PracticeGuide>(); Assert.That(guide.Active,Is.True); Assert.That(guide.Instruction,Is.Not.Empty);
                 var stations=Interactable.Active.Where(s=>s.gameObject.scene==scene).ToArray();
-                var source=stations.OfType<SourceStation>().Single(s=>!s.plates && s.ingredient==hud.order.recipe.ingredient); var plates=stations.OfType<SourceStation>().Single(s=>s.plates);
+                var source=stations.OfType<SourceStation>().Single(s=>!s.plates && s.Offers(hud.order.recipe.ingredient)); var plates=stations.OfType<SourceStation>().Single(s=>s.plates);
                 var prep=stations.OfType<ProcessingStation>().Single(s=>s.recipe.input==FoodState.Raw);
                 var fryer=stations.OfType<ProcessingStation>().Single(s=>s.recipe.input==FoodState.Cut);
                 var counter=stations.OfType<CounterStation>().First(s=>!(s is ProcessingStation));
                 var service=stations.OfType<ServiceStation>().Single();
-                if(training=="Guided full loop" || training=="Garden salad") {Assert.That(chef.Hands.Item,Is.Null); Assert.That(source.Interact(chef),Is.True);}
+                if(training=="Guided full loop" || training=="Garden salad") {Assert.That(chef.Hands.Item,Is.Null); KitchenTestAccess.Take(chef,hud.order.recipe.ingredient);}
                 if(training=="Guided full loop" || training=="Prep" || training=="Garden salad")
                 {Assert.That(chef.Hands.Item.Payload.state,Is.EqualTo(FoodState.Raw)); Assert.That(prep.Interact(chef),Is.True); prep.Advance(1.5f); Assert.That(prep.Interact(chef),Is.True);}
                 if(training=="Guided full loop" || training=="Prep" || training=="Frying")
@@ -629,8 +629,8 @@ namespace ThrownTogether.Tests
                     Assert.That(plates.Interact(chef),Is.True); Assert.That(counter.Interact(chef),Is.True);
                     if(training=="Garden salad")
                     {
-                        var greens=stations.OfType<SourceStation>().Single(s=>!s.plates && s.ingredient==hud.order.recipe.additionalIngredients[0].ingredient);
-                        Assert.That(greens.Interact(chef),Is.True);Assert.That(prep.Interact(chef),Is.True);prep.Advance(1.5f);Assert.That(prep.Interact(chef),Is.True);Assert.That(counter.Interact(chef),Is.True);
+                        var greens=stations.OfType<SourceStation>().Single(s=>!s.plates && s.Offers(hud.order.recipe.additionalIngredients[0].ingredient));
+                        KitchenTestAccess.Take(chef,hud.order.recipe.additionalIngredients[0].ingredient);Assert.That(prep.Interact(chef),Is.True);prep.Advance(1.5f);Assert.That(prep.Interact(chef),Is.True);Assert.That(counter.Interact(chef),Is.True);
                     }
                     yield return null; Assert.That(guide.Instruction,Does.Contain("Pick up your finished plate"));
                     Assert.That(counter.Interact(chef),Is.True);
@@ -639,6 +639,11 @@ namespace ThrownTogether.Tests
                 yield return new WaitUntil(()=>hud.order.Phase==OrderPhase.Complete);
                 yield return null; Assert.That(guide.Instruction,Does.Contain("complete"));
             }
+        }
+        static bool SourceUse(SourceStation source,ChefController chef)
+        {
+            if(chef.Hands.Item!=null)return source.Interact(chef);
+            KitchenTestAccess.Take(chef,source.ingredient);return true;
         }
     }
 }

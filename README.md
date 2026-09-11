@@ -87,3 +87,9 @@ Open **Quick Play** to choose a kitchen. Tutorial, Career, Trials and Endless ar
 ## Restaurant-day playtest
 
 Choose **Career** or **Quick Play → Restaurant day (5 minutes)**. The clock runs 11 AM–10 PM. Serve matching dishes at the dining tables, clear dirty plates, wash them and restock the five-plate supply. Guests leave if they wait outside too long. Meals and speed bonuses are paid at closing. Open **Menu → Earnings and restaurant improvements** to buy an extra counter/fryer bay, a fryer upgrade or a server, then start the next day. The server collects finished dishes from the pass; cooking and clearing remain yours. Progress saves locally in this browser/device. Fixed-order practice shifts are still available without earnings.
+
+
+### Daily menus and ingredient storage
+In Career, choose at least three dishes in **Today's Menu** before the first service and again through **Next day** in management. D-pad/stick moves through dishes, A toggles, and the first row starts service. Recipes show their sale price and any required appliance. Buy the **Flat-Top Griddle ($125)** or **Grill ($150)** between days to unlock more recipes and the corresponding fridge ingredient. The pause-menu recipe book lists all component steps.
+
+At the **Produce Rack** or **Refrigerator**, press Use/A, choose with stick/D-pad or movement keys, then press A/E/Space again to take the ingredient. B/Q cancels. Each local player has an independent chooser. Ingredients are unlimited; clean plates still come from the five-plate pool. Serve four distinct dishes from a menu of four or more to earn a 5% base-revenue variety bonus, capped at $15, shown at closing.

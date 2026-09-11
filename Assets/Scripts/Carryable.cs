@@ -13,6 +13,7 @@ namespace ThrownTogether
         private Transform visuals;
         private Material material;
         private Vector3 ingredientOffset;
+        private float ingredientScale=1;
         public void Configure(ItemPayload payload) { Payload = payload; RefreshVisual(); }
         public void RefreshVisual()
         {
@@ -24,6 +25,7 @@ namespace ThrownTogether
             visuals.localScale=Vector3.one*1.12f;
             material = new Material(visualShader);
             ingredientOffset=Vector3.zero;
+            ingredientScale=1;
             if (Payload.isPlate)
             {
                 if(plateMesh!=null) MeshPiece(plateMesh,Vector3.zero,Vector3.one,new Color(.91f,.94f,.90f));
@@ -39,6 +41,18 @@ namespace ThrownTogether
                 return;
             }
             if (Payload.ingredient == null) return;
+            bool salad=Payload.IngredientCount==2 && Payload.state==FoodState.Cut && Payload.additions[0].state==FoodState.Cut &&
+                ((Payload.ingredient.visualKind==IngredientVisualKind.Tomato && Payload.additions[0].ingredient.visualKind==IngredientVisualKind.Lettuce) ||
+                 (Payload.ingredient.visualKind==IngredientVisualKind.Lettuce && Payload.additions[0].ingredient.visualKind==IngredientVisualKind.Tomato));
+            if(Payload.additions.Count>0 && !salad)
+            {
+                var portions=new System.Collections.Generic.List<IngredientPortion>(Payload.additions){new IngredientPortion{ingredient=Payload.ingredient,state=Payload.state}};
+                portions.Sort((a,b)=>a.ingredient.visualKind.CompareTo(b.ingredient.visualKind));
+                ingredientScale=.65f;
+                for(int i=0;i<portions.Count;i++)
+                {float angle=i*Mathf.PI*2/portions.Count;ingredientOffset=new Vector3(Mathf.Cos(angle)*.2f,.04f,Mathf.Sin(angle)*.2f);DrawIngredient(portions[i].ingredient,portions[i].state);}
+                return;
+            }
             if(Payload.additions.Count==1 && Payload.ingredient.visualKind==IngredientVisualKind.Tomato && Payload.additions[0].ingredient.visualKind==IngredientVisualKind.Lettuce)
             {
                 DrawIngredient(Payload.additions[0].ingredient,Payload.additions[0].state);
@@ -51,7 +65,23 @@ namespace ThrownTogether
         {
             var color = ingredient.ColorFor(state);
             var y = Payload.isPlate ? .10f : .08f;
-            if(ingredient.visualKind==IngredientVisualKind.Lettuce)
+            if(ingredient.visualKind==IngredientVisualKind.Egg)
+            {
+                if(state==FoodState.Raw)Piece(PrimitiveType.Sphere,new Vector3(0,y+.1f,0),new Vector3(.33f,.43f,.33f),new Color(.95f,.90f,.78f));
+                else
+                {Piece(PrimitiveType.Sphere,new Vector3(0,y,0),new Vector3(.6f,.06f,.5f),Color.white);Piece(PrimitiveType.Sphere,new Vector3(.02f,y+.06f,0),new Vector3(.25f,.12f,.25f),new Color(1,.68f,.04f));}
+            }
+            else if(ingredient.visualKind==IngredientVisualKind.Chicken)
+            {
+                Piece(PrimitiveType.Sphere,new Vector3(0,y+.04f,0),new Vector3(.49f,.22f,.57f),color).localRotation=Quaternion.Euler(0,-20,0);
+                Piece(PrimitiveType.Sphere,new Vector3(.12f,y+.03f,-.19f),new Vector3(.24f,.14f,.3f),color);
+                if(state==FoodState.Grilled)for(int i=-1;i<=1;i++)Piece(PrimitiveType.Cube,new Vector3(0,y+.153f,i*.12f),new Vector3(.32f,.012f,.035f),new Color(.24f,.12f,.06f)).localRotation=Quaternion.Euler(0,-20,0);
+            }
+            else if(ingredient.visualKind==IngredientVisualKind.Potato && state==FoodState.Griddled)
+            {
+                for(int i=-1;i<=1;i++)Piece(PrimitiveType.Sphere,new Vector3(i*.14f,y+i*.016f,0),new Vector3(.26f,.085f,.46f),color);
+            }
+            else if(ingredient.visualKind==IngredientVisualKind.Lettuce)
             {
                 for(int i=0;i<5;i++)
                 {
@@ -118,7 +148,7 @@ namespace ThrownTogether
             // which can be stripped from players when no authored object uses them.
             var part = new GameObject("Food part");
             part.AddComponent<MeshFilter>().sharedMesh=mesh;
-            part.transform.SetParent(visuals, false); part.transform.localPosition=position+ingredientOffset; part.transform.localScale=scale;
+            part.transform.SetParent(visuals, false); part.transform.localPosition=position*ingredientScale+ingredientOffset; part.transform.localScale=scale*ingredientScale;
             var renderer=part.AddComponent<MeshRenderer>(); renderer.sharedMaterial=material;
             var properties=new MaterialPropertyBlock(); properties.SetColor("_BaseColor",color); renderer.SetPropertyBlock(properties);
             return part.transform;

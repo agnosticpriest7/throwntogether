@@ -1,0 +1,25 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e3fb6ce36b0f3284e8a42896fdb41191, type: 3}
+  m_Name: fried-egg
+  m_EditorClassIdentifier: ThrownTogether.Runtime::ThrownTogether.RecipeDefinition
+  id: dish.fried-egg
+  displayName: Fried Egg
+  description:
+  ingredient: {fileID: 11400000, guid: fb7e498a4489baa40832e0458fdcab8e, type: 2}
+  requiredPurchases:
+  - griddle
+  salePrice: 12
+  requiredState: 3
+  steps:
+  - {fileID: 11400000, guid: 38124ba7e1581c84289dd2efccb4e689, type: 2}
+  additionalIngredients: []

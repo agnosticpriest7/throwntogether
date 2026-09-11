@@ -47,8 +47,8 @@ namespace ThrownTogether.Tests
                         var sink=stations.OfType<WashingStation>().Single();Use(chef,sink);sink.Advance(3);Use(chef,sink);Use(chef,plates);
                     }
                     var ticket=shift.seats.First(s=>s.Active && s.Phase==OrderPhase.Waiting);
-                    var source=stations.OfType<SourceStation>().Single(s=>!s.plates && s.ingredient==ticket.recipe.ingredient);
-                    Use(chef,source); Assert.That(service.Interact(chef),Is.False,"Raw ingredients cannot fulfil a ticket");
+                    var source=stations.OfType<SourceStation>().Single(s=>s.Offers(ticket.recipe.ingredient));
+                    KitchenTestAccess.Take(chef,ticket.recipe.ingredient); Assert.That(service.Interact(chef),Is.False,"Raw ingredients cannot fulfil a ticket");
                     Use(chef,prep); prep.Advance(1.5f); Use(chef,prep);
                     if(ticket.recipe.requiredState==FoodState.Cooked) {Use(chef,fryer); fryer.Advance(5); Use(chef,fryer);}
                     else Assert.That(fryer.Interact(chef),Is.False,"Cold salad must not enter the fryer");
@@ -56,7 +56,7 @@ namespace ThrownTogether.Tests
                     Use(chef,plating); Use(chef,plates); Use(chef,plating);
                     foreach(var extra in ticket.recipe.additionalIngredients)
                     {
-                        Use(chef,stations.OfType<SourceStation>().Single(s=>!s.plates && s.ingredient==extra.ingredient));
+                        KitchenTestAccess.Take(chef,extra.ingredient);
                         Use(chef,prep);prep.Advance(1.5f);Use(chef,prep);Use(chef,plating);
                     }
                     Use(chef,plating);
@@ -82,10 +82,24 @@ namespace ThrownTogether.Tests
         {
             KitchenTestAccess.Approach(chef,station);
             Assert.That(chef.Use(),Is.True,"Use failed at "+station.stationName+": "+chef.Feedback);
+            KitchenTestAccess.SelectDefault(chef,station);
         }
     }
     internal static class KitchenTestAccess
     {
+        public static void SelectDefault(ChefController chef,Interactable station)
+        {
+            if(station is SourceStation source && source.storage!=null && chef.GetComponent<ChefInput>().Storage!=null)
+                Assert.That(chef.GetComponent<ChefInput>().ChooseIngredient(0),Is.True);
+        }
+        public static void Take(ChefController chef,IngredientDefinition ingredient)
+        {
+            var source=Interactable.Active.OfType<SourceStation>().Single(s=>s.gameObject.scene==chef.gameObject.scene && s.Offers(ingredient));
+            Approach(chef,source);Assert.That(chef.Use(),Is.True);
+            if(source.storage!=null)Assert.That(chef.GetComponent<ChefInput>().ChooseIngredient(System.Array.IndexOf(source.Ingredients,ingredient)),Is.True);
+            Assert.That(chef.Hands.Item.Payload.ingredient,Is.SameAs(ingredient));
+        }
+
         // Stations can now form connected runs. Approach from an actually clear side,
         // rather than teleporting inside the adjacent counter south of every station.
         public static void Approach(ChefController chef,Interactable station)

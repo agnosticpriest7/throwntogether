@@ -1,0 +1,33 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e3fb6ce36b0f3284e8a42896fdb41191, type: 3}
+  m_Name: garden-omelet
+  m_EditorClassIdentifier: ThrownTogether.Runtime::ThrownTogether.RecipeDefinition
+  id: dish.garden-omelet
+  displayName: Garden Omelet
+  description:
+  ingredient: {fileID: 11400000, guid: fb7e498a4489baa40832e0458fdcab8e, type: 2}
+  requiredPurchases:
+  - griddle
+  salePrice: 26
+  requiredState: 3
+  steps:
+  - {fileID: 11400000, guid: 38124ba7e1581c84289dd2efccb4e689, type: 2}
+  - {fileID: 11400000, guid: 92892ce930c1ecd4ea5bd1d0adf36947, type: 2}
+  - {fileID: 11400000, guid: 90c5ae405f3372e4b9f60aed86ecec5a, type: 2}
+  - {fileID: 11400000, guid: 2dc18f3118a7204409cef8c5d14852fb, type: 2}
+  - {fileID: 11400000, guid: 1994b2a838ded0d45bebffc5368702ed, type: 2}
+  additionalIngredients:
+  - ingredient: {fileID: 11400000, guid: d59fc79e3765848469ee63bebb057d38, type: 2}
+    state: 3
+  - ingredient: {fileID: 11400000, guid: 774a8cef9a9a6dd4ca0ff91166849847, type: 2}
+    state: 3

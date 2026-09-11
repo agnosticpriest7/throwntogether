@@ -14,7 +14,18 @@ namespace ThrownTogether
         public int BaseIncome {get;private set;}
         public int Bonuses {get;private set;}
         public int WasteFees {get;private set;}
-        public int NetIncome=>Mathf.Max(0,BaseIncome+Bonuses-WasteFees);
+        public RecipeDefinition[] Menu {get;private set;}=new RecipeDefinition[0];
+        public bool AwaitingMenu {get;private set;}=true;
+        readonly HashSet<string> servedRecipes=new HashSet<string>();
+        public int VarietyBonus=>Closed?DailyMenu.VarietyRevenue(Menu.Length,servedRecipes.Count,BaseIncome):0;
+        public int NetIncome=>Mathf.Max(0,BaseIncome+Bonuses+VarietyBonus-WasteFees);
+        public bool StartService()
+        {
+            if(!AwaitingMenu || !DailyMenu.CanStart(RestaurantAccounts.Current))return false;
+            int number=RestaurantAccounts.Current.StartDay();if(number==0)return false;
+            Menu=DailyMenu.Resolve(RestaurantAccounts.Current);DayNumber=number;AwaitingMenu=false;return true;
+        }
+        private void Start(){if(AwaitingMenu)GetComponent<RestaurantMenu>().ChooseDailyMenu(()=>{if(StartService())GetComponent<RestaurantMenu>().Close();});}
         public float LastWasteAt {get;private set;}=-100;
         public bool RecordWaste(){if(Closed)return false;WasteFees+=Mathf.Max(0,Settings.wasteCost);LastWasteAt=Elapsed;return true;}
         public int LostCustomers {get;private set;}
@@ -31,7 +42,7 @@ namespace ThrownTogether
         readonly System.Random customerRandom=new System.Random();
         public void Begin(RestaurantShift owner,DayServiceDefinition settings)
         {
-            shift=owner;Settings=settings;ServiceDayNumber=RestaurantAccounts.Current.Data.completedDays+1;DayNumber=RestaurantAccounts.Current.StartDay();nextArrival=settings.firstArrival;
+            shift=owner;Settings=settings;ServiceDayNumber=RestaurantAccounts.Current.Data.completedDays+1;nextArrival=settings.firstArrival;
             if(owner.diningExpansion!=null && Settings.purchases.Any(p=>p!=null && p.kind==RestaurantPurchaseKind.DiningTables && RestaurantAccounts.Current.Owns(p.id)))
             {owner.diningExpansion.SetActive(true);owner.seats=owner.seats.Concat(owner.expansionSeats).Distinct().ToArray();}
             Tables=owner.seats.Select(o=>
@@ -41,7 +52,7 @@ namespace ThrownTogether
                 // which owns the plate slot, so player focus, highlights and server routes agree.
                 var table=o.tableSlot.transform.parent.gameObject.AddComponent<DiningTable>();table.day=this;table.order=o;table.stationName="Dining table";table.SetGuestVisible(false);return table;
             }).ToArray();
-            ApplyPurchases();
+            ApplyPurchases();StartService();
         }
         void ApplyPurchases()
         {
@@ -56,7 +67,7 @@ namespace ThrownTogether
             foreach(var purchase in Settings.purchases)
                 if(purchase!=null && account.Owns(purchase.id) && purchase.kind==RestaurantPurchaseKind.FasterFryers)
                     foreach(var fryer in FindObjectsByType<ProcessingStation>(FindObjectsSortMode.None))
-                        if(fryer.gameObject.scene==gameObject.scene && !fryer.requiresAttendance)fryer.processingSpeed=purchase.processingSpeed;
+                        if(fryer.gameObject.scene==gameObject.scene && !fryer.requiresAttendance && fryer.appliance!=null && fryer.appliance.id.Contains("fryer"))fryer.processingSpeed=purchase.processingSpeed;
             if(Settings.serverRole!=null && account.Owns(Settings.serverRole.id))
             {
                 var pass=FindObjectsByType<ServiceStation>(FindObjectsSortMode.None).First(s=>s.gameObject.scene==gameObject.scene);
@@ -84,11 +95,11 @@ namespace ThrownTogether
             var p=Settings.sidewalkStart;
             int look=customerRandom.Next();
             var walker=Walker("Arriving customer",look,p);walker.Go(new Vector3(Settings.entrance.x,0,p.z),Settings.entrance);
-            guests.Add(new Guest {walker=walker,phase=4,look=look,arrived=Elapsed,recipe=shift.definition.orders[spawned%shift.definition.orders.Length]});spawned++;
+            guests.Add(new Guest {walker=walker,phase=4,look=look,arrived=Elapsed,recipe=Menu[spawned%Menu.Length]});spawned++;
         }
         public void Advance(float seconds)
         {
-            if(Closed)return;
+            if(Closed || AwaitingMenu)return;
             // Bounded substeps keep queue patience and arrival order deterministic in tests and slow frames.
             float remaining=Mathf.Max(0,seconds);
             while(remaining>0 && !Closed){float dt=Mathf.Min(.1f,remaining);remaining-=dt;Tick(dt);}
@@ -133,13 +144,13 @@ namespace ThrownTogether
         }
         public void RecordMeal(RecipeDefinition recipe,float waiting)
         {
-            if(Closed)return;Served++;BaseIncome+=Mathf.Max(0,recipe.salePrice);
+            if(Closed || AwaitingMenu || !Menu.Contains(recipe))return;servedRecipes.Add(recipe.id);Served++;BaseIncome+=Mathf.Max(0,recipe.salePrice);
             Bonuses+=Mathf.RoundToInt(Settings.maximumBonus*Mathf.Clamp01(1-Mathf.Max(0,waiting)/Settings.bonusWindow));
         }
         public bool RetryPayment()
         {
             if(!Closed)return false;if(Paid)return true;
-            Paid=RestaurantAccounts.Current.Settle(DayNumber,BaseIncome,Bonuses,WasteFees);return Paid;
+            Paid=RestaurantAccounts.Current.Settle(DayNumber,BaseIncome,Bonuses+VarietyBonus,WasteFees);return Paid;
         }
     }
 }

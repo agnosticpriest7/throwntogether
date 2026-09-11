@@ -14,13 +14,21 @@ MonoBehaviour:
   m_EditorClassIdentifier: ThrownTogether.Runtime::ThrownTogether.IngredientDefinition
   id: ingredient.mushroom
   displayName: Mushrooms
-  description: 
+  description:
   visualKind: 1
+  combineWith: {fileID: 0}
+  requiredPurchase:
+  additionalPlatingStates: 0300000004000000i
+  platingState: 2
   stateNames:
   - Raw mushrooms
   - Cut mushrooms
   - Fried mushrooms
+  - Griddled mushrooms
+  - Grilled mushrooms
   stateColors:
   - {r: 0.72, g: 0.62, b: 0.51, a: 1}
   - {r: 0.9, g: 0.8, b: 0.66, a: 1}
   - {r: 0.65, g: 0.36, b: 0.16, a: 1}
+  - {r: 0.77, g: 0.49, b: 0.19, a: 1}
+  - {r: 0.61, g: 0.34, b: 0.13, a: 1}

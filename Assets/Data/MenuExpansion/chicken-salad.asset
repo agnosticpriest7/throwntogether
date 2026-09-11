@@ -1,0 +1,31 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e3fb6ce36b0f3284e8a42896fdb41191, type: 3}
+  m_Name: chicken-salad
+  m_EditorClassIdentifier: ThrownTogether.Runtime::ThrownTogether.RecipeDefinition
+  id: dish.chicken-salad
+  displayName: Chicken Salad
+  description:
+  ingredient: {fileID: 11400000, guid: 5a0efd6321ce59c449fe65f2e05903a5, type: 2}
+  requiredPurchases:
+  - grill
+  salePrice: 26
+  requiredState: 4
+  steps:
+  - {fileID: 11400000, guid: 0ff708a34690ae14ea26d440183055b0, type: 2}
+  - {fileID: 11400000, guid: 2c66a23a670adcd4abbb8aed0cc139a5, type: 2}
+  - {fileID: 11400000, guid: 92892ce930c1ecd4ea5bd1d0adf36947, type: 2}
+  additionalIngredients:
+  - ingredient: {fileID: 11400000, guid: 89a386b274d272c4abf5920e4c16bd21, type: 2}
+    state: 1
+  - ingredient: {fileID: 11400000, guid: d59fc79e3765848469ee63bebb057d38, type: 2}
+    state: 1

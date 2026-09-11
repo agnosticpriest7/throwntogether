@@ -104,7 +104,7 @@ namespace ThrownTogether
             {
                 Panel(new Rect(340,170,600,285));
                 GUI.Label(new Rect(355,180,570,45),"10 PM — DAY "+day.ServiceDayNumber+" COMPLETE",title);
-                GUI.Label(new Rect(355,230,570,90),day.Served+" meals: $"+day.BaseIncome+"\nQuick-service bonus: $"+day.Bonuses+"  |  Customers lost: "+day.LostCustomers+"\nFood waste: -$"+day.WasteFees,label);
+                GUI.Label(new Rect(355,230,570,90),day.Served+" meals: $"+day.BaseIncome+"\nQuick-service bonus: $"+day.Bonuses+"  |  Customers lost: "+day.LostCustomers+"\nVariety bonus: $"+day.VarietyBonus+" | Food waste: -$"+day.WasteFees,label);
                 GUI.Label(new Rect(355,325,570,45),day.Paid?"Paid to your bank: $"+day.NetIncome:RestaurantAccounts.Current.Problem,small);
                 if(GUI.Button(new Rect(395,385,490,45),"Y / Esc menu — improvements and next day"))menu.OpenRestaurant();
             }
@@ -173,7 +173,7 @@ namespace ThrownTogether
             GUI.color=HudTint(contrast?Color.black:new Color(.97f,.94f,.85f));GUI.DrawTexture(new Rect(rect.x+2,rect.y+2,rect.width-4,rect.height-4),Texture2D.whiteTexture);GUI.color=HudTint(Color.white);
             small.fontSize=Mathf.RoundToInt(13*scale);small.normal.textColor=ink;
             GUI.Label(new Rect(rect.x+6,rect.y+3,rect.width-12,22*scale),"TABLE "+number,small);
-            FoodIcon.Draw(new Rect(rect.x+8,rect.y+28*scale,48*scale,42*scale),ticket.recipe.ingredient,presentation.ServiceOpacity);
+            FoodIcon.Draw(new Rect(rect.x+8,rect.y+28*scale,48*scale,42*scale),ticket.recipe,presentation.ServiceOpacity);
             label.fontSize=Mathf.RoundToInt(18*scale);label.normal.textColor=ink;
             GUI.Label(new Rect(rect.x+62*scale,rect.y+23*scale,rect.width-68*scale,49*scale),ticket.recipe.displayName,label);
             GUI.color=HudTint(ticket.Phase==OrderPhase.Waiting?new Color(.04f,.12f,.13f):ticket.Phase==OrderPhase.Delivering?new Color(.17f,.09f,.025f):new Color(.05f,.14f,.04f));

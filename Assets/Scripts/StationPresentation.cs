@@ -10,7 +10,7 @@ namespace ThrownTogether
         public void Initialize(ProcessingStation target,Carryable assets)
         {
             station=target; material=new Material(assets.visualShader);
-            bool chopping=station.recipe.input==FoodState.Raw;
+            bool chopping=station.requiresAttendance;
             pieces=new Transform[chopping ? 1:3];
             for(int i=0;i<pieces.Length;i++)
             {

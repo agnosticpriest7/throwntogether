@@ -18,7 +18,7 @@ namespace ThrownTogether
             hud=GetComponent<RestaurantHud>();
             if(hud.shift!=null || SessionOptions.Training=="Free practice") return;
             var stations=Interactable.Active.Where(s=>s.gameObject.scene==gameObject.scene).ToArray();
-            source=stations.OfType<SourceStation>().First(s=>!s.plates && s.ingredient==hud.order.recipe.ingredient); plates=stations.OfType<SourceStation>().First(s=>s.plates);
+            source=stations.OfType<SourceStation>().First(s=>!s.plates && s.Offers(hud.order.recipe.ingredient)); plates=stations.OfType<SourceStation>().First(s=>s.plates);
             prep=stations.OfType<ProcessingStation>().First(s=>s.recipe.input==FoodState.Raw);
             fryer=stations.OfType<ProcessingStation>().First(s=>s.recipe.input==FoodState.Cut);
             counters=stations.OfType<CounterStation>().Where(s=>!(s is ProcessingStation)).ToArray(); service=stations.OfType<ServiceStation>().First();
@@ -28,7 +28,7 @@ namespace ThrownTogether
                 Carryable item;
                 if(SessionOptions.Training=="Serving") { plates.Interact(hud.chef); item=hud.chef.Hands.Item; }
                 else item=Instantiate(source.itemPrefab);
-                var payload=ItemPayload.Food(source.ingredient);
+                var payload=ItemPayload.Food(hud.order.recipe.ingredient);
                 if(SessionOptions.Training=="Frying") payload.state=FoodState.Cut;
                 if(SessionOptions.Training=="Plating" || SessionOptions.Training=="Serving") payload.state=FoodState.Cooked;
                 if(SessionOptions.Training=="Serving") payload.isPlate=true;
@@ -67,7 +67,7 @@ namespace ThrownTogether
                     if(ItemPayload.CanPlate(ItemPayload.Plate(),c.slot.Item.Payload)) Hint(plates,"Take a clean plate from the stack, then return to your prepared food.");
                     else Hint(c,"Collect the ingredient you left on this counter to continue."); return;
                 }
-            Hint(source,"Take "+source.ingredient.displayName+" from its crate. Face the mint border, then press A / E.");
+            Hint(source,"Choose "+hud.order.recipe.ingredient.displayName+" at Produce Rack. Face the mint border, then press A / E.");
         }
         private void GardenAdvice()
         {
@@ -87,7 +87,7 @@ namespace ThrownTogether
             if(loose!=null) {Hint(plated==null ? (Interactable)plates:loose,plated==null ? "Take a clean plate and add it to the prepared food." : "Pick up the prepared food and add it to the plate.");return;}
             var needed=recipe.ingredient;
             if(plated!=null && plated.slot.Item.Payload.Contains(recipe.ingredient,recipe.requiredState)) needed=recipe.additionalIngredients[0].ingredient;
-            var next=Interactable.Active.OfType<SourceStation>().First(s=>s.gameObject.scene==gameObject.scene && !s.plates && s.ingredient==needed);
+            var next=Interactable.Active.OfType<SourceStation>().First(s=>s.gameObject.scene==gameObject.scene && !s.plates && s.Offers(needed));
             Hint(next,"Take "+needed.displayName+", chop it, then add it to the salad plate. No frying.");
         }
         private void Hint(Interactable target,string instruction) { SuggestedTarget=target; Instruction=instruction; }

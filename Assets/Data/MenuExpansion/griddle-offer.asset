@@ -1,0 +1,25 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 290d6a22633f0f6489912498fb6ff4a5, type: 3}
+  m_Name: griddle-offer
+  m_EditorClassIdentifier: ThrownTogether.Runtime::ThrownTogether.RestaurantUpgradeDefinition
+  id: griddle
+  displayName: Flat-Top Griddle
+  description:
+  kind: 4
+  cost: 125
+  stationPrefab: {fileID: 3248787489978384879, guid: 034688dfe3184e24d897ba695248756f, type: 3}
+  layoutPositions:
+  - {x: -6.4, y: 0, z: 3.55}
+  - {x: 0.6, y: 0, z: 5}
+  - {x: -6, y: 0, z: -1.4}
+  processingSpeed: 1.25

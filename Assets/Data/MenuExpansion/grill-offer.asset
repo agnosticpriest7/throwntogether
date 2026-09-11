@@ -1,0 +1,25 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 290d6a22633f0f6489912498fb6ff4a5, type: 3}
+  m_Name: grill-offer
+  m_EditorClassIdentifier: ThrownTogether.Runtime::ThrownTogether.RestaurantUpgradeDefinition
+  id: grill
+  displayName: Grill
+  description:
+  kind: 4
+  cost: 150
+  stationPrefab: {fileID: 4057720430602012252, guid: 420d67e9242f01841993c24337774773, type: 3}
+  layoutPositions:
+  - {x: -4.1, y: 0, z: 3.55}
+  - {x: -6, y: 0, z: 1}
+  - {x: -2.5, y: 0, z: -4.3}
+  processingSpeed: 1.25
