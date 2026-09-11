@@ -145,16 +145,17 @@ namespace ThrownTogether
         public void Draw(Action saved,Action cancelled)
         {
             var camera=GetComponent<RestaurantHud>().gameplayCamera;
-            var prior=GUI.color;GUI.depth=-150;
+            var prior=GUI.color;var matrix=GUI.matrix;GUI.depth=-150;
+            GUI.matrix=Matrix4x4.Scale(new Vector3(Screen.width/1280f,Screen.height/720f,1));
             var style=new GUIStyle(GUI.skin.label){fontSize=22,alignment=TextAnchor.MiddleCenter};style.normal.textColor=Color.white;
-            GUI.Box(new Rect(15,10,Screen.width-30,76),"KITCHEN LAYOUT — Move / D-pad   A: select/place   X / R: rotate   RB / Tab: equipment   Y: save   B: back");
-            GUI.Label(new Rect(30,40,Screen.width-360,40),Message);
-            if(GUI.Button(new Rect(Screen.width-315,44,140,30),"Save layout") && Save())saved();
-            if(GUI.Button(new Rect(Screen.width-165,44,140,30),"Cancel")){Cancel();cancelled();}
+            GUI.Box(new Rect(15,10,1280-30,76),"KITCHEN LAYOUT — Move / D-pad   A: select/place   X / R: rotate   RB / Tab: equipment   Y: save   B: back");
+            GUI.Label(new Rect(30,40,1280-360,40),Message);
+            if(GUI.Button(new Rect(1280-315,44,140,30),"Save layout") && Save())saved();
+            if(GUI.Button(new Rect(1280-165,44,140,30),"Cancel")){Cancel();cancelled();}
             for(int i=0;i<Slots.Length;i++)
             {
                 var screen=camera.WorldToScreenPoint(Slots[i]+Vector3.up*1.15f);var occupant=At(i);
-                var rect=new Rect(screen.x-29,Screen.height-screen.y-25,58,50);
+                var rect=new Rect(screen.x*1280f/Screen.width-29,720-screen.y*720f/Screen.height-25,58,50);
                 var tint=i==Selected?new Color(1,.85f,.2f):occupant==null?new Color(.15f,.95f,.3f):new Color(.25f,.7f,1);
                 GUI.color=tint;GUI.DrawTexture(rect,Texture2D.whiteTexture);
                 GUI.color=new Color(.02f,.07f,.09f,.9f);GUI.DrawTexture(new Rect(rect.x+3,rect.y+3,rect.width-6,rect.height-6),Texture2D.whiteTexture);GUI.color=Color.white;
@@ -162,11 +163,11 @@ namespace ThrownTogether
             }
             GUI.color=Color.white;
             string name=Held>=0?pieces[Held].root.name:At(Selected)?.root.name??"Empty";
-            GUI.Box(new Rect(Screen.width*.2f,Screen.height-74,Screen.width*.6f,48),"Slot "+(Selected+1)+" — "+name+(Held>=0?" | Rotation "+(pendingTurns*90)+"°":""));
+            GUI.Box(new Rect(1280*.2f,720-74,1280*.6f,48),"Slot "+(Selected+1)+" — "+name+(Held>=0?" | Rotation "+(pendingTurns*90)+"°":""));
             // Out-of-plan equipment in alternate/older layouts remains selectable for its first move.
             int row=0;foreach(var p in pieces.Where(p=>p.slot<0))
-                if(GUI.Button(new Rect(Screen.width-245,100+row++*38,225,34),"Move "+p.root.name)){Held=pieces.IndexOf(p);pendingTurns=p.turns;}
-            GUI.color=prior;
+                if(GUI.Button(new Rect(1280-245,100+row++*38,225,34),"Move "+p.root.name)){Held=pieces.IndexOf(p);pendingTurns=p.turns;}
+            GUI.color=prior;GUI.matrix=matrix;GUI.depth=0;
         }
     }
 }
