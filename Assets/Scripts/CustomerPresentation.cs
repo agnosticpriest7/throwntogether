@@ -17,15 +17,7 @@ namespace ThrownTogether
             if(seatedVisual!=null)
             {
                 seatedVisual.enabled=false;seatedVisual.usePlayerSelection=false;
-                var look=ChefAppearanceData.Example(variant==0?1:3);look.clothing=0;look.headwear=0;look.hair=1;look.build=variant==0?1:2;
-                seatedVisual.Apply(look);
-                foreach(var renderer in seatedVisual.GetComponentsInChildren<Renderer>(true))
-                {
-                    bool shirt=renderer.name.StartsWith("C_Torso"),trousers=renderer.name.StartsWith("C_Leg"),shoe=renderer.name.StartsWith("C_Foot");
-                    if(!shirt&&!trousers&&!shoe)continue;
-                    var block=new MaterialPropertyBlock();renderer.GetPropertyBlock(block);
-                    block.SetColor("_BaseColor",shirt?(variant==0?new Color(.27f,.39f,.58f):new Color(.73f,.36f,.24f)):shoe?new Color(.22f,.26f,.28f):new Color(.24f,.30f,.36f));renderer.SetPropertyBlock(block);
-                }
+                ApplyCustomerLook(seatedVisual,variant);
                 foreach(var bone in seatedVisual.GetComponentsInChildren<Transform>(true))
                 {
                     if(bone.name=="B_Leg_L"){legLeft=bone;legLeftRest=bone.localRotation;}
@@ -52,6 +44,16 @@ namespace ThrownTogether
             var go=new GameObject(name); go.transform.SetParent(parent,false); go.transform.localPosition=position; go.transform.localScale=scale;
             go.AddComponent<MeshFilter>().sharedMesh=mesh; var renderer=go.AddComponent<MeshRenderer>(); renderer.sharedMaterial=material;
             var block=new MaterialPropertyBlock(); block.SetColor("_BaseColor",color); renderer.SetPropertyBlock(block); return go.transform;
+        }
+        public static void ApplyCustomerLook(ChefAppearance appearance,int variant)
+        {
+            var look=ChefAppearanceData.Example(variant==0?1:3);look.clothing=0;look.headwear=0;look.hair=1;look.build=variant==0?1:2;appearance.Apply(look);
+            foreach(var renderer in appearance.GetComponentsInChildren<Renderer>(true))
+            {
+                bool shirt=renderer.name.StartsWith("C_Torso"),trousers=renderer.name.StartsWith("C_Leg"),shoe=renderer.name.StartsWith("C_Foot");
+                if(!shirt&&!trousers&&!shoe)continue;var block=new MaterialPropertyBlock();renderer.GetPropertyBlock(block);
+                block.SetColor("_BaseColor",shirt?(variant==0?new Color(.27f,.39f,.58f):new Color(.73f,.36f,.24f)):shoe?new Color(.22f,.26f,.28f):new Color(.24f,.30f,.36f));renderer.SetPropertyBlock(block);
+            }
         }
         private void Update()
         {

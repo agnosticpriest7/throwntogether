@@ -54,3 +54,6 @@
 2026-09-10 — Kyle approved a kitchen/dining divider, accessible service/return counters on both sides, a connecting doorway for future serving, and a total pool of five reusable plates to require washing. Dining expansion allowed if needed; current footprint fits after shifting tables. Three-order short shifts retain their existing order count and can finish without washing.
 
 2026-09-10 — Restaurant entry belongs on the dining frontage, not the kitchen frontage. Owner requested correcting the entry location; retain the internal kitchen/dining doorway.
+
+### 2026-09-10 — First timed service day
+Owner requested 11 AM–10 PM in about five minutes, manual seating/service/clearing, outside patience, meal income and speed bonuses, purchasable equipment space/upgrades and a starter server. Initial tuning: 300 seconds, 12 arrivals, 45-second outside patience, eight-second meals, $10 base + up to $5 quick-service bonus. First purchases are predefined reusable counter/fryer bays rather than a construction UI; one-time server hire transports pass-to-table only. Money/purchases persist locally; no wages or ingredient costs added. Fixed-order practice remains separate and unpaid. These values need solo/co-op physical playtesting.

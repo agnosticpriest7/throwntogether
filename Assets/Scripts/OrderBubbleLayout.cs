@@ -9,6 +9,6 @@ namespace ThrownTogether
             float scale=Mathf.Clamp(textScale,1,1.4f),width=206*scale,height=100*scale;
             return new Rect(Mathf.Clamp(point.x+36,12,1268-width),Mathf.Clamp(point.y-22,76,612-height),width,height);
         }
-        public static string State(OrderPhase phase)=>phase==OrderPhase.Waiting?"TO COOK":phase==OrderPhase.Delivering?"ON THE WAY":phase==OrderPhase.Eating?"ENJOYING":"SERVED";
+        public static string State(OrderPhase phase)=>phase==OrderPhase.Dirty?"CLEAR DIRTY PLATE":phase==OrderPhase.Waiting?"TO COOK":phase==OrderPhase.Delivering?"ON THE WAY":phase==OrderPhase.Eating?"ENJOYING":"SERVED";
     }
 }

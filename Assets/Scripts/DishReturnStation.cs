@@ -7,7 +7,7 @@ namespace ThrownTogether
         public Transform stack;
         private readonly Queue<Carryable> dishes=new Queue<Carryable>();
         public int Count => dishes.Count;
-        public override string Prompt(ChefController chef) => Count==0 ? "No dirty plates yet" : chef.Hands.Item!=null ? "Hands full — use a counter" : "Take dirty plate ("+Count+")";
+        public override string Prompt(ChefController chef) => chef.Hands.Item?.Payload.dirty==true ? "Stack dirty plate" : Count==0 ? "No dirty plates yet" : chef.Hands.Item!=null ? "Hands full — use a counter" : "Take dirty plate ("+Count+")";
         public void Return(Carryable dish)
         {
             if(dish==null) return;
@@ -17,6 +17,7 @@ namespace ThrownTogether
         }
         public override bool Interact(ChefController chef)
         {
+            if(chef.Hands.Item?.Payload.dirty==true){Return(chef.Hands.Item);return true;}
             if(Count==0 || chef.Hands.Item!=null) return false;
             var dish=dishes.Peek();if(!chef.Hands.TryTake(dish)) return false;
             dishes.Dequeue();int i=0;foreach(var remaining in dishes) remaining.transform.localPosition=Vector3.up*(i++*.07f);

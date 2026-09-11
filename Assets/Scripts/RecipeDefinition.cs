@@ -6,6 +6,7 @@ namespace ThrownTogether
     public class RecipeDefinition : ContentDefinition
     {
         public IngredientDefinition ingredient;
+        public int salePrice=10;
         public FoodState requiredState=FoodState.Cooked;
         public ProcessingRecipe[] steps = new ProcessingRecipe[0];
         public IngredientPortion[] additionalIngredients=new IngredientPortion[0];

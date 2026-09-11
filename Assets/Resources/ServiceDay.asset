@@ -1,0 +1,34 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7ee965188c2f1b344b3960213708b94c, type: 3}
+  m_Name: ServiceDay
+  m_EditorClassIdentifier: ThrownTogether.Runtime::ThrownTogether.DayServiceDefinition
+  id: service-day-v1
+  displayName: Restaurant day
+  description:
+  durationSeconds: 300
+  arrivals: 12
+  firstArrival: 4
+  arrivalInterval: 24
+  outsidePatience: 45
+  eatingSeconds: 8
+  bonusWindow: 60
+  maximumBonus: 5
+  walkingSpeed: 2.4
+  entrance: {x: 6.3, y: 0, z: -6.1}
+  diningAisleX: 4.9
+  purchases:
+  - {fileID: 11400000, guid: 23bb209edd87c474dac5e6b902955414, type: 2}
+  - {fileID: 11400000, guid: 7b4641db72770874588db945c750c2c0, type: 2}
+  - {fileID: 11400000, guid: ec93092e6552ca943afed481d2f348b3, type: 2}
+  walkingVisual: {fileID: 2952335610465244968, guid: c0436b59516a1534d99a46c7fd5a0983, type: 3}
+  serverRole: {fileID: 11400000, guid: 9347d4505819b0c45b715e6fb81cba5d, type: 2}

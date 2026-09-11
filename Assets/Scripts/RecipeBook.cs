@@ -22,7 +22,7 @@ namespace ThrownTogether
             }
             lines.Add("On an ordinary counter, combine all the prepared ingredients with a clean plate. Add each ingredient separately; either order works.");
             lines.Add("Pick up the finished plate from the counter.");
-            lines.Add("Serve at the pass with the bell when a customer orders "+recipe.displayName+".");
+            lines.Add("Restaurant day: carry "+recipe.displayName+" to the matching customer's table. A hired server can collect it from the pass. Practice shifts use automatic pass delivery.");
             for(int i=0;i<lines.Count;i++) lines[i]=(i+1)+". "+lines[i];
             return string.Join("\n",lines);
         }

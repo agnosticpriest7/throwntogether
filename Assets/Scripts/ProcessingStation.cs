@@ -8,6 +8,7 @@ namespace ThrownTogether
         public ApplianceDefinition appliance;
         private ProcessingRecipe activeRecipe;
         public bool requiresAttendance;
+        [System.NonSerialized] public float processingSpeed=1;
         private readonly WorkAttendance attendance=new WorkAttendance();
         public bool Working => Busy && (!requiresAttendance || attendance.Running);
         private ProcessingRecipe Select(ItemPayload item)
@@ -42,7 +43,7 @@ namespace ThrownTogether
         public void Advance(float seconds)
         {
             if (!Working || seconds <= 0) return;
-            elapsed+=seconds;
+            elapsed+=seconds*Mathf.Max(1,processingSpeed);
             if (elapsed < activeRecipe.duration) return;
             slot.Item.Payload.state=activeRecipe.output; slot.Item.RefreshVisual(); Busy=false;attendance.Release();
             if(requiresAttendance) ShowSuccess(true);

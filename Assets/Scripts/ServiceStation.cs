@@ -11,13 +11,20 @@ namespace ThrownTogether
         private Carryable delivery;
         private float elapsed;
         private Vector3 origin;
+        public bool ManualService=>shift!=null && shift.Day!=null;
         public override string Status => stationName + (delivery!=null ? "\nDelivering…" : "");
         private CustomerOrder Match(ItemPayload item) => shift!=null ? shift.FindOrder(item) : order.CanAccept(item) ? order : null;
-        public override string Prompt(ChefController chef) => delivery!=null ? "Delivering — please wait" :
+        public override string Prompt(ChefController chef) => ManualService ? pickupSlot.Item!=null ? chef.Hands.Item==null ? "Take dish from pass":"Pass occupied" : chef.Hands.Item!=null ? "Leave item on pass":"Stage a dish here, or serve at the table" : delivery!=null ? "Delivering — please wait" :
             chef.Hands.Item != null && Match(chef.Hands.Item.Payload)!=null ? "Serve "+chef.Hands.Item.Payload.Label :
             shift!=null ? "Needs a plated dish matching a ticket" : order.Phase!=OrderPhase.Waiting ? "Order served" : "Needs plated fries";
         public override bool Interact(ChefController chef)
         {
+            if(ManualService)
+            {
+                if(shift.Day.Closed)return false;
+                if(chef.Hands.Item==null)return pickupSlot.Item!=null && chef.Hands.TryTake(pickupSlot.Item);
+                return pickupSlot.TryTake(chef.Hands.Item);
+            }
             var item=chef.Hands.Item;
             if(delivery!=null || item==null) return false;
             var target=Match(item.Payload);

@@ -11,7 +11,7 @@ namespace ThrownTogether
     public sealed class RestaurantMenu : MonoBehaviour
     {
         public static RestaurantMenu Instance { get; private set; }
-        public static bool GameplayBlocked => Instance!=null && (Instance.IsOpen || Time.frameCount<=Instance.blockThroughFrame);
+        public static bool GameplayBlocked => Instance!=null && (Instance.IsOpen || Instance.hud?.shift?.Day?.Closed==true || Time.frameCount<=Instance.blockThroughFrame);
         public static DisplaySettingsData Display => Instance?.hud?.settings?.Repository?.Display ?? defaults;
         private static readonly DisplaySettingsData defaults=new DisplaySettingsData();
         private static bool booted;
@@ -125,7 +125,7 @@ namespace ThrownTogether
             {
                 AddUnavailable("Tutorial");
                 Add("Quick Play",()=>ShowLevels(false));
-                AddUnavailable("Career");
+                Add("Career — restaurant days",()=>{SessionOptions.ShiftOrders=0;ShowLevels(false);});
                 AddUnavailable("Trials");
                 AddUnavailable("Endless");
                 Add("Recipe book",OpenRecipeBook);
@@ -171,6 +171,19 @@ namespace ThrownTogether
             }
             if(Page=="Settings")
             {Add("Audio",()=>SetPage("Audio"));Add("Text and accessibility",()=>SetPage("Display"));Add("Back",()=>SetPage("Main"));return;}
+            if(Page=="Restaurant")
+            {
+                var day=hud.shift?.Day;var config=Resources.Load<DayServiceDefinition>("ServiceDay");var account=RestaurantAccounts.Current;
+                Add("Next day — bank $"+account.Data.cash,()=>{if(day!=null && !day.Closed)message="Finish this day before starting the next.";else if(day!=null && !day.Paid)message="Save today's earnings before continuing. Use Retry below.";else {SessionOptions.ShiftOrders=0;Close();Load("RestaurantShift");}});
+                if(config!=null)
+                {
+                    foreach(var offer in config.purchases)
+                    {var purchase=offer;Add(purchase.displayName+(account.Owns(purchase.id)?" — owned":" — $"+purchase.cost),()=>Buy(purchase.id,purchase.cost));}
+                    var role=config.serverRole;if(role!=null)Add(role.displayName+(account.Owns(role.id)?" — hired":" — $"+role.hireCost),()=>Buy(role.id,role.hireCost));
+                }
+                if(day!=null && day.Closed && !day.Paid)Add("Retry saving today's earnings",()=>message=day.RetryPayment()?"Earnings saved.":account.Problem);
+                Add("Back",()=>SetPage("Main"));return;
+            }
             if(Page=="Recipes")
             {
                 if(recipeBook!=null && recipeBook.recipes!=null) for(int i=0;i<recipeBook.recipes.Length;i++)
@@ -235,14 +248,14 @@ namespace ThrownTogether
             Add("Kitchen, shift length and practice",()=>SetPage("Session"));
             if(hud.coop!=null) Add("Co-op setup and controller help",()=>SetPage("Co-op"));
             Add("Settings",()=>SetPage("Settings"));
-            Add("Session results",()=>SetPage("Results"));
+            Add(hud.shift?.Day!=null ? "Earnings and restaurant improvements":"Session results",()=>SetPage(hud.shift?.Day!=null?"Restaurant":"Results"));
             Add("Return to main menu",()=>Confirm("Leave this level? Starting another level resets progress.",OpenFrontEnd));
             if(Page=="Results") { rows.Clear(); Add("Back",()=>SetPage("Main")); }
         }
         private static void CycleLength(int direction)
         {
-            int[] lengths={3,6,12}; int index=Array.IndexOf(lengths,SessionOptions.ShiftOrders);
-            SessionOptions.ShiftOrders=lengths[(index+direction+3)%3];
+            int[] lengths={0,3,6,12}; int index=Array.IndexOf(lengths,SessionOptions.ShiftOrders);
+            SessionOptions.ShiftOrders=lengths[(index+direction+lengths.Length)%lengths.Length];
         }
         private void StartTraining(string training) => Confirm("Start "+training+"? Current progress will reset.",()=>{SessionOptions.Training=training; Load("RestaurantDevelopment");});
         private void Volume(string name,Func<float> read,Action<float> write)
@@ -251,7 +264,14 @@ namespace ThrownTogether
             Add(name+": "+Mathf.RoundToInt(read()*100)+"%   ← / →",()=>change(1),change);
         }
         private void Save() { message=hud.settings.Save() ? "Settings saved." : "Settings could not be saved; existing saved data was preserved."; }
-        public void RequestRestart() => Confirm("Restart this mode? Current food/order progress will reset.",()=>hud.chef.GetComponent<ChefInput>().RestartSlice());
+        public void RequestRestart() => Confirm("Restart this mode? Unpaid earnings and current food/orders will be lost. Saved money and purchases stay.",()=>hud.chef.GetComponent<ChefInput>().RestartSlice());
+        public void OpenRestaurant(){if(!IsOpen)Open();SetPage("Restaurant");}
+        private void Buy(string id,int cost)
+        {
+            var account=RestaurantAccounts.Current;
+            if(hud.shift?.Day!=null && !hud.shift.Day.Closed){message="Purchases open after the 10 PM close.";return;}
+            message=account.Buy(id,cost)?"Purchased — available next day.":!string.IsNullOrEmpty(account.Problem)?account.Problem:"Already owned, insufficient cash, or today's earnings are not yet saved.";
+        }
         private void Confirm(string text,Action action) { if(!IsOpen) Open(); pending=action; confirmation=text; SetPage("Confirm"); }
         public void ActivateSelection() { if(!rows[Mathf.Clamp(Selection,0,rows.Count-1)].enabled) return; rows[Mathf.Clamp(Selection,0,rows.Count-1)].select(); hud.audioFeedback?.Click(); if(IsOpen) BuildRows(); }
         private void Update() => Tick(WebInputFocus.HasFocus);

@@ -345,7 +345,9 @@ namespace ThrownTogether.Tests
             var dish=Object.Instantiate(source.itemPrefab);dish.Configure(new ItemPayload{isPlate=true,ingredient=seat.recipe.ingredient,state=seat.recipe.requiredState});
             Assert.That(seat.Reserve(dish.Payload),Is.True);seat.Receive(dish);seat.Advance(2);hud.shift.Advance(0);
             var rack=seat.dishReturn;Assert.That(rack.Count,Is.EqualTo(1));Assert.That(dish.Payload.dirty,Is.True);Assert.That(seat.tableSlot.Item,Is.Null);
-            Assert.That(rack.Interact(chef),Is.True);Assert.That(rack.Count,Is.Zero);Assert.That(rack.Interact(chef),Is.False);
+            Assert.That(rack.Interact(chef),Is.True);Assert.That(rack.Count,Is.Zero);
+            Assert.That(rack.Interact(chef),Is.True,"Players may put a cleared dirty plate back on the rack");Assert.That(rack.Count,Is.EqualTo(1));
+            Assert.That(rack.Interact(chef),Is.True);Assert.That(rack.Count,Is.Zero);Assert.That(chef.Hands.Item,Is.SameAs(dish));
             Assert.That(ItemPayload.CanPlate(dish.Payload,ItemPayload.Food(source.ingredient)),Is.False);
             var sink=Interactable.Active.OfType<WashingStation>().Single(s=>s.gameObject.scene==scene);
             Assert.That(sink.Interact(chef),Is.True);sink.Advance(1);float progress=sink.Progress;chef.Move(Vector2.left,.05f);sink.Advance(10);Assert.That(sink.Progress,Is.EqualTo(progress));

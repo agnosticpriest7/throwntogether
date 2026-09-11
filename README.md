@@ -83,3 +83,7 @@ Open **Quick Play** to choose a kitchen. Tutorial, Career, Trials and Endless ar
 **Cutting/washing:** press Use to begin, then stay still. Moving pauses progress; press Use again to resume. Another chef can take over an abandoned job. Fryers continue unattended. After customers eat, collect dirty plates from the kitchen return rack, wash them at the sink (3 seconds), and pick up the clean plate. The clean-plate source remains unlimited for this development version.
 
 **Garden Salad:** chop tomato and lettuce separately, combine both with one clean plate on an ordinary counter, then pick up and serve. Either ingredient can be added first. Pause > Recipe book has the steps.
+
+## Restaurant-day playtest
+
+Choose **Career** or **Quick Play → Restaurant day (5 minutes)**. The clock runs 11 AM–10 PM. Serve matching dishes at the dining tables, clear dirty plates, wash them and restock the five-plate supply. Guests leave if they wait outside too long. Meals and speed bonuses are paid at closing. Open **Menu → Earnings and restaurant improvements** to buy an extra counter/fryer bay, a fryer upgrade or a server, then start the next day. The server collects finished dishes from the pass; cooking and clearing remain yours. Progress saves locally in this browser/device. Fixed-order practice shifts are still available without earnings.

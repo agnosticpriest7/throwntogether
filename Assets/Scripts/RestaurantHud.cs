@@ -48,9 +48,16 @@ namespace ThrownTogether
             var previous=GUI.matrix;
             GUI.matrix=Matrix4x4.Scale(new Vector3(Screen.width/1280f,Screen.height/720f,1));
             int total=shift!=null ? shift.TotalOrders:1;
+            var day=shift?.Day;
             Panel(new Rect(20,12,300,48));
             GUI.Label(new Rect(26,18,188,35),lastCompleted+" / "+total+" served",label);
-            GUI.Label(new Rect(214,18,98,35),System.TimeSpan.FromSeconds(summary.ElapsedSeconds).ToString(@"mm\:ss"),small);
+            GUI.Label(new Rect(214,18,98,35),day!=null?day.Clock:System.TimeSpan.FromSeconds(summary.ElapsedSeconds).ToString(@"mm\:ss"),small);
+            if(day!=null)
+            {
+                Panel(new Rect(340,12,690,48));
+                GUI.Label(new Rect(350,15,670,42),"Day "+day.DayNumber+" | Bank $"+RestaurantAccounts.Current.Data.cash+" | Today $"+(day.BaseIncome+day.Bonuses)+" | Outside "+day.WaitingOutside+" ("+Mathf.CeilToInt(Mathf.Max(0,day.Settings.outsidePatience-day.OldestWait))+"s) | Left "+day.LostCustomers,small);
+                if(day.Elapsed-day.LastLostAt<3){Panel(new Rect(390,66,500,28));GUI.Label(new Rect(395,66,490,28),"Customer left unhappy — waited outside too long",small);}
+            }
             if(GUI.Button(new Rect(1060,18,182,39),"Y / Esc: Menu")) menu.Open();
             if(shift==null) DrawOrderBubble(order,1);
             else for(int i=0;i<shift.seats.Length;i++)DrawOrderBubble(shift.seats[i],i+1);
@@ -83,7 +90,15 @@ namespace ThrownTogether
                 }
             }
             bool complete=shift!=null ? shift.Complete : order.Phase==OrderPhase.Complete;
-            if(complete)
+            if(complete && day!=null)
+            {
+                Panel(new Rect(340,170,600,285));
+                GUI.Label(new Rect(355,180,570,45),"10 PM — DAY "+day.DayNumber+" COMPLETE",title);
+                GUI.Label(new Rect(355,230,570,90),day.Served+" meals: $"+day.BaseIncome+"\nQuick-service bonus: $"+day.Bonuses+"  |  Customers lost: "+day.LostCustomers,label);
+                GUI.Label(new Rect(355,325,570,45),day.Paid?"Paid to your bank: $"+(day.BaseIncome+day.Bonuses):RestaurantAccounts.Current.Problem,small);
+                if(GUI.Button(new Rect(395,385,490,45),"Y / Esc menu — improvements and next day"))menu.OpenRestaurant();
+            }
+            else if(complete)
             {
                 Panel(new Rect(340,170,600,285));
                 GUI.Label(new Rect(355,178,570,45),shift!=null ? "SHIFT COMPLETE":"FIRST SERVICE COMPLETE",title);

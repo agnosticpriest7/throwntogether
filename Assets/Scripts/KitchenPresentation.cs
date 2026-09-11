@@ -63,6 +63,7 @@ namespace ThrownTogether
         }
         private void Dress(Interactable station)
         {
+            if(station is DiningTable)return;
             var t=station.transform;
             bool authored=station.GetComponent<StationArt>()?.visual!=null;
             if(!authored)

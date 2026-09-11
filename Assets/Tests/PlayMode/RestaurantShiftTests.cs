@@ -13,6 +13,7 @@ namespace ThrownTogether.Tests
     {
         [UnityTest] public IEnumerator SoloChefCompletesAllThreeDishesAndAllSixOrders()
         {
+            int previousOrders=SessionOptions.ShiftOrders;SessionOptions.ShiftOrders=6;
             var original=SceneManager.GetActiveScene();
             var suspended=Object.FindObjectsByType<RestaurantHud>().Any(h=>h.gameObject.scene==original)
                 ? original.GetRootGameObjects().Where(r=>r.activeSelf).ToArray() : new GameObject[0];
@@ -71,6 +72,7 @@ namespace ThrownTogether.Tests
             }
             finally
             {
+                SessionOptions.ShiftOrders=previousOrders;
                 SceneManager.SetActiveScene(original);
                 foreach(var root in suspended) if(root!=null) root.SetActive(true);
             }

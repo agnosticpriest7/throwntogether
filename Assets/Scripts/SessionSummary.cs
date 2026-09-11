@@ -23,7 +23,7 @@ namespace ThrownTogether
             if(plated) count.plates++;
             else if(station is ProcessingStation process && held && process.Busy)
             { if(process.recipe.input==FoodState.Raw) count.prep++; else count.fry++; }
-            if(station is ServiceStation) count.served++;
+            if(station is ServiceStation pass && !pass.ManualService || station is DiningTable table && table.LastInteractionServed) count.served++;
         }
         private void Update()
         {

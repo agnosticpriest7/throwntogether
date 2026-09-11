@@ -9106,6 +9106,7 @@ MonoBehaviour:
   seats:
   - {fileID: 2044820154}
   - {fileID: 1639947436}
+  dayDefinition: {fileID: 11400000, guid: ec3d14ad61fb57a4981939a6fa07c730, type: 2}
 --- !u!114 &1600033231
 MonoBehaviour:
   m_ObjectHideFlags: 0
