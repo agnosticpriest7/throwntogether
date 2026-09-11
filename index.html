@@ -26,15 +26,15 @@
 
     </div>
   </main>
-  <script src="web-shell.js?build=8877bc350cf42de25ae01c14977034be.data"></script>
+  <script src="web-shell.js?build=7973a93cf142c8a1e25ab16c8e48e74a.data"></script>
   <script>
     const canvas=document.getElementById("unity-canvas");
     const loading=document.getElementById("loading");
     const shell=ThrownTogetherWeb.attach(window,document);
     const config={
-      dataUrl:"Build/8877bc350cf42de25ae01c14977034be.data",
+      dataUrl:"Build/7973a93cf142c8a1e25ab16c8e48e74a.data",
       frameworkUrl:"Build/2aab7cdc42a3a29ffedebe5d7d087285.framework.js",
-      codeUrl:"Build/9c2ae289ae51f387c119783060673b21.wasm",
+      codeUrl:"Build/3d149d46ed61c7778921ad108413a8ad.wasm",
       streamingAssetsUrl:"StreamingAssets",
       companyName:"DefaultCompany",
       productName:"ThrownTogetherUnity",
@@ -46,7 +46,7 @@
       showBanner:(message,type)=>{ if(type==="error") { loading.style.display="grid"; loading.textContent=message; } else console.warn(message); }
     };
     const loader=document.createElement("script");
-    loader.src="Build/6afabdda59c1a3587f051e98a0e72448.loader.js";
+    loader.src="Build/b0a3ba7272cd498bc7aaae960f349b7c.loader.js";
     loader.onerror=()=>{ loading.textContent="Unity loader could not download. Refresh this page to retry."; };
     loader.onload=()=>createUnityInstance(canvas,config,p=>{loading.textContent="Loading Unity… "+Math.round(p*100)+"%";})
       .then(()=>{ canvas.dataset.loaderReadyMs=Math.round(performance.now()); loading.style.display="none"; shell.ready(); })
