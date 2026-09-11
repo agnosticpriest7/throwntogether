@@ -227,7 +227,7 @@ namespace ThrownTogether
                     Add((System.Array.IndexOf(account.Data.selectedMenu,choice.id)>=0?"[x] ":"[ ] ")+choice.displayName+" — $"+choice.salePrice+(unlocked?"":" — "+choice.LockReason),()=>{if(!DailyMenu.Toggle(account,choice))message=account.Problem;});
                     rows[rows.Count-1].enabled=unlocked;
                 }
-                Add("Back",()=>SetPage(IsFrontEnd?"Title":"Restaurant"));return;
+                Add(IsFrontEnd?"Back":"Back to Day Complete",()=>SetPage(IsFrontEnd?"Title":"Restaurant"));return;
             }
             if(Page=="Employees")
             {
@@ -333,11 +333,13 @@ namespace ThrownTogether
                 bool station=item.stationPrefab!=null;
                 if(shopTab==0 && station && item.kind!=RestaurantPurchaseKind.CounterBay || shopTab==1 && item.kind==RestaurantPurchaseKind.CounterBay || shopTab==3 && !station)
                 {Add(item.displayName+" — $"+item.cost+" • Owned "+account.Quantity(item.id),()=>{if(station){var f=GetComponent<KitchenFurniture>();message=f.TryPurchase(item)?f.Message:f.Message;}else Buy(item.id,item.cost);});if(!station)rows[rows.Count-1].enabled=!account.Owns(item.id);}
-                if(shopTab==4 && station)foreach(var owned in account.Equipment(item.id,item.cost)){var copy=owned;Add("Sell "+item.displayName+" — $"+RestaurantAccount.Resale(copy.paid),()=>Confirm("Sell "+item.displayName+" for $"+RestaurantAccount.Resale(copy.paid)+"? Recipes may lock if this is your last one.",()=>Sell(copy,item.cost)));}
+                if(shopTab==4 && station)foreach(var owned in account.Equipment(item.id,item.cost)){var copy=owned;Add("Sell "+item.displayName+BayLabel(copy.instanceId)+" — $"+RestaurantAccount.Resale(copy.paid),()=>Confirm("Sell "+item.displayName+BayLabel(copy.instanceId)+" for $"+RestaurantAccount.Resale(copy.paid)+"? Recipes may lock if this is your last one.",()=>Sell(copy,item.cost)));}
             }
             if(shopTab==4)foreach(var owned in account.Equipment("extra-plate",20)){var copy=owned;Add("Sell extra plate — $"+RestaurantAccount.Resale(copy.paid),()=>Confirm("Sell one extra plate for $"+RestaurantAccount.Resale(copy.paid)+"? Applies next day.",()=>Sell(copy,20)));}
             Add("Back to Day Complete",NavigateBack);
         }
+        private string BayLabel(string id)
+        {var f=GetComponent<KitchenFurniture>();return f!=null && f.Find("purchase:"+id)!=null?" • Bay "+(f.AssignedSlot("purchase:"+id)+1):"";}
         private void Sell(OwnedEquipment item,int legacyPrice)
         {
             if(!RestaurantAccounts.Current.SellEquipment(item.instanceId,item.offerId,legacyPrice)){message=RestaurantAccounts.Current.Problem;return;}
@@ -432,7 +434,7 @@ namespace ThrownTogether
             if(buttonStyle==null) { buttonStyle=new GUIStyle(GUI.skin.button) {alignment=TextAnchor.MiddleLeft}; textStyle=new GUIStyle(GUI.skin.label) {fontSize=22,wordWrap=true,alignment=TextAnchor.MiddleCenter}; }
             var style=buttonStyle; style.fontSize=Mathf.RoundToInt(21*Display.TextScale); var text=textStyle;
             text.normal.textColor=Color.white; style.normal.textColor=Color.white; style.hover.textColor=Color.white; style.active.textColor=Color.white;
-            GUI.Label(new Rect(260,25,760,48),Page=="Title" ? "THROWN TOGETHER" : Page=="Main" ? "PAUSED" : Page=="Levels" ? (practiceLevel ? "CHOOSE A PRACTICE KITCHEN":"CHOOSE YOUR LEVEL") : Page=="Recipes" ? "RECIPE BOOK" : Page=="Restaurant" ? "DAY "+(hud.shift?.Day?.DayNumber??0)+" COMPLETE" : Page=="Shop" ? "APPLIANCES, COUNTERS & DISHES" : Page.ToUpperInvariant(),text);
+            GUI.Label(new Rect(260,25,760,48),Page=="Title" ? "THROWN TOGETHER" : Page=="Main" ? "PAUSED" : Page=="Levels" ? (practiceLevel ? "CHOOSE A PRACTICE KITCHEN":"CHOOSE YOUR LEVEL") : Page=="Recipes" ? "RECIPE BOOK" : Page=="Restaurant" ? (hud.shift?.Day?.Closed==true?"DAY "+hud.shift.Day.DayNumber+" COMPLETE":"RESTAURANT SETUP") : Page=="Shop" ? "APPLIANCES, COUNTERS & DISHES" : Page=="Today's Menu" ? "DAY "+RestaurantAccounts.Current.Data.nextDay+" — CHOOSE MENU" : Page.ToUpperInvariant(),text);
             GUI.Label(Page=="Restaurant"?new Rect(180,73,920,60):new Rect(260,73,760,60),Page=="Reset career" ? "Erase all career days, money, purchases, hires, menu choices and saved kitchen layouts? Settings and chef appearance stay." : Page=="Confirm" ? confirmation : Page=="Today's Menu" ? DailyMenu.Resolve(RestaurantAccounts.Current).Length+" selected • Minimum 3 • A: toggle dish\nServe 4 different menu dishes: +5% meal revenue (max $15)" : Page=="Restaurant" && hud.shift?.Day?.Closed==true ? "10:00 PM • "+hud.shift.Day.Served+" served / "+hud.shift.Day.LostCustomers+" lost • Earned $"+hud.shift.Day.NetIncome+" (speed $"+hud.shift.Day.Bonuses+", variety $"+hud.shift.Day.VarietyBonus+", waste $"+hud.shift.Day.WasteFees+")\nAvailable $"+RestaurantAccounts.Current.Data.cash+" • B returns here" : IsFrontEnd ? "D-pad / stick: navigate • A: select • B: back\nChoose a kitchen and start cooking." : BetweenDays?"Available $"+RestaurantAccounts.Current.Data.cash+" • D-pad: navigate • A: select • B: Day Complete":"Paused • D-pad / stick: navigate • A: select • B: back\nY / Escape: close • Xbox Menu belongs to Edge",text);
             int visible=Page=="Recipes"?6:Page=="Shop"?7:(Page=="Restaurant" || Page=="Today's Menu")?8:9;
             bool menu=Page=="Today's Menu";
@@ -454,6 +456,7 @@ namespace ThrownTogether
             if(end-begin>visible)
             {
                 bool recipes=Page=="Recipes";
+                if(!recipes){float top=Page=="Shop"?185:140, height=Page=="Shop"?324:331;GUI.color=new Color(.2f,.25f,.28f);GUI.DrawTexture(new Rect(1030,top,8,height),Texture2D.whiteTexture);GUI.color=new Color(.3f,.85f,.65f);float thumb=height*visible/(end-begin);GUI.DrawTexture(new Rect(1030,top+(height-thumb)*(first-begin)/(end-begin-visible),8,thumb),Texture2D.whiteTexture);GUI.color=Color.white;}
                 if(GUI.Button(recipes?new Rect(35,520,165,32):new Rect(260,575,170,30),"↑ Scroll up"))Selection=Mathf.Max(0,Selection-visible);
                 GUI.Label(recipes?new Rect(35,558,345,32):new Rect(435,575,400,30),(first>begin?"↑ More above   ":"")+(first-begin+1)+"–"+Mathf.Min(end-begin,first-begin+visible)+" / "+(end-begin)+(first+visible<end?"   More below ↓":""),text);
                 if(GUI.Button(recipes?new Rect(210,520,170,32):new Rect(850,575,170,30),"↓ Scroll down"))Selection=Mathf.Min(rows.Count-1,Selection+visible);

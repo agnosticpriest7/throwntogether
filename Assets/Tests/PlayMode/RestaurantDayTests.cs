@@ -157,6 +157,20 @@ namespace ThrownTogether.Tests
             day.Advance(150);Assert.That(day.LostCustomers,Is.GreaterThan(0));Assert.That(day.Served,Is.Zero);
             day.Advance(150);Assert.That(day.Closed,Is.True);Assert.That(RestaurantAccounts.Current.Data.cash,Is.Zero);Assert.That(day.WaitingOutside,Is.LessThanOrEqualTo(3));yield return null;
         }
+        [UnityTest] public IEnumerator ServerChainsQueuedMealsWithoutReturningHome()
+        {
+            var recipe=DailyMenu.Catalog.First(r=>r.ingredient.id=="ingredient.potato" && r.requiredState==FoodState.Cooked);
+            foreach(var table in day.Tables){table.ReserveSeat();table.Seat(recipe);}
+            var stock=stations.OfType<SourceStation>().Single(s=>s.plates);var pass=stations.OfType<ServiceStation>().Single();
+            var first=stock.TakeCleanPlate();first.Configure(new ItemPayload{isPlate=true,ingredient=recipe.ingredient,state=recipe.requiredState});pass.pickupSlot.TryTake(first);
+            var server=day.gameObject.AddComponent<DiningServer>();server.Initialize(day,pass);
+            for(int i=0;i<500 && pass.pickupSlot.Item!=null;i++)server.Advance(.05f);
+            Assert.That(pass.pickupSlot.Item,Is.Null);
+            var second=stock.TakeCleanPlate();second.Configure(new ItemPayload{isPlate=true,ingredient=recipe.ingredient,state=recipe.requiredState});pass.pickupSlot.TryTake(second);
+            for(int i=0;i<1000 && day.Served<1;i++)server.Advance(.05f);Assert.That(day.Served,Is.EqualTo(1));
+            float closest=100;for(int i=0;i<1000 && day.Served<2;i++){server.Advance(.05f);closest=Mathf.Min(closest,Vector3.Distance(server.transform.Find("Hired server").position,day.Settings.serverIdle));}
+            Assert.That(day.Served,Is.EqualTo(2));Assert.That(closest,Is.GreaterThan(2),"Queued delivery should bypass idle destination");yield return null;
+        }
         [UnityTest] public IEnumerator PassDoesNotTeleportFoodAndServerMovesMatchingDishToTable()
         {
             day.Advance(18);var dish=CookFirstDish();var pass=stations.OfType<ServiceStation>().Single();Use(pass);
