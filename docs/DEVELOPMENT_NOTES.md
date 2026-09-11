@@ -484,3 +484,5 @@ Agnostic Studios now holds fully visible for 3 seconds, followed by the supplied
 The Boot timer waits until Unity's native splash finishes, so loading cannot consume the studio hold behind that splash.
 
 0.14.1 release verified: source **5a3049f06497163f2bf7e367e3ce80444dd2e7f2**, gh-pages **53ed52d39864aacee241b9d21e910cb664e3e369**. Passed **58 EditMode + 76 PlayMode + 13 Web checks (147 total)**. Web build: **62,294,010 bytes**. Browser review confirmed publisher artwork preserves its proportions, reaches the existing title screen, and the public deployment serves the matching build identity. No new runtime errors; the known URP upscaling warning remains. Unity MCP did not respond; isolated Unity tests/build and browser review were used. Physical Xbox intro/skip testing remains unverified.
+
+Publisher background follow-up: source Twist image background samples are already RGB(0,0,0). Changed the surrounding Web page, host and loading backdrop from blue-gray to #000000 so the logo card blends into a pure-black surround. Logo artwork, timing and gameplay remain unchanged.
