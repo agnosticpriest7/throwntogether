@@ -167,11 +167,11 @@ namespace ThrownTogether
             var point=gameplayCamera.WorldToViewportPoint(ticket.customerVisual.position+Vector3.up*1.7f);if(point.z<=0)return;
             float scale=Mathf.Clamp(RestaurantMenu.Display.TextScale,1,1.4f);
             var rect=OrderBubbleLayout.ForSeat(new Vector2(point.x*1280,(1-point.y)*720),scale);
-            FoodIcon.Draw(new Rect(rect.x,rect.y,rect.width,55*scale),ticket.recipe,presentation.ServiceOpacity);
+            FoodIcon.DrawOrder(new Rect(rect.x,rect.y,rect.width,68.75f*scale),ticket.recipe,presentation.ServiceOpacity,scale);
             var table=ticket.manualService && ticket.tableSlot!=null ? ticket.tableSlot.GetComponentInParent<DiningTable>():null;
             if(table!=null && table.WaitingForMeal)
             {
-                var bar=new Rect(rect.x+3*scale,rect.y+59*scale,rect.width-6*scale,7*scale);
+                var bar=new Rect(rect.x+3*scale,rect.y+73.75f*scale,rect.width-6*scale,7*scale);
                 GUI.color=HudTint(new Color(.12f,.16f,.17f));GUI.DrawTexture(bar,Texture2D.whiteTexture);
                 bar.width*=table.PatienceRemaining;GUI.color=HudTint(Color.Lerp(new Color(.9f,.22f,.12f),new Color(.22f,.7f,.36f),table.PatienceRemaining));GUI.DrawTexture(bar,Texture2D.whiteTexture);GUI.color=HudTint(Color.white);
             }

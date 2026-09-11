@@ -18,6 +18,23 @@ namespace ThrownTogether
             }
         }
         private static Color WithOpacity(Color color,float opacity) { color.a*=opacity; return color; }
+        // The current 192px dish bakes fit inside pixels 28..164, 47..147.
+        // Trim only transparent padding, retaining a square crop and the original proportions.
+        // Scope this treatment to customer orders; recipe-book and ingredient icons stay unchanged.
+        public static void DrawOrder(Rect area,RecipeDefinition recipe,float opacity=1,float scale=1)
+        {
+            var image=DishImage(recipe);if(image==null){Draw(area,recipe,opacity);return;}
+            float size=Mathf.Min(area.width,area.height);
+            var rect=new Rect(area.center.x-size*.5f,area.center.y-size*.5f,size,size);
+            var uv=new Rect(.125f,.125f,.75f,.75f);var previous=GUI.color;
+            float edge=1.3f*scale;
+            GUI.color=new Color(.035f,.025f,.02f,.8f*opacity);
+            GUI.DrawTextureWithTexCoords(new Rect(rect.x-edge,rect.y,rect.width,rect.height),image,uv);
+            GUI.DrawTextureWithTexCoords(new Rect(rect.x+edge,rect.y,rect.width,rect.height),image,uv);
+            GUI.DrawTextureWithTexCoords(new Rect(rect.x,rect.y-edge,rect.width,rect.height),image,uv);
+            GUI.DrawTextureWithTexCoords(new Rect(rect.x,rect.y+edge,rect.width,rect.height),image,uv);
+            GUI.color=new Color(1,1,1,opacity);GUI.DrawTextureWithTexCoords(rect,image,uv);GUI.color=previous;
+        }
         public static void Draw(Rect area,RecipeDefinition recipe,float opacity=1)
         {
             var image=DishImage(recipe);if(image!=null){var prior=GUI.color;GUI.color=new Color(1,1,1,opacity);GUI.DrawTexture(area,image,ScaleMode.ScaleToFit);GUI.color=prior;return;}

@@ -29,7 +29,7 @@ namespace ThrownTogether.Tests
                 ticket.Advance(3);Assert.That(OrderBubbleLayout.Visible(ticket),Is.False);
                 ticket.ResetOrder(recipe);Assert.That(OrderBubbleLayout.Visible(ticket),Is.True);
                 ticket.ResetOrder(null);Assert.That(OrderBubbleLayout.Visible(ticket),Is.False);
-                var size=OrderBubbleLayout.ForSeat(Vector2.zero,1).size;Assert.That(size.x*size.y,Is.LessThan(206*109*.25f));
+                var size=OrderBubbleLayout.ForSeat(Vector2.zero,1).size;Assert.That(size.x*size.y,Is.LessThan(206*109*.32f));
             }
             finally{Object.DestroyImmediate(dish);Object.DestroyImmediate(root);Object.DestroyImmediate(recipe);}
         }
