@@ -50,6 +50,75 @@ namespace ThrownTogether.Tests
             }
             Assert.Fail("Chef could not walk to "+target+"; stopped at "+chef.transform.position);
         }
+        [UnityTest] public IEnumerator ClosingNightAndOpeningPreserveServiceAndApplyNextDayPurchases()
+        {
+            var hud=Object.FindObjectsByType<RestaurantHud>().Single(h=>h.gameObject.scene==scene);
+            var presentation=hud.GetComponent<DayPresentation>();var menu=hud.GetComponent<RestaurantMenu>();
+            float size=hud.gameplayCamera.orthographicSize;var rotation=hud.gameplayCamera.transform.rotation;
+            var sun=Object.FindObjectsByType<Light>().First(l=>l.gameObject.scene==scene && l.type==LightType.Directional);
+            float intensity=sun.intensity;var color=sun.color;
+            day.Advance(18);CookFirstDish();Use(day.Tables.First(t=>t.WaitingForMeal));Assert.That(day.Served,Is.EqualTo(1));
+            CaptureTransition(hud,"service");day.Advance(300);presentation.AdvancePresentation(0);
+            Assert.That(day.Clock,Is.EqualTo("10:00 PM"));Assert.That(day.Paid,Is.True);
+            Assert.That(presentation.Current,Is.EqualTo(DayPresentation.Phase.Closing));Assert.That(Time.timeScale,Is.Zero);
+            presentation.AdvancePresentation(1.25f);
+            Assert.That(hud.gameplayCamera.orthographicSize,Is.EqualTo(size*1.0625f).Within(.001f));
+            Assert.That(presentation.ServiceOpacity,Is.EqualTo(.5f).Within(.001f));Assert.That(menu.IsOpen,Is.False);
+            CaptureTransition(hud,"closing");presentation.AdvancePresentation(1.25f);
+            Assert.That(menu.IsOpen,Is.True);Assert.That(menu.Page,Is.EqualTo("Restaurant"));
+            Assert.That(hud.gameplayCamera.enabled,Is.True);Assert.That(hud.gameplayCamera.orthographicSize,Is.EqualTo(size*1.125f).Within(.001f));
+            Assert.That(sun.intensity,Is.LessThan(intensity));Assert.That(sun.intensity,Is.GreaterThan(intensity*.5f));
+            Assert.That(hud.gameplayCamera.transform.rotation,Is.EqualTo(rotation));
+            presentation.AdvancePresentation(10);Assert.That(presentation.NightAmount,Is.EqualTo(1));Assert.That(Time.timeScale,Is.Zero);
+            CaptureTransition(hud,"management-night");
+            int paid=RestaurantAccounts.Current.Data.cash;day.RetryPayment();Assert.That(RestaurantAccounts.Current.Data.cash,Is.EqualTo(paid));
+            // Give the test account sufficient earned income, then use the real purchase authority.
+            RestaurantAccounts.Current.Data.cash=500;
+            var offer=day.Settings.purchases.First(p=>p.kind==RestaurantPurchaseKind.FryerBay);
+            Assert.That(RestaurantAccounts.Current.Buy(offer.id,offer.cost),Is.True);
+            AsyncOperation loading=null;
+            Assert.That(presentation.BeginNextDay(()=>{
+                menu.Close();
+#if UNITY_EDITOR
+                loading=EditorSceneManager.LoadSceneAsyncInPlayMode("Assets/Scenes/RestaurantShift.unity",new LoadSceneParameters(LoadSceneMode.Additive));
+#else
+                loading=SceneManager.LoadSceneAsync("RestaurantShift",LoadSceneMode.Additive);
+#endif
+            }),Is.True);
+            Assert.That(presentation.BeginNextDay(()=>Assert.Fail("Duplicate load")),Is.False);
+            presentation.AdvancePresentation(.175f);Assert.That(presentation.MenuOpacity,Is.EqualTo(.5f).Within(.001f));
+            presentation.AdvancePresentation(.175f);Assert.That(loading,Is.Not.Null);
+            foreach(var root in scene.GetRootGameObjects())root.SetActive(false);
+            yield return loading;
+            var oldScene=scene;scene=SceneManager.GetSceneAt(SceneManager.sceneCount-1);SceneManager.SetActiveScene(scene);
+            yield return SceneManager.UnloadSceneAsync(oldScene);
+            hud=Object.FindObjectsByType<RestaurantHud>().Single(h=>h.gameObject.scene==scene);
+            presentation=hud.GetComponent<DayPresentation>();presentation.enabled=false;
+            day=hud.shift.Day;Assert.That(presentation.Current,Is.EqualTo(DayPresentation.Phase.Opening));
+            Assert.That(day.Elapsed,Is.Zero);Assert.That(day.Clock,Is.EqualTo("11:00 AM"));Assert.That(day.ServiceDayNumber,Is.EqualTo(2));
+            Assert.That(Object.FindObjectsByType<ProcessingStation>().Count(p=>p.gameObject.scene==scene && !p.requiresAttendance),Is.EqualTo(2));
+            Assert.That(RestaurantMenu.GameplayBlocked,Is.True);
+            CaptureTransition(hud,"opening-night");presentation.AdvancePresentation(1.25f);CaptureTransition(hud,"morning");
+            presentation.AdvancePresentation(2.5f);
+            Assert.That(presentation.Current,Is.EqualTo(DayPresentation.Phase.Service));Assert.That(Time.timeScale,Is.EqualTo(1));
+            Assert.That(day.Clock,Is.EqualTo("11:00 AM"));Assert.That(hud.gameplayCamera.orthographicSize,Is.EqualTo(size));
+            sun=Object.FindObjectsByType<Light>().First(l=>l.gameObject.scene==scene && l.type==LightType.Directional);
+            Assert.That(sun.intensity,Is.EqualTo(intensity));Assert.That(sun.color,Is.EqualTo(color));
+            CaptureTransition(hud,"next-service");LogAssert.NoUnexpectedReceived();
+        }
+        private static void CaptureTransition(RestaurantHud hud,string name)
+        {
+            var camera=hud.gameplayCamera;var old=camera.targetTexture;var active=RenderTexture.active;
+            var render=RenderTexture.GetTemporary(1280,720,24);var texture=new Texture2D(1280,720,TextureFormat.RGB24,false);
+            try
+            {
+                camera.targetTexture=render;camera.Render();RenderTexture.active=render;
+                texture.ReadPixels(new Rect(0,0,1280,720),0,0);texture.Apply();
+                var directory=System.IO.Path.Combine(Application.dataPath,"../TestResults/DayTransitions");System.IO.Directory.CreateDirectory(directory);
+                System.IO.File.WriteAllBytes(System.IO.Path.Combine(directory,name+".png"),texture.EncodeToPNG());
+            }
+            finally {camera.targetTexture=old;RenderTexture.active=active;RenderTexture.ReleaseTemporary(render);Object.Destroy(texture);}
+        }
         [UnityTest] public IEnumerator WalkThroughDiningDoorAndServeBothVisibleTablesThenClearTheirPlates()
         {
             day.Advance(45);

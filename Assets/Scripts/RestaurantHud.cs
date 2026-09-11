@@ -13,6 +13,7 @@ namespace ThrownTogether
         public RestaurantShift shift;
         private GUIStyle label, small, title;
         private RestaurantMenu menu;
+        private DayPresentation presentation;
         private PracticeGuide guide;
         private SessionSummary summary;
         private int lastCompleted;
@@ -20,6 +21,7 @@ namespace ThrownTogether
         private void Awake()
         {
             menu=gameObject.AddComponent<RestaurantMenu>();
+            presentation=gameObject.AddComponent<DayPresentation>();
             gameObject.AddComponent<KitchenPresentation>();
             summary=gameObject.AddComponent<SessionSummary>();
             guide=gameObject.AddComponent<PracticeGuide>();
@@ -27,6 +29,7 @@ namespace ThrownTogether
             gameObject.AddComponent<DevelopmentDiagnostics>();
 #endif
         }
+        private Color HudTint(Color color) { color.a*=presentation.ServiceOpacity; return color; }
         public bool ShowControlHelp => guide!=null && guide.Active;
         private void Update()
         {
@@ -46,6 +49,8 @@ namespace ThrownTogether
             small.fontSize=Mathf.RoundToInt(15*RestaurantMenu.Display.TextScale);
             title.fontSize=Mathf.RoundToInt(22*RestaurantMenu.Display.TextScale);
             label.normal.textColor=small.normal.textColor=title.normal.textColor=Color.white;
+            GUI.color=new Color(1,1,1,presentation.ServiceOpacity);
+            GUI.enabled=!presentation.Transitioning;
             var previous=GUI.matrix;
             GUI.matrix=Matrix4x4.Scale(new Vector3(Screen.width/1280f,Screen.height/720f,1));
             int total=shift!=null ? shift.TotalOrders:1;
@@ -68,8 +73,8 @@ namespace ThrownTogether
                 if(station==null || station.gameObject.scene!=gameObject.scene || station.Progress<0) continue;
                 var p=gameplayCamera.WorldToViewportPoint(station.transform.position+new Vector3(0,1.27f,-.63f));
                 var rect=new Rect(p.x*1280-37,(1-p.y)*720,74,8);
-                GUI.color=new Color(.07f,.1f,.1f); GUI.DrawTexture(rect,Texture2D.whiteTexture);
-                GUI.color=new Color(1,.75f,.2f); rect.width*=station.Progress; GUI.DrawTexture(rect,Texture2D.whiteTexture); GUI.color=Color.white;
+                GUI.color=HudTint(new Color(.07f,.1f,.1f)); GUI.DrawTexture(rect,Texture2D.whiteTexture);
+                GUI.color=HudTint(new Color(1,.75f,.2f)); rect.width*=station.Progress; GUI.DrawTexture(rect,Texture2D.whiteTexture); GUI.color=HudTint(Color.white);
             }
             DrawSuccessCues();
             // Identity is carried by apron colors and target borders; no floating panels cover chefs.
@@ -91,11 +96,11 @@ namespace ThrownTogether
                 if(guide.SuggestedTarget!=null)
                 {
                     var p=gameplayCamera.WorldToViewportPoint(guide.SuggestedTarget.transform.position+Vector3.up*2.05f);
-                    GUI.color=new Color(1,.83f,.25f); GUI.Label(new Rect(p.x*1280-20,(1-p.y)*720-25,40,30),"v",title); GUI.color=Color.white;
+                    GUI.color=HudTint(new Color(1,.83f,.25f)); GUI.Label(new Rect(p.x*1280-20,(1-p.y)*720-25,40,30),"v",title); GUI.color=HudTint(Color.white);
                 }
             }
             bool complete=shift!=null ? shift.Complete : order.Phase==OrderPhase.Complete;
-            if(complete && day!=null)
+            if(complete && day!=null && !presentation.Transitioning)
             {
                 Panel(new Rect(340,170,600,285));
                 GUI.Label(new Rect(355,180,570,45),"10 PM — DAY "+day.ServiceDayNumber+" COMPLETE",title);
@@ -103,7 +108,7 @@ namespace ThrownTogether
                 GUI.Label(new Rect(355,325,570,45),day.Paid?"Paid to your bank: $"+day.NetIncome:RestaurantAccounts.Current.Problem,small);
                 if(GUI.Button(new Rect(395,385,490,45),"Y / Esc menu — improvements and next day"))menu.OpenRestaurant();
             }
-            else if(complete)
+            else if(complete && day==null)
             {
                 Panel(new Rect(340,170,600,285));
                 GUI.Label(new Rect(355,178,570,45),shift!=null ? "SHIFT COMPLETE":"FIRST SERVICE COMPLETE",title);
@@ -111,7 +116,7 @@ namespace ThrownTogether
                 GUI.Label(new Rect(355,285,570,85),"P1  "+summary.PlayerOne.Description+"\nP2  "+summary.PlayerTwo.Description,small);
                 GUI.Label(new Rect(355,380,570,40),"Y / Esc: replay, choose a shift or practice",label);
             }
-            GUI.matrix=previous; GUI.color=Color.white; GUI.backgroundColor=Color.white;
+            GUI.enabled=true; GUI.matrix=previous; GUI.color=Color.white; GUI.backgroundColor=Color.white;
         }
         private void DrawSuccessCues()
         {
@@ -121,7 +126,7 @@ namespace ThrownTogether
                 var p=gameplayCamera.WorldToViewportPoint(station.transform.position+Vector3.up*1.3f);
                 if(p.z<=0 || p.x<0 || p.x>1 || p.y<0 || p.y>1) continue;
                 float x=p.x*1280, y=(1-p.y)*720;
-                GUI.color=RestaurantMenu.Display.highContrast ? new Color(1,1,1,station.SuccessOpacity) : new Color(.55f,1,.78f,station.SuccessOpacity);
+                GUI.color=HudTint(RestaurantMenu.Display.highContrast ? new Color(1,1,1,station.SuccessOpacity) : new Color(.55f,1,.78f,station.SuccessOpacity));
                 if(station.SuccessCheck)
                 {
                     // Two strokes avoid relying on a font's Unicode checkmark glyph.
@@ -141,20 +146,20 @@ namespace ThrownTogether
                     GUI.DrawTexture(new Rect(x+22,y-12,2,26),Texture2D.whiteTexture);
                 }
             }
-            GUI.color=Color.white;
+            GUI.color=HudTint(Color.white);
         }
         private void DrawPlayer(ChefController player,string id,Color color,float x,float width)
         {
             Panel(new Rect(x,624,width,68));
-            GUI.color=color; GUI.DrawTexture(new Rect(x,624,5,68),Texture2D.whiteTexture); GUI.color=Color.white;
+            GUI.color=HudTint(color); GUI.DrawTexture(new Rect(x,624,5,68),Texture2D.whiteTexture); GUI.color=HudTint(Color.white);
             string prompt=player.Focus!=null ? "A / E: "+player.Focus.Prompt(player):"Face a station to interact";
             GUI.Label(new Rect(x+12,628,width-24,29),id+"  "+prompt,label);
             GUI.Label(new Rect(x+12,657,width-24,29),player.Hands.Item==null ? "Hands empty" : player.Hands.Item.Payload.Label,small);
         }
-        private static void Panel(Rect rect)
+        private void Panel(Rect rect)
         {
-            GUI.color=RestaurantMenu.Display.highContrast ? Color.black:new Color(.035f,.055f,.07f,.88f);
-            GUI.DrawTexture(rect,Texture2D.whiteTexture); GUI.color=Color.white;
+            GUI.color=HudTint(RestaurantMenu.Display.highContrast ? Color.black:new Color(.035f,.055f,.07f,.88f));
+            GUI.DrawTexture(rect,Texture2D.whiteTexture); GUI.color=HudTint(Color.white);
         }
         private void DrawOrderBubble(CustomerOrder ticket,int number)
         {
@@ -164,22 +169,22 @@ namespace ThrownTogether
             var rect=OrderBubbleLayout.ForSeat(new Vector2(point.x*1280,(1-point.y)*720),scale);
             bool contrast=RestaurantMenu.Display.highContrast;
             var ink=contrast?Color.white:new Color(.16f,.23f,.24f);
-            GUI.color=new Color(.23f,.31f,.32f);GUI.DrawTexture(new Rect(rect.x-7,rect.y+27*scale,10,10),Texture2D.whiteTexture);GUI.DrawTexture(rect,Texture2D.whiteTexture);
-            GUI.color=contrast?Color.black:new Color(.97f,.94f,.85f);GUI.DrawTexture(new Rect(rect.x+2,rect.y+2,rect.width-4,rect.height-4),Texture2D.whiteTexture);GUI.color=Color.white;
+            GUI.color=HudTint(new Color(.23f,.31f,.32f));GUI.DrawTexture(new Rect(rect.x-7,rect.y+27*scale,10,10),Texture2D.whiteTexture);GUI.DrawTexture(rect,Texture2D.whiteTexture);
+            GUI.color=HudTint(contrast?Color.black:new Color(.97f,.94f,.85f));GUI.DrawTexture(new Rect(rect.x+2,rect.y+2,rect.width-4,rect.height-4),Texture2D.whiteTexture);GUI.color=HudTint(Color.white);
             small.fontSize=Mathf.RoundToInt(13*scale);small.normal.textColor=ink;
             GUI.Label(new Rect(rect.x+6,rect.y+3,rect.width-12,22*scale),"TABLE "+number,small);
-            FoodIcon.Draw(new Rect(rect.x+8,rect.y+28*scale,48*scale,42*scale),ticket.recipe.ingredient);
+            FoodIcon.Draw(new Rect(rect.x+8,rect.y+28*scale,48*scale,42*scale),ticket.recipe.ingredient,presentation.ServiceOpacity);
             label.fontSize=Mathf.RoundToInt(18*scale);label.normal.textColor=ink;
             GUI.Label(new Rect(rect.x+62*scale,rect.y+23*scale,rect.width-68*scale,49*scale),ticket.recipe.displayName,label);
-            GUI.color=ticket.Phase==OrderPhase.Waiting?new Color(.04f,.12f,.13f):ticket.Phase==OrderPhase.Delivering?new Color(.17f,.09f,.025f):new Color(.05f,.14f,.04f);
-            GUI.DrawTexture(new Rect(rect.x+6,rect.y+75*scale,rect.width-12,20*scale),Texture2D.whiteTexture);GUI.color=Color.white;small.normal.textColor=Color.white;
+            GUI.color=HudTint(ticket.Phase==OrderPhase.Waiting?new Color(.04f,.12f,.13f):ticket.Phase==OrderPhase.Delivering?new Color(.17f,.09f,.025f):new Color(.05f,.14f,.04f));
+            GUI.DrawTexture(new Rect(rect.x+6,rect.y+75*scale,rect.width-12,20*scale),Texture2D.whiteTexture);GUI.color=HudTint(Color.white);small.normal.textColor=Color.white;
             GUI.Label(new Rect(rect.x+6,rect.y+74*scale,rect.width-12,22*scale),OrderBubbleLayout.State(ticket.Phase),small);
             var table=ticket.manualService ? ticket.tableSlot.GetComponentInParent<DiningTable>():null;
             if(table!=null && table.WaitingForMeal)
             {
                 var bar=new Rect(rect.x+6,rect.y+97*scale,rect.width-12,7*scale);
-                GUI.color=new Color(.12f,.16f,.17f);GUI.DrawTexture(bar,Texture2D.whiteTexture);
-                bar.width*=table.PatienceRemaining;GUI.color=Color.Lerp(new Color(.9f,.22f,.12f),new Color(.22f,.7f,.36f),table.PatienceRemaining);GUI.DrawTexture(bar,Texture2D.whiteTexture);GUI.color=Color.white;
+                GUI.color=HudTint(new Color(.12f,.16f,.17f));GUI.DrawTexture(bar,Texture2D.whiteTexture);
+                bar.width*=table.PatienceRemaining;GUI.color=HudTint(Color.Lerp(new Color(.9f,.22f,.12f),new Color(.22f,.7f,.36f),table.PatienceRemaining));GUI.DrawTexture(bar,Texture2D.whiteTexture);GUI.color=HudTint(Color.white);
             }
             label.fontSize=Mathf.RoundToInt(19*RestaurantMenu.Display.TextScale);small.fontSize=Mathf.RoundToInt(15*RestaurantMenu.Display.TextScale);label.normal.textColor=Color.white;
         }

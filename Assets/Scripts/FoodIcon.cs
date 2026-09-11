@@ -15,20 +15,21 @@ namespace ThrownTogether
                 disc.SetPixels(pixels); disc.Apply(false,true); return disc;
             }
         }
-        public static void Draw(Rect area,IngredientDefinition ingredient)
+        private static Color WithOpacity(Color color,float opacity) { color.a*=opacity; return color; }
+        public static void Draw(Rect area,IngredientDefinition ingredient,float opacity=1)
         {
             var previous=GUI.color;
-            GUI.color=new Color(.77f,.84f,.87f); GUI.DrawTexture(new Rect(area.x,area.y+area.height*.39f,area.width,area.height*.56f),Disc);
-            GUI.color=Color.white; GUI.DrawTexture(new Rect(area.x+area.width*.07f,area.y+area.height*.43f,area.width*.86f,area.height*.43f),Disc);
-            GUI.color=ingredient==null ? Color.white:ingredient.ColorFor(ingredient.platingState);
+            GUI.color=WithOpacity(new Color(.77f,.84f,.87f),opacity); GUI.DrawTexture(new Rect(area.x,area.y+area.height*.39f,area.width,area.height*.56f),Disc);
+            GUI.color=WithOpacity(Color.white,opacity); GUI.DrawTexture(new Rect(area.x+area.width*.07f,area.y+area.height*.43f,area.width*.86f,area.height*.43f),Disc);
+            GUI.color=WithOpacity(ingredient==null ? Color.white:ingredient.ColorFor(ingredient.platingState),opacity);
             if(ingredient!=null && (ingredient.visualKind==IngredientVisualKind.Tomato || ingredient.visualKind==IngredientVisualKind.Lettuce))
             {
                 for(int i=0;i<3;i++)
                 {
-                    GUI.color=new Color(.38f,.72f,.13f); GUI.DrawTexture(new Rect(area.x+area.width*(.02f+i*.23f),area.y+area.height*.28f,area.width*.49f,area.height*.46f),Disc);
+                    GUI.color=WithOpacity(new Color(.38f,.72f,.13f),opacity); GUI.DrawTexture(new Rect(area.x+area.width*(.02f+i*.23f),area.y+area.height*.28f,area.width*.49f,area.height*.46f),Disc);
                     var r=new Rect(area.x+area.width*(.08f+i*.23f),area.y+area.height*(.25f+(i%2)*.16f),area.width*.4f,area.height*.27f);
-                    GUI.color=new Color(.93f,.13f,.06f); GUI.DrawTexture(r,Disc);
-                    GUI.color=new Color(1,.55f,.3f); GUI.DrawTexture(new Rect(r.x+r.width*.2f,r.y+r.height*.2f,r.width*.6f,r.height*.6f),Disc);
+                    GUI.color=WithOpacity(new Color(.93f,.13f,.06f),opacity); GUI.DrawTexture(r,Disc);
+                    GUI.color=WithOpacity(new Color(1,.55f,.3f),opacity); GUI.DrawTexture(new Rect(r.x+r.width*.2f,r.y+r.height*.2f,r.width*.6f,r.height*.6f),Disc);
                 }
             }
             else if(ingredient!=null && ingredient.visualKind==IngredientVisualKind.Mushroom)

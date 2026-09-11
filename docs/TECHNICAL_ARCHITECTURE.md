@@ -295,3 +295,9 @@ ChefAppearance's old selection indices are stable. Additive authored mesh parts 
 
 ### Trash and idle dining staff (0.12.1)
 `TrashStation` uses the normal chef interaction path and never destroys an issued plate: plated food becomes dirty, unplated food is released/destroyed, and empty plates are rejected. `RestaurantDay` tracks waste fees; `RestaurantAccount.Settle` accepts an optional fee amount and atomically pays max(0, meals + bonuses - waste). Practice has no paid day and no fee. `DayServiceDefinition` owns the $1 cost and separate server/busser standby points. Dining employees distinguish standby from work destinations, preventing remote pass/rack transfers after moving their idle positions.
+
+
+## Between-day presentation — 0.13.0
+DayPresentation is a scene-local visual coordinator attached by RestaurantHud. It observes RestaurantDay.Closed, pauses scaled simulation during its 2.5-second closing/opening transitions, and interpolates camera orthographic size, ambient tri-light colors and the scene's existing light colors/intensities using smoothstep. No restaurant/account or station state is mutated. Authored service values are captured per scene and restored exactly. Night remains active while the existing management menu is open; that menu alone gains a translucent backdrop and fade.
+
+Next-day selection retains the existing paid-day guard, SessionOptions and scene loader. A one-use handoff initializes the next scene at night before rendering; duplicate selection is blocked while the menu fades. The new day and purchased objects still initialize through RestaurantDay.Begin, with elapsed time frozen at zero until opening completes. Input uses the existing menu blocking and action-release gates. Unscaled transition time allows the presentation to run while management/gameplay are paused. No interpolation occurs in non-career play.

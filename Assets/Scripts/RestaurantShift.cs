@@ -35,7 +35,7 @@ namespace ThrownTogether
             seat.ResetOrder(NextOrder<TotalOrders ? definition.orders[NextOrder++ % definition.orders.Length] : null);
         }
         public CustomerOrder FindOrder(ItemPayload item) => seats.FirstOrDefault(s=>s.CanAccept(item));
-        private void Update() => Advance(Time.deltaTime);
+        private void Update() { if(GetComponent<DayPresentation>()?.Transitioning!=true) Advance(Time.deltaTime); }
         public void Advance(float seconds)
         {
             if(Day!=null){Day.Advance(seconds);ElapsedSeconds=Day.Elapsed;return;}

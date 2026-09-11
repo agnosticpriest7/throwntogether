@@ -11,7 +11,7 @@ namespace ThrownTogether
     public sealed class RestaurantMenu : MonoBehaviour
     {
         public static RestaurantMenu Instance { get; private set; }
-        public static bool GameplayBlocked => Instance!=null && (Instance.IsOpen || Instance.hud?.shift?.Day?.Closed==true || Time.frameCount<=Instance.blockThroughFrame);
+        public static bool GameplayBlocked => Instance!=null && (Instance.IsOpen || Instance.GetComponent<DayPresentation>()?.Transitioning==true || Instance.hud?.shift?.Day?.Closed==true || Time.frameCount<=Instance.blockThroughFrame);
         public static DisplaySettingsData Display => Instance?.hud?.settings?.Repository?.Display ?? defaults;
         private static readonly DisplaySettingsData defaults=new DisplaySettingsData();
         private static bool booted;
@@ -175,7 +175,7 @@ namespace ThrownTogether
             if(Page=="Restaurant")
             {
                 var day=hud.shift?.Day;var config=Resources.Load<DayServiceDefinition>("ServiceDay");var account=RestaurantAccounts.Current;
-                Add("Next day — bank $"+account.Data.cash,()=>{if(day!=null && !day.Closed)message="Finish this day before starting the next.";else if(day!=null && !day.Paid)message="Save today's earnings before continuing. Use Retry below.";else {SessionOptions.ShiftOrders=0;Close();Load("RestaurantShift");}});
+                Add("Next day — bank $"+account.Data.cash,()=>{if(day!=null && !day.Closed)message="Finish this day before starting the next.";else if(day!=null && !day.Paid)message="Save today's earnings before continuing. Use Retry below.";else {var presentation=GetComponent<DayPresentation>(); Action start=()=>{SessionOptions.ShiftOrders=0;Close();Load("RestaurantShift");}; if(presentation==null || day==null)start();else presentation.BeginNextDay(start);}});
                 if(config!=null)
                 {
                     foreach(var offer in config.purchases)
@@ -275,11 +275,11 @@ namespace ThrownTogether
             message=account.Buy(id,cost)?"Purchased — available next day.":!string.IsNullOrEmpty(account.Problem)?account.Problem:"Already owned, insufficient cash, or today's earnings are not yet saved.";
         }
         private void Confirm(string text,Action action) { if(!IsOpen) Open(); pending=action; confirmation=text; SetPage("Confirm"); }
-        public void ActivateSelection() { if(!rows[Mathf.Clamp(Selection,0,rows.Count-1)].enabled) return; rows[Mathf.Clamp(Selection,0,rows.Count-1)].select(); hud.audioFeedback?.Click(); if(IsOpen) BuildRows(); }
+        public void ActivateSelection() { if(GetComponent<DayPresentation>()?.Transitioning==true)return; if(!rows[Mathf.Clamp(Selection,0,rows.Count-1)].enabled) return; rows[Mathf.Clamp(Selection,0,rows.Count-1)].select(); hud.audioFeedback?.Click(); if(IsOpen) BuildRows(); }
         private void Update() => Tick(WebInputFocus.HasFocus);
         public void Tick(bool focused)
         {
-            if(!focused) return;
+            if(!focused || GetComponent<DayPresentation>()?.Transitioning==true) return;
             if(toggle.WasPressedThisFrame()) { if(IsOpen) {if(IsFrontEnd) NavigateBack(); else Close();} else Open(); return; }
             if(!IsOpen) return;
             if(back.WasPressedThisFrame()) { NavigateBack(); return; }
@@ -305,17 +305,20 @@ namespace ThrownTogether
         private void OnGUI()
         {
             if(!IsOpen) return;
+            var presentation=GetComponent<DayPresentation>();
+            var opacity=presentation!=null ? presentation.MenuOpacity:1;
+            var previousColor=GUI.color; var previousEnabled=GUI.enabled;
             GUI.depth=-100;
             var matrix=GUI.matrix; GUI.matrix=Matrix4x4.Scale(new Vector3(Screen.width/1280f,Screen.height/720f,1));
-            GUI.color=Color.black; GUI.DrawTexture(new Rect(0,0,1280,720),Texture2D.whiteTexture); GUI.color=Color.white;
+            GUI.color=new Color(0,0,0,(presentation!=null && presentation.NightMenu ? .22f:1)*opacity); GUI.DrawTexture(new Rect(0,0,1280,720),Texture2D.whiteTexture); GUI.color=new Color(1,1,1,opacity);
             if(buttonStyle==null) { buttonStyle=new GUIStyle(GUI.skin.button) {alignment=TextAnchor.MiddleLeft}; textStyle=new GUIStyle(GUI.skin.label) {fontSize=22,wordWrap=true,alignment=TextAnchor.MiddleCenter}; }
             var style=buttonStyle; style.fontSize=Mathf.RoundToInt(21*Display.TextScale); var text=textStyle;
             text.normal.textColor=Color.white; style.normal.textColor=Color.white; style.hover.textColor=Color.white; style.active.textColor=Color.white;
             GUI.Label(new Rect(260,25,760,48),Page=="Title" ? "THROWN TOGETHER" : Page=="Main" ? "PAUSED" : Page=="Levels" ? (practiceLevel ? "CHOOSE A PRACTICE KITCHEN":"CHOOSE YOUR LEVEL") : Page=="Recipes" ? "RECIPE BOOK" : Page.ToUpperInvariant(),text);
-            GUI.Label(new Rect(260,73,760,60),Page=="Confirm" ? confirmation : IsFrontEnd ? "D-pad / stick: navigate • A: select • B: back\nChoose a kitchen and start cooking." : "Paused • D-pad / stick: navigate • A: select • B: back\nY / Escape: close • Xbox Menu belongs to Edge",text);
+            GUI.Label(new Rect(260,73,760,60),Page=="Confirm" ? confirmation : Page=="Restaurant" && hud.shift?.Day?.Closed==true ? "10:00 PM — Closed • "+hud.shift.Day.Served+" meals • Earned $"+hud.shift.Day.NetIncome+" (bonus $"+hud.shift.Day.Bonuses+", waste $"+hud.shift.Day.WasteFees+")\nD-pad / stick: navigate • A: select • Y / Escape: view restaurant" : IsFrontEnd ? "D-pad / stick: navigate • A: select • B: back\nChoose a kitchen and start cooking." : "Paused • D-pad / stick: navigate • A: select • B: back\nY / Escape: close • Xbox Menu belongs to Edge",text);
             for(int i=0;i<rows.Count;i++)
             {
-                GUI.enabled=rows[i].enabled;
+                GUI.enabled=rows[i].enabled && (presentation==null || !presentation.Transitioning);
                 GUI.backgroundColor=i==Selection ? new Color(.2f,.8f,.6f):Color.gray;
                 var rowRect=Page=="Recipes" ? new Rect(35,160+i*55,345,48):WardrobePage ? new Rect(65,145+i*47,670,42):Page=="Restaurant" ? new Rect(260,140+i*42,760,37):new Rect(260,145+i*47,760,42);
                 if(GUI.Button(rowRect,(i==Selection ? ">  ":"    ")+rows[i].label,style)) { Selection=i; ActivateSelection(); break; }
@@ -348,7 +351,7 @@ namespace ThrownTogether
                     "\n\nP1  "+summary.PlayerOne.Description+"\nP2  "+summary.PlayerTwo.Description+"\n\nTeam contributions count successful actions, not points.",text);
             }
             if(hud.coop!=null) GUI.Label(new Rect(180,620,920,75),hud.coop.DeviceSummary,text);
-            GUI.matrix=matrix; GUI.depth=0;
+            GUI.matrix=matrix; GUI.depth=0; GUI.color=previousColor; GUI.enabled=previousEnabled;
         }
     }
 }
