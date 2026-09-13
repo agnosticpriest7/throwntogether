@@ -1,6 +1,6 @@
 # Thrown Together — Development Roadmap
 
-Directional, not rigid. This document reflects the current implemented game rather than the original prototype plan.
+Directional, not rigid. This document reflects the current implemented game and the current design direction rather than the original prototype plan.
 
 ## Current implemented baseline — 0.17.x
 
@@ -18,7 +18,7 @@ Thrown Together is now well beyond the original vertical slice. The current game
 - ingredient prep, cooking, plating and serving
 - multiple ingredients, recipes and appliances
 - daily menu selection with a minimum of three dishes
-- recipe complexity/value progression
+- recipe complexity/value progression foundations
 - menu-variety bonus
 - Produce Rack and Refrigerator category storage
 - purchasable Griddle and Grill progression
@@ -34,7 +34,19 @@ Thrown Together is now well beyond the original vertical slice. The current game
 - studio/publisher/title startup sequence
 - controller-focused menus and diagnostics
 
-The next work should build on this baseline rather than recreate earlier prototype milestones.
+The next major work should prioritize gameplay depth over additional art polish. The central design direction is now **Expo + employees + physical kitchen layout + production flow**.
+
+---
+
+# Core Gameplay Direction
+
+Thrown Together should become a physical restaurant game where the player gradually builds a team capable of running the restaurant, while always retaining the ability to jump back into any hands-on job.
+
+The key optimization fantasy is:
+
+> **PlateUp optimizes machines. Thrown Together optimizes a living restaurant team.**
+
+Orders create work. The player decides what work enters the kitchen. Employees claim work according to their roles, skills and priorities. Kitchen layout determines how efficiently people and food move. As complexity grows, the player can increasingly act as Expediter/manager while still stepping onto a station whenever the restaurant needs help.
 
 ---
 
@@ -44,19 +56,19 @@ The project should support three distinct modes with different goals rather than
 
 ## Quick Play — Custom Restaurant Session
 
-**Purpose:** Flexible low-commitment play where the player chooses how demanding the session should be.
-
-Quick Play should allow the player to configure a restaurant/session without committing to the long-term Career structure or mandatory Endless escalation.
+**Purpose:** Flexible low-commitment play where the player chooses what kind of restaurant session to run.
 
 Direction:
 
-- choose available kitchen/layout
-- choose menu/dishes from available content
+- choose kitchen/layout
+- choose recipes from the available recipe pool
 - choose shift length / starting demand where appropriate
-- allow customer growth to be optional or player-controlled
+- customer growth may be optional or player-controlled
 - missed customers/orders do not automatically end the run by default
 - suitable for experimenting with layouts, recipes, employees and co-op
 - useful as a relaxed couch-play mode
+
+Whether Quick Play exposes every recipe immediately or is partially gated by Career progression remains an open design decision.
 
 Future options may include difficulty presets, custom customer counts, employee/equipment starting conditions and optional arcade failure rules.
 
@@ -69,13 +81,31 @@ The current mode labeled Career most closely resembles this concept and should u
 Core Endless rules:
 
 - one persistent restaurant for the run
+- choose the active menu from available recipes
 - normal between-day management remains available
 - player can buy appliances, rearrange the kitchen, hire/train staff and expand
-- customer demand increases every day automatically
+- workload increases every day automatically
 - escalation is mandatory rather than optional
 - difficulty should continue rising until the restaurant eventually fails
 - if a customer leaves because their order was not served before patience expires, the run ends
 - ordinary kitchen mistakes such as dropping/burning/wasting food are not themselves instant game over; they matter because they consume time and can cause a customer to leave
+
+### Endless workload model
+
+Endless should not simply add a fixed number of customers every day regardless of restaurant type.
+
+Use a rising **workload/demand budget**. Menu complexity and dining setup convert that budget into the actual number and shape of orders.
+
+Examples:
+
+- simple, fast menu → more individual orders
+- complex menu → fewer orders, but more work per ticket
+- Double/Family Tables → fewer parties but larger simultaneous bursts
+- To-Go Counter → additional kitchen throughput without consuming dining tables
+
+Increasing recipe difficulty or table size may reduce total party/order count by a percentage while the overall workload still rises from day to day.
+
+This allows a fast-food restaurant and a high-end restaurant to reach comparable difficulty through very different service patterns.
 
 End-of-run summary should emphasize:
 
@@ -89,7 +119,7 @@ Long-term consideration: local/personal best records and eventual leaderboard-st
 
 Endless answers the question:
 
-> **How long can this restaurant survive as demand keeps increasing?**
+> **How long can this restaurant survive as workload keeps increasing?**
 
 ## Career — Build a Restaurant Company
 
@@ -98,6 +128,92 @@ Endless answers the question:
 Career should be broader and more strategic than Endless. A poor service day creates consequences but does **not** erase the player's company or end the campaign.
 
 Career progression should grow from one hands-on restaurant into a multi-location restaurant business.
+
+### Career starting groups
+
+Career should begin by choosing one of a small number of starter food groups rather than choosing an irreversible restaurant class.
+
+Initial planned starter groups:
+
+- **Burgers**
+- **Italian**
+- **Mexican**
+
+Each group begins with a small, simple three-item menu that teaches a few different production areas.
+
+Burger example:
+
+- Basic Burger
+- Fries
+- Soft Drink
+
+Italian and Mexican starter trios are still to be designed.
+
+The starter group only determines where the restaurant begins. It does not permanently define the restaurant's concept.
+
+### Mastery = depth
+
+Serving food successfully earns **Food Mastery** within its family.
+
+Mastery should unlock deeper variations and more demanding production options within food the player already understands.
+
+Burger-family example direction:
+
+- Basic Burger
+- Cheeseburger
+- Bacon / Mushroom variants
+- Double Burger
+- premium/gourmet burger variants
+- eventual signature burger possibilities
+
+Fries and beverages can have their own mastery branches.
+
+Mastery should not simply create linear stat upgrades. New recipes should change workload, station pressure, ingredients, prep and assembly.
+
+### Reputation = breadth
+
+Reputation expands the player's culinary opportunity pool.
+
+Direction:
+
+- low reputation mostly exposes recipes from the three starter groups
+- at milestones, the player receives a controlled random selection of new recipe opportunities
+- skipped recipes are not permanently lost; they can return later
+- around Reputation 10, a mid-tier set of cuisine groups should begin entering the opportunity pool (exact threshold/tuning remains provisional)
+- later reputation tiers introduce more specialized cuisine families, ingredients, appliances and staff needs
+
+This creates varied Careers without allowing pure randomness to permanently derail the player's preferred direction.
+
+### Recipe opportunity draft
+
+A typical unlock should present a small choice, such as **choose 1 of 3 opportunities**.
+
+An opportunity may introduce:
+
+- a new recipe
+- a new ingredient
+- a new appliance requirement
+- access to a new food family
+
+New recipe access should create physical operational consequences rather than simply expanding a menu list.
+
+### Restaurant identity emerges from play
+
+Career should not force arbitrary permanent restaurant classes.
+
+Restaurant identity should emerge from:
+
+- chosen menu
+- recipe complexity
+- equipment
+- staffing
+- prep strategy
+- table mix
+- takeout capacity
+- pricing/economy
+- reputation
+
+A player can remain a high-volume burger restaurant forever, evolve into an upscale burger concept, mix in Italian/Mexican dishes, or eventually operate multiple restaurants with different concepts.
 
 ### Early Career — Owner/operator
 
@@ -109,6 +225,7 @@ Career progression should grow from one hands-on restaurant into a multi-locatio
 - expand kitchen/dining capacity
 - hire first employees
 - improve reputation
+- earn food mastery
 
 ### Established Restaurant
 
@@ -128,7 +245,8 @@ Future Career employee depth:
 - role skills / strengths / weaknesses
 - experience gained through work
 - wages
-- training
+- training / cross-training
+- task priorities
 - promotions
 - employment history
 - transfers between locations
@@ -170,11 +288,172 @@ Career answers the question:
 
 ---
 
-# Shared Systems — Next Development Priorities
+# Highest-Priority Gameplay Work
 
-These systems benefit all three modes and should generally be developed before mode-specific late-game content.
+These systems should be pursued before another major art pass.
 
-## 1. Physical Xbox / couch-co-op validation
+## 1. Physical Expo / Order Rail
+
+This is the next major gameplay milestone.
+
+Add a physical **Expo Counter / Order Rail** in the kitchen.
+
+Flow:
+
+**Dining-room order → Waiting ticket → Player fires ticket → Active kitchen queue → Production → Completed dish / Expo → Server / customer**
+
+Direction:
+
+- customer orders first exist in a Waiting Orders pool
+- player physically walks to the Expo station and interacts with it
+- show recipe and customer urgency/patience clearly
+- player chooses which order to fire next
+- allow multiple fired orders at once
+- fired queue should have a limited starting capacity rather than accepting everything automatically
+- player can prioritize/reorder work where appropriate
+- completed dishes should remain associated with their ticket/order
+- eventually the Expediter role can be hired/trained out to an employee
+
+The player should be able to spend a busy service acting primarily as Expediter, then leave Expo and personally help whichever station is failing.
+
+The system should first be proven with the player still doing the cooking manually before attempting full kitchen-employee automation.
+
+## 2. Employee Kitchen Orchestration
+
+Employees should not simply remove a mechanic from the player. They should form a configurable production team.
+
+Future roles may include:
+
+- prep cook
+- grill / fryer / griddle station chefs
+- general line cook
+- beverage specialist/director
+- pastry chef
+- dishwasher
+- server
+- busser
+- host
+- Expediter
+- supervisor / kitchen manager
+
+Design principle:
+
+> Employees are assigned work types, stations and priorities rather than each employee blindly owning a complete customer order.
+
+Fired tickets can eventually decompose into available tasks. Employees claim tasks they are qualified and prioritized to perform.
+
+Example employee priorities:
+
+**Dishwasher**
+1. Wash dishes
+2. Restock clean plates
+3. Prep potatoes when dish queue is clear
+
+**Prep Cook**
+1. Keep tomato Prep Bin stocked
+2. Keep lettuce Prep Bin stocked
+3. Help another approved task when buffers are full
+
+This is the human-staff equivalent of an automation network.
+
+## 3. Physical Employee Traffic and Congestion
+
+Kitchen layout should matter because employees occupy real space.
+
+Direction:
+
+- employees cannot simply walk through each other
+- brief yielding / sidestepping is acceptable
+- reroute if blocked long enough
+- never allow permanent pathfinding deadlocks
+- poor layout should cost time, not break the simulation
+- station access, food movement and staff routes should remain visually understandable
+
+The player should be able to look at a bad service and realize that two employees repeatedly crossing the same aisle is the problem, then fix that problem through Arrange Kitchen.
+
+## 4. Service Pacing, Complexity and Patience
+
+Current service should move toward fewer, more meaningful orders rather than relying on a constant stream of fast-expiring tickets.
+
+Customer patience should relate to the expected complexity of the ordered food rather than relying only on one global timer.
+
+Direction:
+
+- simple/fast dishes → shorter expected wait, high potential volume
+- complex/high-end dishes → longer expected wait, lower volume, higher value
+- recipe complexity contributes to expected service time
+- future customer traits may further modify patience
+- service should have enough breathing room for Expo decisions to matter
+
+This supports restaurants ranging from fast-food throughput to high-end dining execution.
+
+## 5. Prep Bins / Production Buffers
+
+Add a purchasable **Prep Bin**.
+
+Current direction:
+
+- one bin holds one processed ingredient type at a time
+- starting capacity: about 5
+- upgrades: roughly 8–10
+- bin choice should matter based on the active menu
+- prep employees can eventually keep designated bins stocked
+
+Example:
+
+**Prep Cook → processed potato Prep Bin → Fry/Griddle Cook**
+
+Prep Bins should turn menu planning and advance preparation into a real production strategy rather than simply increasing storage.
+
+## 6. Dining Capacity and Demand-Shaping Equipment
+
+Add dining/service options that allow players to deliberately take on more throughput and risk.
+
+### Standard Table
+
+Normal small-party service.
+
+### Double Table
+
+- generates multiple simultaneous orders
+- better revenue opportunity per seating event
+- creates burst pressure
+
+### Family Table
+
+- larger parties / larger simultaneous ticket bursts
+- fewer parties may arrive overall for equivalent workload
+- strong income potential but greater risk if kitchen is unprepared
+
+### To-Go Counter (Dining Side)
+
+- orders do not consume a dining table
+- adds kitchen throughput
+- reduced income per to-go plate compared with equivalent dine-in food
+- can eventually have dedicated service staff
+
+Owning more/larger tables should not automatically manufacture demand. Reputation/advertising/Endless workload determine how much demand exists; tables and takeout determine how that demand can be accepted and shaped.
+
+## 7. Menu / Mastery / Reputation Progression
+
+Before implementing a large quantity of new dishes, define:
+
+- Burger starter tree
+- Italian starter tree
+- Mexican starter tree
+- first mastery branches
+- initial recipe-complexity ratings
+- reputation opportunity tiers
+- first mid-tier cuisine groups
+- appliance/ingredient dependencies
+
+This design work should be settled enough that Codex can build against a coherent progression model rather than adding recipes ad hoc.
+
+---
+
+# Other Shared Development Priorities
+
+## Physical Xbox / couch-co-op validation
 
 Continue real-device testing of:
 
@@ -188,7 +467,7 @@ Continue real-device testing of:
 
 Automated tests must not substitute for physical controller verification.
 
-## 2. Kitchen layout and expansion refinement
+## Kitchen layout and expansion refinement
 
 Continue developing the current physical arrangement system.
 
@@ -204,7 +483,7 @@ Direction:
 
 Future consideration: saved layout presets for different menu styles once the game has enough content to justify them.
 
-## 3. More appliances / ingredients / recipes
+## More appliances / ingredients / recipes
 
 Continue expanding content through systems that reuse existing ingredients rather than introducing isolated one-appliance/one-dish branches.
 
@@ -212,23 +491,9 @@ Design principle:
 
 > A new appliance should create new uses for ingredients the player already understands while adding only a manageable amount of new pantry complexity.
 
-Recipe value should continue scaling with operational complexity, including ingredient count, preparation stages, appliance requirements and multi-component assembly.
+Recipe value should scale with operational complexity, including ingredient count, preparation stages, appliance requirements and multi-component assembly.
 
-## 4. Employee depth
-
-Build outward from the existing server, busser and dishwasher systems.
-
-Likely future roles:
-
-- prep cook
-- line/station cook
-- host
-- supervisor
-- manager
-
-Progress toward skills, experience, wages, promotion and transfer carefully, keeping employees readable and emotionally persistent.
-
-## 5. Reputation, demand and advertising
+## Reputation, demand and advertising
 
 Career especially needs demand driven by restaurant success rather than mandatory daily escalation.
 
@@ -240,9 +505,9 @@ Direction:
 - service quality affects reputation
 - small high-reputation restaurants remain viable
 
-Endless should use its own mandatory escalation curve rather than relying only on Career reputation mechanics.
+Endless should use its own mandatory workload curve rather than relying only on Career reputation mechanics.
 
-## 6. Economy depth
+## Economy depth
 
 Current purchase/resale/training systems provide the foundation.
 
@@ -260,7 +525,7 @@ Existing direction remains:
 - no ingredient spoilage/decay for now
 - no repair/maintenance economy as a core money sink
 
-## 7. Main menu / presentation polish
+## Main menu / presentation polish
 
 Continue integrating the game's persistent restaurant identity into presentation.
 
@@ -275,7 +540,7 @@ Direction:
 
 Use the restaurant world itself where practical rather than disconnected generic menus.
 
-## 8. Audio / music
+## Audio / music
 
 Build on the existing audio foundation with:
 
@@ -288,9 +553,11 @@ Build on the existing audio foundation with:
 
 Preferred musical identity: warm playful indie-funk / light jazzy restaurant groove rather than frantic comedy music.
 
-## 9. Art and character polish
+## Art and character polish
 
-Continue the approved stylized 3D / 2.5D direction:
+Continue the approved stylized 3D / 2.5D direction, but gameplay work currently takes priority over another large visual pass.
+
+Direction:
 
 - angled orthographic camera
 - readable work surfaces and appliance fronts
@@ -323,19 +590,16 @@ Do not require all owned restaurants to run as fully rendered live scenes simult
 - moving a strong worker should benefit one restaurant while weakening another
 - preserve hire date / role history / progression where practical
 
-## Restaurant concepts
+## Signature dishes
 
-Career should not force arbitrary restaurant classes.
+Possible later Career system once normal mastery progression is proven:
 
-Concept should emerge primarily from:
+- allow experienced restaurants to create a limited number of signature dishes
+- combine unlocked components within a known food family
+- calculate resulting production complexity, ingredient cost, expected wait and value
+- let the player name the dish
 
-- menu
-- equipment
-- layout
-- pricing
-- decor/theme where eventually supported
-
-A burger-focused restaurant may gradually broaden its menu or remain specialized indefinitely.
+Do not build this before the standard recipe/mastery system is fun and understandable.
 
 ---
 
@@ -347,11 +611,12 @@ Tune mandatory daily growth using real playtests.
 
 Potential escalation levers:
 
-- customer count
+- workload budget
+- party/customer count
 - arrival spacing
-- patience
-- menu complexity pressure
-- simultaneous table demand
+- recipe complexity
+- table-size burst pressure
+- takeout volume
 
 Avoid difficulty increases that merely feel unfair or remove meaningful player counterplay.
 
@@ -386,9 +651,9 @@ Quick Play should remain the least restrictive mode.
 Potential configuration options:
 
 - kitchen/layout
-- menu
+- recipes
 - shift length
-- starting customer count
+- starting customer pressure
 - demand growth on/off
 - employee availability
 - starting cash/equipment presets
@@ -421,18 +686,26 @@ Do not require every configuration option immediately. Add them as shared system
 - store assets
 - release pipeline
 
-## Campaign / authored challenges
+## Xbox
 
-A separate authored challenge / three-star mode remains optional and is not currently a primary development priority. Revisit only if it adds something meaningfully different from Quick Play, Endless and Career.
+After the core game is proven and stable on PC:
+
+- controller-only usability throughout
+- account/sign-in integration as required
+- suspend/resume
+- save behavior
+- platform UI
+- multiple-controller/user handling
+- certification and performance work
 
 ---
 
-# Mode identity summary
+# Mode Identity Summary
 
-| Mode | Core fantasy | Demand growth | Missed customer |
-| --- | --- | --- | --- |
-| **Quick Play** | Play the restaurant session you want | Player choice | Normally continue |
-| **Endless** | Survive as long as possible | Mandatory and increasing | Run ends |
-| **Career** | Build a restaurant company | Reputation/growth driven | Business consequence, continue |
+| Mode | Core fantasy | Menu approach | Demand growth | Missed customer |
+| --- | --- | --- | --- | --- |
+| **Quick Play** | Play the restaurant session you want | Player chooses available recipes | Player choice | Normally continue |
+| **Endless** | Survive as long as possible | Player chooses available recipes | Mandatory rising workload, modified by complexity/table mix | Run ends |
+| **Career** | Build a restaurant company | Starter group → Mastery depth + Reputation breadth | Reputation/growth driven | Business consequence, continue |
 
-The three modes should share the same core cooking, restaurant, layout, employee and content systems while applying different progression and failure rules.
+The three modes should share the same core cooking, Expo, restaurant, layout, employee and content systems while applying different progression and failure rules.
