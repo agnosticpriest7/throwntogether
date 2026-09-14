@@ -97,3 +97,5 @@ Reused management, colliders, staff routes and atomic account storage. Added foc
 2026-09-11 — Day Complete hub, repeat equipment/plates, 75% resale, $100 rearrangement and employee training/task chaining implemented and verified. 161 final automated checks; canonical live MCP and Web review. Account-wide token/credit usage unavailable; no usage amount estimated.
 
 2026-09-14 — Expo production integration and persistent dish strip. Reused reviewed Claude ticket/browser work and existing recipes, icons, furniture, save and service systems. Final candidate has 201 passing automated checks. Account-wide usage unavailable; no credit saving or token estimate recorded. Release/live review provenance is in DEVELOPMENT_NOTES.md.
+
+2026-09-14 — Resumed Expo verification/deployment after approval-service recovery. Fixed only the scaled READY marker, completed live canonical service and next-day checks, reran all 201 tests and deployed 0.18.0-dev. No usage estimate; physical TV/controller review remains with the owner.
