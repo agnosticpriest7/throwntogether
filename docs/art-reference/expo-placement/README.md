@@ -5,3 +5,4 @@
 - compact-browsers.png: final compact panels and corrected draw order, two synthetic controller chefs.
 
 See ../../EXPO_IMPLEMENTATION.md for test provenance and remaining production startup/deployment work.
+- production-hold.png: actual production Game View, automatic Expo and persistent HOLD dish strip, 2026-09-14.

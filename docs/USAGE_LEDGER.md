@@ -95,3 +95,5 @@ Extended both logo holds to three seconds, imported supplied Twist artwork, and 
 Reused management, colliders, staff routes and atomic account storage. Added focused placement/controller tests, live MCP cooking verification and full pipeline verification. Used supplied artwork directly; no art generation. Account-wide usage not available; no usage estimate recorded.
 
 2026-09-11 — Day Complete hub, repeat equipment/plates, 75% resale, $100 rearrangement and employee training/task chaining implemented and verified. 161 final automated checks; canonical live MCP and Web review. Account-wide token/credit usage unavailable; no usage amount estimated.
+
+2026-09-14 — Expo production integration and persistent dish strip. Reused reviewed Claude ticket/browser work and existing recipes, icons, furniture, save and service systems. Final candidate has 201 passing automated checks. Account-wide usage unavailable; no credit saving or token estimate recorded. Release/live review provenance is in DEVELOPMENT_NOTES.md.
