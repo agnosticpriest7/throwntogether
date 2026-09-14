@@ -99,3 +99,5 @@ Reused management, colliders, staff routes and atomic account storage. Added foc
 2026-09-14 — Expo production integration and persistent dish strip. Reused reviewed Claude ticket/browser work and existing recipes, icons, furniture, save and service systems. Final candidate has 201 passing automated checks. Account-wide usage unavailable; no credit saving or token estimate recorded. Release/live review provenance is in DEVELOPMENT_NOTES.md.
 
 2026-09-14 — Resumed Expo verification/deployment after approval-service recovery. Fixed only the scaled READY marker, completed live canonical service and next-day checks, reran all 201 tests and deployed 0.18.0-dev. No usage estimate; physical TV/controller review remains with the owner.
+
+2026-09-14 — Owner correction: stable Expo rows with explicit Fire/Hold commands; Hold never blocks manual/server delivery. Reused existing menu/input, board and claim architecture. 204 candidate automated checks passed; live held-order cooking/delivery verified. Account-wide usage unavailable; no estimate recorded.

@@ -42,3 +42,6 @@ Supersedes the explicit-only installation limitation above. RestaurantDay now in
 Full candidate verification e17feaa: 77 EditMode + 110 PlayMode + 14 Web checks. All three actual career layouts pass Expo/purchase placement validation. See DEVELOPMENT_NOTES.md for live review provenance, release status and TV checklist.
 
 Release complete: 0.18.0-dev, tested source 15d7740b6a06a6f08f19c6bc95a979d49eaa0dea, Pages f5b30a8475112fd20865ec70a5d850cf46e438ed. Final 201 checks passed; full live canonical cooking/delivery/co-op/closing/next-day review completed using memory-only accounts and synthetic pads. See DEVELOPMENT_NOTES.md for exact evidence and physical TV/controller limitations.
+
+## 0.18.1 owner correction
+Supersedes the earlier Fire-gated delivery design. Fire/Hold is a kitchen work instruction only. Menu/strip use stable arrival order; explicit left/right action selection and A apply do not reorder tickets. Hold preserves physical reservations/claims while releasing active work capacity. Manual and server delivery accepts any matching live order, including HOLD; servers match oldest eligible arrival. Cancellation, stale claim and once-only settlement boundaries remain enforced.
