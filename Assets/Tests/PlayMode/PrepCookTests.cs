@@ -20,6 +20,13 @@ namespace ThrownTogether.Tests
             Time.timeScale=1;RestaurantAccounts.UseStorage(new Memory());var account=RestaurantAccounts.Current;
             int paid=account.StartDay();account.Settle(paid,2000,0);
             Assert.IsTrue(account.Buy("prep-cook",150));Assert.IsTrue(account.BuyEquipment("prep-bin",60));
+            if(TestContext.CurrentContext.Test.Name.StartsWith("Restock"))
+            {
+                account.BuyEquipment("prep-bin",60);var owned=account.Equipment("prep-bin",60).ToArray();
+                var potato=DailyMenu.Catalog.SelectMany(r=>r.steps).Select(p=>p.ingredient).First(i=>i!=null && i.visualKind==IngredientVisualKind.Potato);
+                var mushroom=DailyMenu.Catalog.SelectMany(r=>r.steps).Select(p=>p.ingredient).First(i=>i!=null && i.visualKind==IngredientVisualKind.Mushroom);
+                Assert.IsTrue(account.AssignPrepBins(0,true,new[]{new PrepBinAssignment{bin="purchase:"+owned[0].instanceId,ingredient=potato.id},new PrepBinAssignment{bin="purchase:"+owned[1].instanceId,ingredient=mushroom.id}}));
+            }
             account.SetMenu(DailyMenu.Catalog.Where(r=>r.requiredPurchases.Length==0).Select(r=>r.id).ToArray());
             SessionOptions.ShiftOrders=0;SessionOptions.Kitchen=0;original=SceneManager.GetActiveScene();
             suspended=Object.FindObjectsByType<RestaurantHud>().Any(h=>h.gameObject.scene==original)?original.GetRootGameObjects().Where(g=>g.activeSelf).ToArray():new GameObject[0];
@@ -31,7 +38,7 @@ namespace ThrownTogether.Tests
 #endif
             scene=SceneManager.GetSceneAt(SceneManager.sceneCount-1);SceneManager.SetActiveScene(scene);yield return null;
             day=Object.FindObjectsByType<RestaurantDay>().Single(d=>d.gameObject.scene==scene);
-            bin=Object.FindObjectsByType<PrepBin>().Single(b=>b.gameObject.scene==scene);
+            bin=Object.FindObjectsByType<PrepBin>().First(b=>b.gameObject.scene==scene);
             prep=Object.FindObjectsByType<ProcessingStation>().First(p=>p.gameObject.scene==scene && p.requiresAttendance);
             fries=DailyMenu.Catalog.First(r=>r.ingredient.visualKind==IngredientVisualKind.Potato && r.requiredState==FoodState.Cooked && r.additionalIngredients.Length==0);
             source=Object.FindObjectsByType<SourceStation>().First(s=>s.gameObject.scene==scene && s.Offers(fries.ingredient));
@@ -48,6 +55,27 @@ namespace ThrownTogether.Tests
         KitchenTicket Seat(int index=0)
         {var t=day.Tables[index];t.ReserveSeat();t.Seat(fries);return day.Expo.TicketFor(t);}
         void Tick(int frames=800){for(int i=0;i<frames;i++)day.PrepCook.Advance(.1f);}
+        [Test] public void RestockFillsTwoAssignedBinsWithoutOrdersAndReplacesTakenFood()
+        {
+            var assignment=RestaurantAccounts.Current.PrepAssignment(0);var bins=day.GetComponent<KitchenFurniture>().PrepBins;
+            Assert.IsEmpty(day.Expo.OpenTickets);Tick(5000);
+            foreach(var a in assignment.bins){var target=bins.Single(b=>b.Key==a.bin).Value;Assert.AreEqual(5,target.Count,day.PrepCook.Status);Assert.AreEqual(a.ingredient,target.Ingredient.id);}
+            var first=bins.Single(b=>b.Key==assignment.bins[0].bin).Value;
+            var player=Object.FindObjectsByType<ChefController>().First(c=>c.gameObject.scene==scene);
+            Assert.IsTrue(first.Take(player.Hands));Tick(1000);Assert.AreEqual(5,first.Count);Assert.IsNotNull(player.Hands.Item,"Restocking must count bin stock, not player-held stock");
+            Assert.IsEmpty(day.Expo.OpenTickets);Assert.IsEmpty(day.PrepCook.Production.Ledger.Claims);
+        }
+        [Test] public void RestockRetainsFoodWhenPlayerFillsItsBinAndResumesAfterSpaceClears()
+        {
+            for(int i=0;i<500 && day.PrepCook.Hands.Item==null;i++)day.PrepCook.Advance(.1f);
+            var item=day.PrepCook.Hands.Item;Assert.IsNotNull(item,day.PrepCook.Status);
+            var assigned=RestaurantAccounts.Current.PrepAssignment(0).bins.Single(b=>b.ingredient==item.Payload.ingredient.id);
+            var target=day.GetComponent<KitchenFurniture>().PrepBins.Single(b=>b.Key==assigned.bin).Value;
+            for(int i=0;i<5;i++){var portion=Object.Instantiate(source.itemPrefab);portion.Configure(new ItemPayload{ingredient=item.Payload.ingredient,state=FoodState.Cut});Assert.IsTrue(target.Store(portion));}
+            Tick(1000);Assert.AreSame(item,day.PrepCook.Hands.Item);Assert.AreEqual(FoodState.Cut,item.Payload.state);Assert.AreEqual(5,target.Count);
+            var player=Object.FindObjectsByType<ChefController>().First(c=>c.gameObject.scene==scene);Assert.IsTrue(target.Take(player.Hands));Tick(500);
+            Assert.AreSame(target,item.GetComponentInParent<PrepBin>());Assert.AreEqual(5,target.Count);
+        }
         Carryable ManualPortion(FoodState state)
         {var item=Object.Instantiate(source.itemPrefab);item.Configure(new ItemPayload{ingredient=fries.ingredient,state=state});return item;}
         [Test] public void FiredOrderGetsPhysicalPrepAndHoldPreservesTheCollectedFood()
@@ -115,7 +143,10 @@ namespace ThrownTogether.Tests
                 menu.SelectRow(System.Array.FindIndex(menu.VisibleOptions,s=>s=="Employee Management"));Press(GamepadButton.South);Assert.AreEqual("Employees",menu.Page);
                 menu.SelectRow(System.Array.FindIndex(menu.VisibleOptions,s=>s=="Prep cook assignment"));Press(GamepadButton.South);Assert.AreEqual("Prep cook",menu.Page);
                 Press(GamepadButton.DpadRight);Assert.IsNotEmpty(RestaurantAccounts.Current.PrepAssignment(0).station);
-                Press(GamepadButton.DpadDown);Assert.AreEqual(1,menu.Selection);Press(GamepadButton.South);Assert.IsNotEmpty(RestaurantAccounts.Current.PrepAssignment(0).ingredient);
+                Press(GamepadButton.DpadDown);Assert.AreEqual(1,menu.Selection);Press(GamepadButton.South);Assert.IsTrue(RestaurantAccounts.Current.PrepAssignment(0).restock);
+                Press(GamepadButton.DpadDown);Press(GamepadButton.South);Assert.AreEqual(1,RestaurantAccounts.Current.PrepAssignment(0).bins.Length);
+                Press(GamepadButton.DpadUp);Press(GamepadButton.South);Assert.IsFalse(RestaurantAccounts.Current.PrepAssignment(0).restock);
+                Press(GamepadButton.DpadDown);Press(GamepadButton.South);Assert.IsNotEmpty(RestaurantAccounts.Current.PrepAssignment(0).ingredient);
                 Press(GamepadButton.East);Assert.AreEqual("Employees",menu.Page);Press(GamepadButton.East);Assert.AreEqual("Restaurant",menu.Page);
                 var furniture=day.GetComponent<KitchenFurniture>();var offer=day.Settings.purchases.First(o=>o.id=="prep-bin");
                 Assert.IsTrue(furniture.TryPurchase(offer),furniture.Message);var owned=RestaurantAccounts.Current.Data.equipment.Last();

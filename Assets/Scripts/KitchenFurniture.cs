@@ -72,6 +72,7 @@ namespace ThrownTogether
         Piece At(int slot)=>pieces.FirstOrDefault(p=>p.slot==slot);
         public Transform Find(string id)=>pieces.FirstOrDefault(p=>p.id==id)?.root;
         public KeyValuePair<string,ProcessingStation>[] PrepStations=>pieces.Where(p=>p.root!=null).Select(p=>new KeyValuePair<string,ProcessingStation>(p.id,p.root.GetComponentInChildren<ProcessingStation>())).Where(p=>p.Value!=null && p.Value.requiresAttendance).ToArray();
+        public KeyValuePair<string,PrepBin>[] PrepBins=>pieces.Where(p=>p.root!=null).Select(p=>new KeyValuePair<string,PrepBin>(p.id,p.root.GetComponentInChildren<PrepBin>())).Where(p=>p.Value!=null).ToArray();
         public bool TryPurchase(RestaurantUpgradeDefinition offer)
         {
             if(!CanEdit || offer==null || offer.stationPrefab==null)return false;

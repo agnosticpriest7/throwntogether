@@ -5,7 +5,8 @@ namespace ThrownTogether
 {
     [Serializable] public sealed class OwnedEquipment { public string instanceId, offerId; public int paid; }
     [Serializable] public sealed class StaffTraining { public string role; public int level; }
-    [Serializable] public sealed class PrepCookAssignment { public int kitchen; public string station="",ingredient=""; }
+    [Serializable] public sealed class PrepBinAssignment { public string bin="",ingredient=""; }
+    [Serializable] public sealed class PrepCookAssignment { public int kitchen; public string station="",ingredient=""; public bool restock; public PrepBinAssignment[] bins=new PrepBinAssignment[0]; }
     [Serializable] public sealed class RestaurantSave
     {
         public int schemaVersion=1, cash, nextDay=1, activeDay, settledDay, completedDays;
@@ -92,11 +93,21 @@ namespace ThrownTogether
         public static int Resale(int cost)=>Mathf.FloorToInt(cost*.75f);
         public int TrainingLevel(string role)=>Data.training.FirstOrDefault(t=>t.role==role)?.level??0;
         public PrepCookAssignment PrepAssignment(int kitchen)
-        {var a=Data.prepAssignments.FirstOrDefault(p=>p!=null && p.kitchen==kitchen);return new PrepCookAssignment{kitchen=kitchen,station=a?.station??"",ingredient=a?.ingredient??""};}
+        {var a=Data.prepAssignments.FirstOrDefault(p=>p!=null && p.kitchen==kitchen);return new PrepCookAssignment{kitchen=kitchen,station=a?.station??"",ingredient=a?.ingredient??"",restock=a?.restock??false,bins=(a?.bins??new PrepBinAssignment[0]).Where(b=>b!=null).Select(b=>new PrepBinAssignment{bin=b.bin,ingredient=b.ingredient}).ToArray()};}
         public bool AssignPrep(int kitchen,string station,string ingredient)
         {
             if(!Owns("prep-cook") || Data.activeDay>Data.settledDay || kitchen<0 || kitchen>2 || station==null || ingredient==null)return false;
-            var next=Copy();next.prepAssignments=next.prepAssignments.Where(a=>a!=null && a.kitchen!=kitchen).Concat(new[]{new PrepCookAssignment{kitchen=kitchen,station=station,ingredient=ingredient}}).ToArray();return Commit(next);
+            var assignment=PrepAssignment(kitchen);assignment.station=station;assignment.ingredient=ingredient;return SavePrep(assignment);
+        }
+        public bool AssignPrepBins(int kitchen,bool restock,PrepBinAssignment[] bins)
+        {
+            if(bins==null || bins.Any(b=>b==null || string.IsNullOrEmpty(b.bin) || string.IsNullOrEmpty(b.ingredient)) || bins.Select(b=>b.bin).Distinct().Count()!=bins.Length)return false;
+            var assignment=PrepAssignment(kitchen);assignment.restock=restock;assignment.bins=bins.Select(b=>new PrepBinAssignment{bin=b.bin,ingredient=b.ingredient}).ToArray();return SavePrep(assignment);
+        }
+        bool SavePrep(PrepCookAssignment assignment)
+        {
+            if(!Owns("prep-cook") || Data.activeDay>Data.settledDay || assignment.kitchen<0 || assignment.kitchen>2)return false;
+            var next=Copy();next.prepAssignments=next.prepAssignments.Where(a=>a!=null && a.kitchen!=assignment.kitchen).Concat(new[]{assignment}).ToArray();return Commit(next);
         }
         public float StaffSpeed(string role)=>1+.1f*TrainingLevel(role);
         public int TrainingPrice(string role)=>50*(TrainingLevel(role)+1);

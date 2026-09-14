@@ -14,6 +14,7 @@ namespace ThrownTogether
         SourceStation source;Interactable destination;Carryable jobItem;float retry;
         enum Work {Idle,Fetch,ToPrep,Prep,Deposit}
         Work phase;
+        PrepBin restockBin;bool restockJob;int nextBin;
         public string Status {get;private set;}="Waiting for fired orders";
         public Carryable ReservedItem=>claim!=null?jobItem:null;
         public CarrySlot Hands=>hands;
@@ -43,7 +44,7 @@ namespace ThrownTogether
             if(heldClaim!=null)production.Ledger.Release(workerId,heldClaim.Id);
         }
         void Idle()
-        {station?.ReleaseStaff(this);Release();phase=Work.Idle;jobItem=null;destination=null;retry=.2f;}
+        {station?.ReleaseStaff(this);Release();phase=Work.Idle;jobItem=null;destination=null;restockBin=null;restockJob=false;retry=.2f;}
         bool OutputExists(ItemPayload food)=>Outputs(food).Any();
         Interactable[] Outputs(ItemPayload food)
         {
@@ -53,6 +54,11 @@ namespace ThrownTogether
         }
         bool DepositRoute()
         {
+            if(restockJob)
+            {
+                if(restockBin!=null && restockBin.CanStore(hands.Item.Payload) && Go(restockBin))return true;
+                Wait("Assigned bin full, blocked or unavailable — food retained");return false;
+            }
             foreach(var output in Outputs(hands.Item.Payload))if(Go(output))return true;
             Wait("Waiting for free counter or prep bin");return false;
         }
@@ -62,6 +68,25 @@ namespace ThrownTogether
             var boards=day.GetComponent<KitchenFurniture>().PrepStations
                 .Where(p=>string.IsNullOrEmpty(assignment.station) || p.Key==assignment.station).Select(p=>p.Value).ToArray();
             if(boards.Length==0){Wait("Assigned prep station missing — update assignment");return;}
+            if(assignment.restock)
+            {
+                var bins=day.GetComponent<KitchenFurniture>().PrepBins;
+                var ingredients=DailyMenu.Catalog.SelectMany(r=>r.steps).Where(s=>s!=null && s.input==FoodState.Raw && s.output==FoodState.Cut).Select(s=>s.ingredient).Where(i=>i!=null && i.Unlocked).Distinct().ToArray();
+                for(int n=0;n<assignment.bins.Length;n++)
+                {
+                    int index=(nextBin+n)%assignment.bins.Length;var assigned=assignment.bins[index];
+                    var target=bins.FirstOrDefault(b=>b.Key==assigned.bin).Value;
+                    var wanted=ingredients.FirstOrDefault(i=>i.id==assigned.ingredient);
+                    if(target==null || !target.isActiveAndEnabled || wanted==null || !target.CanStore(new ItemPayload{ingredient=wanted,state=FoodState.Cut}))continue;
+                    station=boards.FirstOrDefault(p=>p.isActiveAndEnabled && !p.Busy && p.slot.Item==null && p.SupportsPrep(wanted) && KitchenStaffRoute.ToStation(transform.position,p.transform)!=null);
+                    source=FindObjectsByType<SourceStation>(FindObjectsSortMode.None).FirstOrDefault(s=>s.gameObject.scene==gameObject.scene && s.Offers(wanted) && KitchenStaffRoute.ToStation(transform.position,s.transform)!=null);
+                    if(station==null || source==null || KitchenStaffRoute.ToStation(transform.position,target.transform)==null)continue;
+                    ingredient=wanted;restockJob=true;restockBin=target;nextBin=(index+1)%assignment.bins.Length;
+                    if(!Go(source)){Idle();continue;}
+                    phase=Work.Fetch;Status="Restocking "+ingredient.displayName;return;
+                }
+                Wait(assignment.bins.Length==0?"Assign ingredients to prep bins in Employees":"Assigned bins stocked or blocked — waiting");return;
+            }
             foreach(var wanted in production.Needed)
             {
                 if(!string.IsNullOrEmpty(assignment.ingredient) && wanted.id!=assignment.ingredient || production.Ledger.Available(wanted.id)==0)continue;
@@ -87,7 +112,7 @@ namespace ThrownTogether
             if(phase==Work.Fetch)
             {
                 production.Refresh();
-                if(production.Deficit(ingredient.id)==0){Idle();return;}
+                if(restockJob ? restockBin==null || !restockBin.CanStore(new ItemPayload{ingredient=ingredient,state=FoodState.Cut}) : production.Deficit(ingredient.id)==0){Idle();return;}
             }
             if(destination==null || !destination.isActiveAndEnabled)
             {
@@ -128,6 +153,7 @@ namespace ThrownTogether
             if(phase==Work.Deposit)
             {
                 if(hands.Item!=jobItem){Idle();return;}
+                if(restockJob && destination!=restockBin){DepositRoute();return;}
                 bool stored=destination is PrepBin bin?bin.Store(jobItem):destination.GetType()==typeof(CounterStation) && ((CounterStation)destination).slot.TryTake(jobItem);
                 if(stored){destination.ShowSuccess();Idle();return;}
                 DepositRoute();

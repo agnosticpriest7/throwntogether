@@ -252,12 +252,28 @@ namespace ThrownTogether
                 if(!stationIds.Contains(assignment.station)){stationIds=stationIds.Concat(new[]{assignment.station}).ToArray();labels=labels.Concat(new[]{"Missing station — choose another"}).ToArray();}
                 int selected=Math.Max(0,Array.IndexOf(stationIds,assignment.station));
                 Choice("Station",labels,()=>selected,v=>{if(!account.AssignPrep(SessionOptions.Kitchen,stationIds[v],assignment.ingredient))message=account.Problem;});
+                Choice("Work mode",new[]{"Fired orders only","Restock assigned bins"},()=>assignment.restock?1:0,v=>{if(!account.AssignPrepBins(SessionOptions.Kitchen,v==1,assignment.bins))message=account.Problem;});
                 var ingredients=DailyMenu.Catalog.Where(r=>r.Unlocked(account)).SelectMany(r=>r.steps).Where(p=>p!=null && p.input==FoodState.Raw && p.output==FoodState.Cut).Select(p=>p.ingredient).Where(i=>i!=null).Distinct().ToArray();
                 var ids=new[]{""}.Concat(ingredients.Select(i=>i.id)).ToArray();var names=new[]{"Automatic — fired orders"}.Concat(ingredients.Select(i=>i.displayName)).ToArray();
                 if(!ids.Contains(assignment.ingredient)){ids=ids.Concat(new[]{assignment.ingredient}).ToArray();names=names.Concat(new[]{"Unavailable ingredient — choose another"}).ToArray();}
                 int food=Math.Max(0,Array.IndexOf(ids,assignment.ingredient));
-                Choice("Ingredient",names,()=>food,v=>{if(!account.AssignPrep(SessionOptions.Kitchen,assignment.station,ids[v]))message=account.Problem;});
-                Add("Fired orders only • uses bins or free counters",()=>{});rows[rows.Count-1].enabled=false;
+                if(!assignment.restock)Choice("Ingredient",names,()=>food,v=>{if(!account.AssignPrep(SessionOptions.Kitchen,assignment.station,ids[v]))message=account.Problem;});
+                else
+                {
+                    var bins=furniture.PrepBins;
+                    foreach(var bin in bins)
+                    {
+                        string key=bin.Key;var assigned=assignment.bins.FirstOrDefault(b=>b.bin==key);
+                        var binIds=new[]{""}.Concat(ingredients.Select(i=>i.id)).ToArray();var binNames=new[]{"Unassigned"}.Concat(ingredients.Select(i=>i.displayName)).ToArray();
+                        if(assigned!=null && !binIds.Contains(assigned.ingredient)){binIds=binIds.Concat(new[]{assigned.ingredient}).ToArray();binNames=binNames.Concat(new[]{"Unavailable ingredient — choose another"}).ToArray();}
+                        int choice=Math.Max(0,Array.IndexOf(binIds,assigned?.ingredient??""));
+                        Choice("Bin — Bay "+(furniture.AssignedSlot(key)+1),binNames,()=>choice,v=>{var assignments=assignment.bins.Where(b=>b.bin!=key).ToList();if(v>0)assignments.Add(new PrepBinAssignment{bin=key,ingredient=binIds[v]});if(!account.AssignPrepBins(SessionOptions.Kitchen,true,assignments.ToArray()))message=account.Problem;});
+                    }
+                    foreach(var missing in assignment.bins.Where(a=>!bins.Any(b=>b.Key==a.bin)))
+                    {string key=missing.bin;Add("Missing bin — remove assignment",()=>account.AssignPrepBins(SessionOptions.Kitchen,true,assignment.bins.Where(b=>b.bin!=key).ToArray()));}
+                    if(bins.Length==0){Add("Buy a Prep Bin under Counters first",()=>{});rows[rows.Count-1].enabled=false;}
+                }
+                Add(assignment.restock?"Refills each assigned bin to 5, independent of orders":"Fired orders only • uses bins or free counters",()=>{});rows[rows.Count-1].enabled=false;
                 Add("Back to Employees",()=>SetPage("Employees"));return;
             }
             if(Page=="Shop") { BuildShopRows();return; }
