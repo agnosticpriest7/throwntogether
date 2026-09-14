@@ -151,7 +151,8 @@ namespace ThrownTogether.Tests
             Tick(1200);var partial=CookProduction.Snapshot(day).Single(o=>o.Ticket==ticket).Plate;Assert.IsNotNull(partial,day.Cook.Status);Assert.AreEqual(1,partial.Payload.IngredientCount);
             var counter=(CounterStation)CookProduction.Location(partial);chef.Hands.TryTake(partial);StockParts(ChickenFries);Tick(600);
             Assert.IsNull(pass.pickupSlot.Item);Assert.AreEqual(4,plates.CleanPlatesRemaining);Assert.AreSame(partial,chef.Hands.Item);StringAssert.Contains("player",day.Cook.Status);
-            counter.slot.TryTake(partial);Tick(2500);Assert.AreSame(partial,pass.pickupSlot.Item);Assert.IsTrue(ChickenFries.Matches(partial.Payload));
+            var free=Object.FindObjectsByType<CounterStation>().First(c=>c.gameObject.scene==scene && c.GetType()==typeof(CounterStation) && c.slot.Item==null);
+            Assert.IsTrue(free.slot.TryTake(partial));Tick(2500);Assert.AreSame(partial,pass.pickupSlot.Item,day.Cook.Status);Assert.IsTrue(ChickenFries.Matches(partial.Payload));
         }
         [Test] public void AllocationCountsSharedPortionsAndWholePlatesOnlyOnce()
         {
