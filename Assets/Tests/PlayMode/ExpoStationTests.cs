@@ -507,9 +507,9 @@ namespace ThrownTogether.Tests
             Assert.That(ExpoOrderStrip.Label(ticket),Is.EqualTo("READY"));Assert.That(ExpoOrderStrip.Tint(ticket).g,Is.GreaterThan(ExpoOrderStrip.Tint(ticket).r));
             Assert.That(ExpoOrderStrip.Visible(expo),Does.Contain(ticket));
             Assert.That(expo.TableFor(ticket).Deliver(dish),Is.True);
-            Assert.That(ExpoOrderStrip.Visible(expo),Does.Not.Contain(ticket),"Served tile vanishes immediately");
+            Assert.That(ExpoOrderStrip.Visible(expo),Has.No.Member(ticket),"Served tile vanishes immediately");
             var next=expo.WaitingTickets[0];Assert.That(expo.TryFire(next),Is.True);Assert.That(ExpoOrderStrip.Label(next),Is.EqualTo("MAKE"));
-            expo.TableFor(next).BeginDeparture();Assert.That(ExpoOrderStrip.Visible(expo),Does.Not.Contain(next));
+            expo.TableFor(next).BeginDeparture();Assert.That(ExpoOrderStrip.Visible(expo),Has.No.Member(next));
             yield return null;LogAssert.NoUnexpectedReceived();
         }
         [UnityTest] public IEnumerator FiringStaysPossibleAfterTenPmUntilTheDayActuallyCloses()
