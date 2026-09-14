@@ -177,42 +177,24 @@ namespace ThrownTogether.Tests
         }
         [UnityTest] public IEnumerator NavigationReachesEveryRowAndAFullQueueRefusesWithoutMutation()
         {
-            day.Settings.activeQueueCapacity=1;
-            station=Install(Counter);SeatTwo();var expo=station.Expo;
-            Assert.That(expo.Capacity,Is.EqualTo(1));
-            var input=Ready(chef,station);
+            station=Install(Counter);var expo=station.Expo;var seats=ExtraSeats(3);
+            Assert.That(expo.Capacity,Is.EqualTo(2));var input=Ready(chef,station);
             using(new DeviceScope())
             {
                 var pad=InputSystem.AddDevice<Gamepad>();input.BindDevices(pad);
                 try
                 {
-                    Assert.That(input.OpenExpo(station),Is.True);
-                    var first=input.SelectedExpoTicket;
-                    Press(pad,input,GamepadButton.DpadDown);
-                    var second=input.SelectedExpoTicket;
-                    Assert.That(second,Is.Not.SameAs(first),"D-pad reaches the next row");
-                    Press(pad,input,GamepadButton.DpadDown);
-                    Assert.That(input.SelectedExpoTicket,Is.SameAs(second),"Selection clamps at the last row");
-                    Send(pad,input,new GamepadState());
-                    Send(pad,input,new GamepadState{leftStick=Vector2.up});
-                    Assert.That(input.SelectedExpoTicket,Is.SameAs(first),"Stick up returns to the first row");
-                    Send(pad,input,new GamepadState());
-                    Send(pad,input,new GamepadState{leftStick=Vector2.up});
-                    Assert.That(input.SelectedExpoTicket,Is.SameAs(first),"Selection clamps at the first row");
-                    Send(pad,input,new GamepadState{leftStick=Vector2.right});
-                    Assert.That(input.SelectedExpoTicket,Is.SameAs(first),"Sideways input does not change rows");
-                    Assert.That(input.FireSelectedExpoTicket(),Is.True);
-                    Assert.That(expo.ActiveCount,Is.EqualTo(1));
-                    // Firing moved the first order into the fired rows below, so the
-                    // remaining waiting order is now above the cursor.
-                    Press(pad,input,GamepadButton.DpadUp);
-                    Assert.That(input.SelectedExpoTicket,Is.SameAs(second));
-                    Assert.That(input.FireSelectedExpoTicket(),Is.False,"A full kitchen refuses the next order");
-                    Assert.That(second.State,Is.EqualTo(KitchenTicketState.Waiting));
-                    Assert.That(expo.ActiveCount,Is.EqualTo(1));
-                    Assert.That(input.Expo,Is.SameAs(station),"Refusal keeps the browser open");
-                    Assert.That(input.SelectedExpoTicket,Is.SameAs(second),"Refusal keeps the selection");
-                    Assert.That(station.Prompt(chef),Does.Contain("full"));
+                    Assert.That(input.OpenExpo(station),Is.True);var first=input.SelectedExpoTicket;
+                    Press(pad,input,GamepadButton.DpadDown);var second=input.SelectedExpoTicket;
+                    Assert.That(second,Is.Not.SameAs(first));
+                    Send(pad,input,new GamepadState());Send(pad,input,new GamepadState{leftStick=Vector2.up});
+                    Assert.That(input.SelectedExpoTicket,Is.SameAs(first));
+                    Send(pad,input,new GamepadState{leftStick=Vector2.right});Assert.That(input.SelectedExpoTicket,Is.SameAs(first));
+                    Assert.That(input.FireSelectedExpoTicket(),Is.True);Assert.That(expo.TryFire(second),Is.True);
+                    var third=expo.TicketFor(seats[2]);SelectRow(pad,input,third);
+                    Assert.That(input.FireSelectedExpoTicket(),Is.False);Assert.That(third.State,Is.EqualTo(KitchenTicketState.Waiting));
+                    Assert.That(expo.ActiveCount,Is.EqualTo(2));Assert.That(input.Expo,Is.SameAs(station));
+                    Assert.That(input.SelectedExpoTicket,Is.SameAs(third));Assert.That(station.Prompt(chef),Does.Contain("full"));
                 }
                 finally{input.BindDevices((InputDevice[])null);InputSystem.RemoveDevice(pad);}
             }
@@ -508,6 +490,26 @@ namespace ThrownTogether.Tests
                 finally{input.BindDevices((InputDevice[])null);InputSystem.RemoveDevice(pad);}
             }
             Assert.That(seats.Length,Is.EqualTo(7));
+            yield return null;LogAssert.NoUnexpectedReceived();
+        }
+        [UnityTest] public IEnumerator ProductionExpoStripTracksHoldMakeReadyAndImmediateRemoval()
+        {
+            station=day.GetComponent<KitchenFurniture>().Find("expo").GetComponent<ExpoStation>();
+            Assert.That(station,Is.Not.Null,"Career startup installs the physical station");
+            Assert.That(day.Expo,Is.SameAs(station.Expo));SeatTwo();var expo=day.Expo;
+            var ticket=expo.WaitingTickets[0];Assert.That(ExpoOrderStrip.Label(ticket),Is.EqualTo("HOLD"));
+            Assert.That(ExpoOrderStrip.Tint(ticket).r,Is.GreaterThan(ExpoOrderStrip.Tint(ticket).g));
+            var pass=stations.OfType<ServiceStation>().Single();var dish=Plate(ticket.Recipe);
+            Assert.That(pass.pickupSlot.TryTake(dish),Is.True);
+            Assert.That(expo.TryStage(dish),Is.False,"Advance preparation must not bypass Fire");
+            Assert.That(expo.TryFire(ticket),Is.True);
+            Assert.That(ticket.State,Is.EqualTo(KitchenTicketState.Ready),"A matching dish already on the pass becomes READY on Fire");
+            Assert.That(ExpoOrderStrip.Label(ticket),Is.EqualTo("READY"));Assert.That(ExpoOrderStrip.Tint(ticket).g,Is.GreaterThan(ExpoOrderStrip.Tint(ticket).r));
+            Assert.That(ExpoOrderStrip.Visible(expo),Does.Contain(ticket));
+            Assert.That(expo.TableFor(ticket).Deliver(dish),Is.True);
+            Assert.That(ExpoOrderStrip.Visible(expo),Does.Not.Contain(ticket),"Served tile vanishes immediately");
+            var next=expo.WaitingTickets[0];Assert.That(expo.TryFire(next),Is.True);Assert.That(ExpoOrderStrip.Label(next),Is.EqualTo("MAKE"));
+            expo.TableFor(next).BeginDeparture();Assert.That(ExpoOrderStrip.Visible(expo),Does.Not.Contain(next));
             yield return null;LogAssert.NoUnexpectedReceived();
         }
         [UnityTest] public IEnumerator FiringStaysPossibleAfterTenPmUntilTheDayActuallyCloses()

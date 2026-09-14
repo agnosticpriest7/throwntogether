@@ -21,7 +21,7 @@ namespace ThrownTogether
         float messageUntil;
         public void Open(ExpoStation station)
         {
-            Station=station;selected=Guid.Empty;index=0;scroll=0;recovered=false;message="";messageUntil=0;Sync();
+            Station=station;selected=Guid.Empty;index=0;scroll=0;recovered=false;message="HOLD: wait • A: MAKE • READY: staged for delivery";messageUntil=Time.unscaledTime+8;Sync();
         }
         public void Close()
         {
@@ -87,12 +87,12 @@ namespace ThrownTogether
             if(ConsumeRecovered()){Note("Selection changed — confirm again");return false;}
             var expo=Station!=null ? Station.Expo:null;var ticket=Selected;
             if(expo==null || ticket==null){Note("No waiting orders");return false;}
-            if(ticket.State!=KitchenTicketState.Waiting){Note("Already fired");return false;}
+            if(ticket.State!=KitchenTicketState.Waiting){Note("Already making this order");return false;}
             if(expo.ActiveCount>=expo.Capacity){Note("Kitchen queue full ("+expo.ActiveCount+" / "+expo.Capacity+") — serve an order first");return false;}
             if(!expo.TryFire(ticket)){Note("That order can no longer be fired");Sync();return false;}
             // Keep this exact ticket selected: it moves from the waiting rows into the
             // fired rows, and the next row must not be fired by the same press.
-            selected=ticket.Id;Note("Fired "+Label(ticket));Sync();return true;
+            selected=ticket.Id;Note("MAKE: "+Label(ticket));Sync();return true;
         }
         static string Label(KitchenTicket ticket)=>ticket.Recipe!=null ? ticket.Recipe.displayName:"Order";
         string Seat(KitchenTicket ticket)
@@ -103,8 +103,8 @@ namespace ThrownTogether
             int seat=Array.IndexOf(day.Tables,table);
             return seat>=0 ? "Table "+(seat+1):"Seated";
         }
-        static string StateLabel(KitchenTicketState state)=>state==KitchenTicketState.Waiting ? "WAITING":
-            state==KitchenTicketState.Ready ? "READY":"FIRED";
+        static string StateLabel(KitchenTicketState state)=>state==KitchenTicketState.Waiting ? "HOLD":
+            state==KitchenTicketState.Ready ? "READY":"MAKE";
         public void Draw(bool second,float opacity=1)
         {
             var expo=Station!=null ? Station.Expo:null;if(expo==null)return;
@@ -133,7 +133,7 @@ namespace ThrownTogether
                 int i=scroll+row;if(i>=rows.Count)break;
                 var ticket=rows[i];bool chosen=i==index;
                 float y=top+54+row*42;
-                GUI.color=new Color(chosen?.16f:.09f,chosen?.26f:.13f,chosen?.24f:.15f,opacity);
+                var tint=ExpoOrderStrip.Tint(ticket);GUI.color=new Color(tint.r,tint.g,tint.b,opacity);
                 GUI.DrawTexture(new Rect(x+10,y,576,38),Texture2D.whiteTexture);
                 GUI.color=new Color(1,1,1,opacity);
                 if(chosen){GUI.color=new Color(.2f,.8f,.6f,opacity);GUI.DrawTexture(new Rect(x+10,y,4,38),Texture2D.whiteTexture);GUI.color=new Color(1,1,1,opacity);}

@@ -7,6 +7,17 @@ namespace ThrownTogether
     {
         public DayServiceDefinition Settings {get;private set;}
         public RestaurantExpo Expo {get;private set;}
+        public string ExpoProblem {get;private set;}="";
+        ServiceStation expoPass;
+        public bool EnsureExpo()
+        {
+            if(Expo!=null)return true;
+            var furniture=GetComponent<KitchenFurniture>();
+            var station=furniture?.InstallExpo(Resources.Load<ExpoStation>("ExpoCounter"));
+            ExpoProblem=station!=null?"":"Expo needs a clear bay. Open Arrange Kitchen, keep routes clear, then retry Start Day. "+furniture?.Message;
+            return station!=null;
+        }
+        internal void StageExpoPass(){if(Expo!=null && expoPass?.pickupSlot.Item!=null && Expo.BoundTicket(expoPass.pickupSlot.Item)==null)Expo.TryStage(expoPass.pickupSlot.Item);}
         // Enabled by the physical Expo when installed; no invisible Fire gate in old scenes.
         public RestaurantExpo EnableExpo()
         {
@@ -34,7 +45,7 @@ namespace ThrownTogether
         public int NetIncome=>Mathf.Max(0,BaseIncome+Bonuses+VarietyBonus-WasteFees);
         public bool StartService()
         {
-            if(!AwaitingMenu || !DailyMenu.CanStart(RestaurantAccounts.Current))return false;
+            if(!AwaitingMenu || !DailyMenu.CanStart(RestaurantAccounts.Current) || !EnsureExpo())return false;
             int number=RestaurantAccounts.Current.StartDay();if(number==0)return false;
             Menu=DailyMenu.Resolve(RestaurantAccounts.Current);DayNumber=number;AwaitingMenu=false;return true;
         }
@@ -66,7 +77,9 @@ namespace ThrownTogether
                 var table=o.tableSlot.transform.parent.gameObject.AddComponent<DiningTable>();table.day=this;table.order=o;table.stationName="Dining table";table.SetGuestVisible(false);return table;
             }).ToArray();
             gameObject.AddComponent<KitchenFurniture>().Initialize(GetComponent<KitchenLayout>());
-            ApplyPurchases();StartService();
+            ApplyPurchases();
+            expoPass=FindObjectsByType<ServiceStation>().FirstOrDefault(s=>s.gameObject.scene==gameObject.scene);
+            EnsureExpo();StartService();
         }
         void ApplyPurchases()
         {
@@ -160,7 +173,7 @@ namespace ThrownTogether
                     guest.walker.Go(new Vector3(TableApproach(guest.table).x,0,guest.walker.transform.position.z));
                 }
             }
-            Expo?.Refresh();server?.Advance(dt);dishwasher?.Advance(dt);busser?.Advance(dt);
+            Expo?.Refresh();StageExpoPass();server?.Advance(dt);dishwasher?.Advance(dt);busser?.Advance(dt);
             if(AdmissionsClosed && guests.Count==0){Closed=true;RetryPayment();}
         }
         public void RecordMeal(RecipeDefinition recipe,float waiting)

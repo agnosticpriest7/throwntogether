@@ -45,16 +45,19 @@ namespace ThrownTogether.Tests
             int funded=account.StartDay();account.Settle(funded,4000,0);
             foreach(var offer in day.Settings.purchases.Where(p=>p.stationPrefab!=null))Assert.That(f.TryPurchase(offer),Is.True,f.Message);
             var owned=account.Data.equipment.Select(x=>x.instanceId).ToArray();
-            var before=Interactable.Active.Where(x=>x.gameObject.scene==scene).ToDictionary(x=>x,x=>x.transform.position);
+            var before=Enumerable.Range(0,12).Select(i=>"base:"+i).Where(id=>f.Find(id)!=null).ToDictionary(id=>id,id=>f.Find(id).position);
+            // Simulate an older save: no Expo placement record, but all owned equipment retained.
+            account.SetFurniture(SessionOptions.Kitchen,account.Data.furniture.Where(p=>p.id!="expo").ToArray(),false);
             string saved=memory.json;int count=f.Count;int cash=account.Data.cash;
             var prefab=Resources.Load<ExpoStation>("ExpoCounter");Assert.That(prefab,Is.Not.Null);
-            var expo=f.InstallExpo(prefab);Assert.That(expo,Is.Not.Null,f.Message);
-            Assert.That(f.Count,Is.EqualTo(count+1));Assert.That(f.AssignedSlot("expo"),Is.EqualTo(20));
+            RestaurantAccounts.UseStorage(memory);yield return Load();f=hud.GetComponent<KitchenFurniture>();
+            var expo=f.Find("expo").GetComponent<ExpoStation>();Assert.That(expo,Is.Not.Null,f.Message);
+            Assert.That(f.Count,Is.EqualTo(count));Assert.That(f.AssignedSlot("expo"),Is.EqualTo(20));
             Assert.That(f.Validate(out var why),Is.True,why);
-            foreach(var pair in before)Assert.That(pair.Key.transform.position,Is.EqualTo(pair.Value),pair.Key.name);
+            foreach(var pair in before)Assert.That(f.Find(pair.Key).position,Is.EqualTo(pair.Value),pair.Key);
             Assert.That(memory.json,Is.EqualTo(saved),"Installation must not write a migration or charge money");
             Assert.That(account.Data.cash,Is.EqualTo(cash));
-            Assert.That(f.InstallExpo(prefab),Is.SameAs(expo));Assert.That(f.Count,Is.EqualTo(count+1));
+            Assert.That(f.InstallExpo(prefab),Is.SameAs(expo));Assert.That(f.Count,Is.EqualTo(count));
             Assert.That(f.Begin(),Is.True);Assert.That(Enumerable.Range(0,20).Any(slot=>f.TryMove("expo",slot,1)),Is.True,f.Message);int chosen=f.AssignedSlot("expo");
             Assert.That(f.Save(),Is.True,f.Message);
             RestaurantAccounts.UseStorage(memory);yield return Load();f=hud.GetComponent<KitchenFurniture>();
@@ -72,10 +75,12 @@ namespace ThrownTogether.Tests
             int bought=0;while(bought<20 && f.TryPurchase(offer))bought++;
             Assert.That(bought,Is.GreaterThan(0));Assert.That(bought,Is.LessThan(20),"Finite old bays must fill");
             Assert.That(f.TryPurchase(offer),Is.False);
+            account.SetFurniture(SessionOptions.Kitchen,account.Data.furniture.Where(p=>p.id!="expo").ToArray(),false);
             int before=f.Count;string saved=memory.json;
             var positions=account.Data.equipment.ToDictionary(x=>x.instanceId,x=>f.Find("purchase:"+x.instanceId).position);
-            var expo=f.InstallExpo(Resources.Load<ExpoStation>("ExpoCounter"));
-            Assert.That(expo,Is.Not.Null,f.Message);Assert.That(f.Count,Is.EqualTo(before+1));
+            RestaurantAccounts.UseStorage(memory);yield return Load();f=hud.GetComponent<KitchenFurniture>();
+            var expo=f.Find("expo").GetComponent<ExpoStation>();
+            Assert.That(expo,Is.Not.Null,f.Message);Assert.That(f.Count,Is.EqualTo(before));
             Assert.That(memory.json,Is.EqualTo(saved));
             foreach(var pair in positions)Assert.That(f.Find("purchase:"+pair.Key).position,Is.EqualTo(pair.Value));
             Assert.That(f.Validate(out var why),Is.True,why);yield return null;LogAssert.NoUnexpectedReceived();
@@ -131,7 +136,7 @@ namespace ThrownTogether.Tests
         {
             var account=RestaurantAccounts.Current;int funded=account.StartDay();Assert.That(account.Settle(funded,1000,0),Is.True);
             foreach(var offer in day.Settings.purchases.Where(p=>p.stationPrefab!=null))Assert.That(account.Buy(offer.id,offer.cost),Is.True);
-            var f=hud.GetComponent<KitchenFurniture>();Assert.That(f.Begin(),Is.True);Assert.That(f.Count,Is.EqualTo(14));
+            var f=hud.GetComponent<KitchenFurniture>();Assert.That(f.Begin(),Is.True);Assert.That(f.Count,Is.EqualTo(15));
             Assert.That(f.TryMove("purchase:counter-bay",10,0),Is.True,f.Message);Assert.That(f.Save(),Is.True,f.Message);
             var menu=hud.GetComponent<RestaurantMenu>();menu.OpenRestaurant();
             var pad=InputSystem.AddDevice<Gamepad>();
@@ -147,11 +152,11 @@ namespace ThrownTogether.Tests
             }
             finally{InputSystem.RemoveDevice(pad);InputSystem.settings.backgroundBehavior=background;InputSystem.settings.editorInputBehaviorInPlayMode=editor;}
             RestaurantAccounts.UseStorage(memory);yield return Load();f=hud.GetComponent<KitchenFurniture>();Assert.That(f.Find("purchase:counter-bay").position,Is.EqualTo(KitchenFurniture.Slots[10]));
-            Assert.That(f.Count,Is.EqualTo(14));LogAssert.NoUnexpectedReceived();
+            Assert.That(f.Count,Is.EqualTo(15));LogAssert.NoUnexpectedReceived();
         }
         [UnityTest] public IEnumerator MovesSaveReloadCancelAndServiceLock()
         {
-            var furniture=hud.GetComponent<KitchenFurniture>();Assert.That(furniture,Is.Not.Null);Assert.That(furniture.Count,Is.EqualTo(10));
+            var furniture=hud.GetComponent<KitchenFurniture>();Assert.That(furniture,Is.Not.Null);Assert.That(furniture.Count,Is.EqualTo(11));
             Assert.That(furniture.Validate(out var reason),Is.True,reason);Assert.That(furniture.Begin(),Is.True);
             var prep=furniture.Find("base:3");var originalPosition=prep.position;
             Assert.That(furniture.TryMove("base:3",6,0),Is.True,furniture.Message);

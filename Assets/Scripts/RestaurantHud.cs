@@ -77,6 +77,7 @@ namespace ThrownTogether
                 GUI.color=HudTint(new Color(1,.75f,.2f)); rect.width*=station.Progress; GUI.DrawTexture(rect,Texture2D.whiteTexture); GUI.color=HudTint(Color.white);
             }
             DrawSuccessCues();
+            if(day?.Expo!=null && !ShowControlHelp && chef.GetComponent<ChefInput>().Expo==null && (coop?.PlayerTwo==null || coop.PlayerTwo.GetComponent<ChefInput>().Expo==null))ExpoOrderStrip.Draw(day,presentation.ServiceOpacity);
             // Identity is carried by apron colors and target borders; no floating panels cover chefs.
             bool two=coop!=null && coop.PlayerTwo!=null;
             if(ShowControlHelp)

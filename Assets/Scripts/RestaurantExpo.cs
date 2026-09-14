@@ -67,8 +67,9 @@ namespace ThrownTogether
         {
             Refresh();
             var table=TableFor(ticket);
-            return !day.Closed && !day.AwaitingMenu && table!=null && table.WaitingForMeal &&
+            bool fired=!day.Closed && !day.AwaitingMenu && table!=null && table.WaitingForMeal &&
                 table.PatienceRemaining>0 && board.TryFire(ticket,day.Elapsed);
+            if(fired)day.StageExpoPass();return fired;
         }
         public bool CanServe(DiningTable table,ItemPayload food)
         {

@@ -106,7 +106,7 @@ namespace ThrownTogether
         {
             if(!DailyMenu.CanStart(RestaurantAccounts.Current)){message=DailyMenu.StartProblem(RestaurantAccounts.Current);return false;}
             var start=startMenuDay;if(start==null)return false;start.Invoke();
-            if(hud.shift?.Day?.AwaitingMenu==true){message=RestaurantAccounts.Current.Problem;return false;}
+            if(hud.shift?.Day?.AwaitingMenu==true){message=string.IsNullOrEmpty(hud.shift.Day.ExpoProblem)?RestaurantAccounts.Current.Problem:hud.shift.Day.ExpoProblem;return false;}
             startMenuDay=null;return true;
         }
         public void ShowWardrobe()

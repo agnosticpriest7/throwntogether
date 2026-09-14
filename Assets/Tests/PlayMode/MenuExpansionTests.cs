@@ -40,7 +40,7 @@ namespace ThrownTogether.Tests
             Time.timeScale=1;SessionOptions.ShiftOrders=6;SessionOptions.Kitchen=0;RestaurantAccounts.ResetCache();
         }
         void BaseMenu(){foreach(var r in DailyMenu.Catalog.Where(r=>r.requiredPurchases.Length==0))DailyMenu.Toggle(RestaurantAccounts.Current,r);}
-        void Use(Interactable station){KitchenTestAccess.Approach(chef,station);Assert.That(chef.Use(),Is.True,station.stationName+": "+chef.Feedback);KitchenTestAccess.SelectDefault(chef,station);}
+        void Use(Interactable station){if(station is DiningTable table && table.WaitingForMeal && day.Expo.TicketFor(table)?.State==KitchenTicketState.Waiting)Assert.That(day.Expo.TryFire(day.Expo.TicketFor(table)),Is.True);KitchenTestAccess.Approach(chef,station);Assert.That(chef.Use(),Is.True,station.stationName+": "+chef.Feedback);KitchenTestAccess.SelectDefault(chef,station);}
         T Find<T>() where T:Component=>Object.FindObjectsByType<T>().First(t=>t.gameObject.scene==scene);
         void UnlockAll()
         {
