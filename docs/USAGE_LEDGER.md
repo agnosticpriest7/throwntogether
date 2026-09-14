@@ -117,3 +117,5 @@ Reviewed/imported Claude PREP-001 f51f6a3; implemented physical worker, demand p
 2026-09-14 — Cook and Career entry integration: reused staff paths, processing, plating, ticket authority, shop and management. Canonical live cooking/delivery and management entry verified. Full regression/release pending. Actual account-wide usage unavailable; no estimate.
 
 2026-09-14 — Compound cook integration: reused recipe/physical carry/staff systems, 17 targeted live tests passed, canonical live omelet delivery and missing-input retention verified. Full release verification pending. Actual account-wide usage unknown; no estimate recorded.
+
+2026-09-14 — Compound cook released as 0.21.0-dev: 248 full-pipeline checks passed; public build identity confirmed. No measured account-wide usage available; no credit estimate.
