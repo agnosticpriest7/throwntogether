@@ -16,7 +16,7 @@ namespace ThrownTogether
             new Vector3(-5.3f,0,-4.4f),new Vector3(-3.4f,0,-4.4f),
             new Vector3(-.8f,0,-1.4f),new Vector3(-.8f,0,.55f),new Vector3(-.8f,0,2.5f),
             new Vector3(-2.75f,0,2.5f),new Vector3(-2.75f,0,.55f),new Vector3(-2.75f,0,-1.4f),
-            new Vector3(2.45f,0,1),new Vector3(2.45f,0,-1)
+            new Vector3(2.45f,0,1),new Vector3(2.45f,0,-1),new Vector3(2.45f,0,3.4f)
         };
         sealed class Piece { public string id; public Transform root; public Vector3 before; public Quaternion rotation; public int slot=-1,turns; }
         readonly List<Piece> pieces=new List<Piece>();
@@ -41,11 +41,31 @@ namespace ThrownTogether
             if(pieces.Any(p=>p.id==id))return;
             var piece=new Piece{id=id,root=root,before=root.position,rotation=root.rotation,slot=-1};
             int[] anchors={0,1,3,4,5,6,7,8,10,11}, bays={5,4,7,2,14,12,13,18,8,19};
-            int preferred=-1;
+            int preferred=id=="expo" ? Slots.Length-1 : -1;
             for(int i=0;i<anchors.Length;i++)if(id=="base:"+anchors[i] && (SessionOptions.Kitchen==0 || anchors[i]==8 || anchors[i]==11))preferred=bays[i];
             bool SpawnSafe(int i)=>new[]{layout.choices[SessionOptions.Kitchen].playerOneSpawn,layout.choices[SessionOptions.Kitchen].playerTwoSpawn}.All(p=>Mathf.Abs(p.x-Slots[i].x)>1.3f || Mathf.Abs(p.z-Slots[i].z)>1.3f);
-            if(preferred<0 || At(preferred)!=null || !SpawnSafe(preferred))preferred=Enumerable.Range(0,Slots.Length).Where(i=>At(i)==null && SpawnSafe(i) && (i<18 || id=="base:8" || id=="base:11")).OrderBy(i=>Vector3.SqrMagnitude(Slots[i]-root.position)).First();
+            if(preferred<0 || At(preferred)!=null || !SpawnSafe(preferred))preferred=Enumerable.Range(0,Slots.Length).Where(i=>At(i)==null && SpawnSafe(i) && (i<18 || id=="base:8" || id=="base:11" || id=="expo")).OrderBy(i=>Vector3.SqrMagnitude(Slots[i]-root.position)).First();
             pieces.Add(piece);Place(piece,preferred,0);piece.before=root.position;piece.rotation=root.rotation;
+        }
+        // Install after owned equipment and its saved layout have been restored. The new
+        // bay is appended, preserving every existing slot number and all owned capacity.
+        // No save is written or fee charged by migration; normal arrangement persists it.
+        public ExpoStation InstallExpo(ExpoStation prefab)
+        {
+            var existing=Find("expo");if(existing!=null)return existing.GetComponent<ExpoStation>();
+            if(prefab==null || day==null || day.Closed)return null;
+            var previous=pieces.Select(p=>(piece:p,position:p.root.position,rotation:p.root.rotation,slot:p.slot,turns:p.turns)).ToArray();
+            var instance=Instantiate(prefab,transform);instance.name="Expo";
+            Register("expo",instance.transform);
+            ApplySaved();
+            if(!Validate(out var reason))
+            {
+                var piece=pieces.First(p=>p.id=="expo");pieces.Remove(piece);
+                instance.gameObject.SetActive(false);Destroy(instance.gameObject);
+                foreach(var old in previous){old.piece.root.SetPositionAndRotation(old.position,old.rotation);old.piece.slot=old.slot;old.piece.turns=old.turns;}
+                Physics.SyncTransforms();Message="Expo installation blocked: "+reason;return null;
+            }
+            instance.Initialize(day);return instance;
         }
         static int Nearest(Vector3 position)
         {for(int i=0;i<Slots.Length;i++)if(Vector3.Distance(position,Slots[i])<.15f)return i;return -1;}

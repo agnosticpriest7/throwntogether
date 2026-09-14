@@ -39,6 +39,32 @@ namespace ThrownTogether.Tests
             SceneManager.SetActiveScene(original);foreach(var g in suspended)if(g!=null)g.SetActive(true);
             Time.timeScale=1;SessionOptions.ShiftOrders=6;SessionOptions.Kitchen=0;RestaurantAccounts.ResetCache();
         }
+        [UnityTest] public IEnumerator ExpoInstallsWithoutReplacingEquipmentAndPersistsArrangement()
+        {
+            var f=hud.GetComponent<KitchenFurniture>();var account=RestaurantAccounts.Current;
+            int funded=account.StartDay();account.Settle(funded,4000,0);
+            foreach(var offer in day.Settings.purchases.Where(p=>p.stationPrefab!=null))Assert.That(f.TryPurchase(offer),Is.True,f.Message);
+            var owned=account.Data.equipment.Select(x=>x.instanceId).ToArray();
+            var before=Interactable.Active.Where(x=>x.gameObject.scene==scene).ToDictionary(x=>x,x=>x.transform.position);
+            string saved=memory.json;int count=f.Count;int cash=account.Data.cash;
+            var prefab=Resources.Load<ExpoStation>("ExpoCounter");Assert.That(prefab,Is.Not.Null);
+            var expo=f.InstallExpo(prefab);Assert.That(expo,Is.Not.Null,f.Message);
+            Assert.That(f.Count,Is.EqualTo(count+1));Assert.That(f.AssignedSlot("expo"),Is.EqualTo(20));
+            Assert.That(f.Validate(out var why),Is.True,why);
+            foreach(var pair in before)Assert.That(pair.Key.transform.position,Is.EqualTo(pair.Value),pair.Key.name);
+            Assert.That(memory.json,Is.EqualTo(saved),"Installation must not write a migration or charge money");
+            Assert.That(account.Data.cash,Is.EqualTo(cash));
+            Assert.That(f.InstallExpo(prefab),Is.SameAs(expo));Assert.That(f.Count,Is.EqualTo(count+1));
+            Assert.That(f.Begin(),Is.True);Assert.That(f.TryMove("expo",6,1),Is.True,f.Message);
+            Assert.That(f.Save(),Is.True,f.Message);
+            RestaurantAccounts.UseStorage(memory);yield return Load();f=hud.GetComponent<KitchenFurniture>();
+            expo=f.InstallExpo(prefab);Assert.That(expo,Is.Not.Null,f.Message);
+            Assert.That(f.AssignedSlot("expo"),Is.EqualTo(6));Assert.That(expo.transform.eulerAngles.y,Is.EqualTo(90).Within(.01f));
+            CollectionAssert.AreEquivalent(owned,RestaurantAccounts.Current.Data.equipment.Select(x=>x.instanceId));
+            Assert.That(f.Validate(out why),Is.True,why);
+            Assert.That(f.Begin(),Is.True);Assert.That(f.TryMove("expo",20,0),Is.True,f.Message);f.Cancel();
+            Assert.That(f.AssignedSlot("expo"),Is.EqualTo(6));LogAssert.NoUnexpectedReceived();
+        }
         [UnityTest] public IEnumerator ManagementHubRepeatEquipmentAndPlateSupplySurviveReload()
         {
             var account=RestaurantAccounts.Current;int paid=account.StartDay();account.Settle(paid,3000,0);
@@ -138,4 +164,3 @@ namespace ThrownTogether.Tests
         }
     }
 }
-
