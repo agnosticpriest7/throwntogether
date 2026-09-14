@@ -200,6 +200,29 @@ namespace ThrownTogether.Tests
             StringAssert.Contains(Fries.ingredient.NameFor(FoodState.Cut),day.Cook.Status);Assert.IsNull(pass.pickupSlot.Item);
             StockParts(ChickenFries);Tick(2500);Assert.IsTrue(ChickenFries.Matches(pass.pickupSlot.Item?.Payload),day.Cook.Status);
         }
+        [Test] public void CookingInputCannotAlsoSupplyColdRecipe()
+        {
+            StartCook();var hot=DailyMenu.Catalog.Single(r=>r.displayName=="Grilled Tomato");var cold=DailyMenu.Catalog.First(r=>r.HasPortion(hot.ingredient,FoodState.Cut) && r.steps.All(s=>s.output==FoodState.Cut));
+            var coldTicket=Seat(cold);var hotTicket=Seat(hot,1);day.Expo.TryFire(coldTicket);day.Expo.TryFire(hotTicket);
+            var input=Portion(hot.ingredient,FoodState.Cut);chef.Hands.TryTake(input);var grill=Object.FindObjectsByType<ProcessingStation>().First(p=>p.gameObject.scene==scene && p.ProcessFor(input.Payload)==KitchenCook.HotStep(hot));Assert.IsTrue(grill.Interact(chef));
+            var plans=CookProduction.Snapshot(day);Assert.IsNull(plans.Single(p=>p.Ticket==coldTicket).Components.Single(c=>c.Ingredient==hot.ingredient).Supply,"Cooking input is not usable chopped stock");
+            Assert.AreSame(input,plans.Single(p=>p.Ticket==hotTicket).Components.Single().Supply);Assert.AreSame(grill.slot,input.Owner);
+        }
+        [TestCase(false)] [TestCase(true)] public void RefireRecoversFinishedComponentParkedWithEveryCounterFull(bool playerAlreadyCompleted)
+        {
+            StartCook();var ticket=Seat(ChickenFries);day.Expo.TryFire(ticket);
+            for(int i=0;i<1000 && !CookProduction.Plain(day.Cook.Hands.Item,ChickenFries.ingredient,ChickenFries.requiredState);i++)Tick(1);
+            var retained=day.Cook.Hands.Item;Assert.IsNotNull(retained);Assert.IsFalse(retained.Payload.isPlate);
+            StockParts(ChickenFries);var mushroom=DailyMenu.Catalog.Select(r=>r.ingredient).First(i=>i.visualKind==IngredientVisualKind.Mushroom);Portion(mushroom,FoodState.Cut);
+            Assert.IsTrue(day.Expo.TryHold(ticket));Tick(300);Assert.AreSame(retained,day.Cook.Hands.Item);Assert.AreEqual(5,plates.CleanPlatesRemaining);StringAssert.Contains("free counter",day.Cook.Status);
+            if(playerAlreadyCompleted)
+            {
+                var plate=plates.TakeCleanPlate();foreach(var p in CookProduction.Portions(ChickenFries))plate.Payload.AddFood(new ItemPayload{ingredient=p.ingredient,state=p.state});chef.Hands.TryTake(plate);
+                Assert.IsTrue(day.Expo.TryFire(ticket));Tick(500);Assert.AreSame(retained,day.Cook.Hands.Item);Assert.AreSame(plate,chef.Hands.Item);Assert.IsNull(pass.pickupSlot.Item);Assert.AreEqual(4,plates.CleanPlatesRemaining);return;
+            }
+            Assert.IsTrue(day.Expo.TryFire(ticket));Tick(3000);
+            Assert.IsTrue(ChickenFries.Matches(pass.pickupSlot.Item?.Payload),day.Cook.Status);Assert.AreEqual(4,plates.CleanPlatesRemaining);
+        }
         [Test] public void CountersFilledDuringCookingExchangePlateForNextComponentWithoutDeadlock()
         {
             StartCook();var recipe=DailyMenu.Catalog.Single(r=>r.displayName=="Garden Omelet");var ticket=Seat(recipe);day.Expo.TryFire(ticket);

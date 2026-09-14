@@ -56,7 +56,7 @@ namespace ThrownTogether
             {
                 c.OnPlate=o.Plate!=null && o.Plate.Payload.Contains(c.Ingredient,c.State);
                 if(c.OnPlate)continue;
-                c.Supply=food.FirstOrDefault(i=>Available(i,o) && Plain(i,c.Ingredient,c.State));
+                c.Supply=food.FirstOrDefault(i=>Available(i,o) && Plain(i,c.Ingredient,c.State) && !(Location(i) is ProcessingStation p && p.Busy));
                 if(c.Supply==null && c.Hot!=null)c.Supply=food.FirstOrDefault(i=>Available(i,o) && Location(i) is ProcessingStation p && p.CurrentProcess==c.Hot);
                 if(c.Supply!=null)used.Add(c.Supply);
             }

@@ -87,6 +87,11 @@ namespace ThrownTogether
         }
         void Park()
         {
+            // Hold may be lifted while every output surface remains occupied.
+            // Resume only a still-needed finished portion, never raw or duplicate work.
+            if(Fired && job!=null && hands.Item==job && component!=null &&
+                CookProduction.Plain(job,component.Ingredient,component.State) && !CoveredByPlayerWork())
+            {ToPlate();return;}
             phase=Phase.Park;
             foreach(var s in Interactable.Active.Where(s=>s!=null && s.gameObject.scene==gameObject.scene &&
                 (s is PrepBin b && b.CanStore(hands.Item.Payload) || s.GetType()==typeof(CounterStation) && ((CounterStation)s).slot.Item==null)))if(Go(s)){Status="Storing unused component";return;}
