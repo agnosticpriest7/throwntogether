@@ -107,3 +107,5 @@ Prepared Claude PREP-001 ledger assignment; implemented physical five-portion pr
 
 ### 2026-09-14 — Prep Cook integration candidate
 Reviewed/imported Claude PREP-001 f51f6a3; implemented physical worker, demand projection, bins, saved assignment and management. Canonical live service loop succeeded, Console clear. 90 EditMode and initial seven PlayMode cases passed; final isolated regression/release pending. Actual account-wide usage unavailable; no estimate made.
+
+2026-09-14 — Prep Cook milestone released as 0.19.0-dev. Full final pipeline passed 226 checks, Web payload verified and public deployment identity confirmed. Stopped at release. Actual account-wide usage unavailable; no credit or token estimate recorded.
