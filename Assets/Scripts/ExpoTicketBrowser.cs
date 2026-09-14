@@ -109,29 +109,30 @@ namespace ThrownTogether
         {
             var expo=Station!=null ? Station.Expo:null;if(expo==null)return;
             Sync();
-            var matrix=GUI.matrix;var color=GUI.color;var background=GUI.backgroundColor;bool enabled=GUI.enabled;
+            var matrix=GUI.matrix;var color=GUI.color;var background=GUI.backgroundColor;bool enabled=GUI.enabled;int depth=GUI.depth;GUI.depth=-100;
             GUI.matrix=Matrix4x4.Scale(new Vector3(Screen.width/1280f,Screen.height/720f,1));
             float x=second?666:18;
+            int visible=Mathf.Clamp(rows.Count,1,VisibleRows);float height=98+visible*42;float top=694-height;
             var text=new GUIStyle(GUI.skin.label){fontSize=18,alignment=TextAnchor.MiddleLeft,wordWrap=false};
             text.normal.textColor=Color.white;
             var centred=new GUIStyle(text){alignment=TextAnchor.MiddleCenter};
             var small=new GUIStyle(text){fontSize=15};
-            GUI.color=new Color(.035f,.055f,.07f,.96f*opacity);GUI.DrawTexture(new Rect(x,386,596,308),Texture2D.whiteTexture);
+            GUI.color=new Color(.035f,.055f,.07f,.96f*opacity);GUI.DrawTexture(new Rect(x,top,596,height),Texture2D.whiteTexture);
             GUI.color=new Color(1,1,1,opacity);
-            GUI.Label(new Rect(x+12,390,380,26),(second?"P2 — ":"P1 — ")+"EXPO ORDERS",centred);
+            GUI.Label(new Rect(x+12,top+4,380,26),(second?"P2 — ":"P1 — ")+"EXPO ORDERS",centred);
             bool full=expo.ActiveCount>=expo.Capacity;
-            GUI.Label(new Rect(x+396,390,188,26),"Active "+expo.ActiveCount+" / "+expo.Capacity+(full?"  FULL":""),centred);
+            GUI.Label(new Rect(x+396,top+4,188,26),"Active "+expo.ActiveCount+" / "+expo.Capacity+(full?"  FULL":""),centred);
             string note=Message;
-            GUI.Label(new Rect(x+12,414,572,22),note.Length>0 ? note:rows.Count==0 ? "No waiting orders":"Up / down: choose an order",small);
+            GUI.Label(new Rect(x+12,top+28,572,22),note.Length>0 ? note:rows.Count==0 ? "No waiting orders":"Up / down: choose an order",small);
             if(rows.Count==0)
             {
-                GUI.Label(new Rect(x+12,470,572,120),"No orders yet.\nSeated customers appear here as soon as they order.",centred);
+                GUI.Label(new Rect(x+12,top+56,572,42),"No orders yet.\nSeated customers appear here as soon as they order.",centred);
             }
             for(int row=0;row<VisibleRows;row++)
             {
                 int i=scroll+row;if(i>=rows.Count)break;
                 var ticket=rows[i];bool chosen=i==index;
-                float y=440+row*42;
+                float y=top+54+row*42;
                 GUI.color=new Color(chosen?.16f:.09f,chosen?.26f:.13f,chosen?.24f:.15f,opacity);
                 GUI.DrawTexture(new Rect(x+10,y,576,38),Texture2D.whiteTexture);
                 GUI.color=new Color(1,1,1,opacity);
@@ -151,7 +152,7 @@ namespace ThrownTogether
             if(rows.Count>VisibleRows)
                 GUI.Label(new Rect(x+12,650,180,22),"Order "+(index+1)+" of "+rows.Count,small);
             GUI.Label(new Rect(x+196,650,388,22),"Stick / D-pad: choose • A / E: fire • B / Q: close",small);
-            GUI.matrix=matrix;GUI.color=color;GUI.backgroundColor=background;GUI.enabled=enabled;
+            GUI.matrix=matrix;GUI.color=color;GUI.backgroundColor=background;GUI.enabled=enabled;GUI.depth=depth;
         }
     }
 }
