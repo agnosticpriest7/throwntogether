@@ -17,11 +17,13 @@ namespace ThrownTogether
         Guid selected;
         int index,scroll;
         bool recovered;
+        public bool HoldAction {get;private set;}
+        public void ChooseAction(bool hold)=>HoldAction=hold;
         string message="";
         float messageUntil;
         public void Open(ExpoStation station)
         {
-            Station=station;selected=Guid.Empty;index=0;scroll=0;recovered=false;message="HOLD: wait • A: MAKE • READY: staged for delivery";messageUntil=Time.unscaledTime+8;Sync();
+            Station=station;selected=Guid.Empty;index=0;scroll=0;recovered=false;HoldAction=false;message="Fire / Hold guides the kitchen. Matching food can always be served.";messageUntil=Time.unscaledTime+8;Sync();
         }
         public void Close()
         {
@@ -52,10 +54,8 @@ namespace ThrownTogether
             rows.Clear();
             var expo=Station!=null ? Station.Expo:null;
             if(expo==null){index=0;scroll=0;return;}
-            // Waiting first, then the fired queue. Served and cancelled orders are absent
-            // from both source lists, so they never appear as rows.
-            foreach(var ticket in expo.WaitingTickets)rows.Add(ticket);
-            foreach(var ticket in expo.ActiveTickets)rows.Add(ticket);
+            // Arrival order is stable across Fire/Hold/Ready, for both players.
+            foreach(var ticket in expo.OpenTickets)rows.Add(ticket);
             // Keep the lost id while the board is empty. Clearing it here would hide the
             // loss, and the next diner to be seated would look like an ordinary selection.
             if(rows.Count==0){index=0;scroll=0;return;}
@@ -88,11 +88,17 @@ namespace ThrownTogether
             var expo=Station!=null ? Station.Expo:null;var ticket=Selected;
             if(expo==null || ticket==null){Note("No waiting orders");return false;}
             if(ticket.State!=KitchenTicketState.Waiting){Note("Already making this order");return false;}
-            if(expo.ActiveCount>=expo.Capacity){Note("Kitchen queue full ("+expo.ActiveCount+" / "+expo.Capacity+") — serve an order first");return false;}
+            if(expo.ActiveCount>=expo.Capacity){Note("Kitchen queue full — Hold or serve an order to free a slot");return false;}
             if(!expo.TryFire(ticket)){Note("That order can no longer be fired");Sync();return false;}
-            // Keep this exact ticket selected: it moves from the waiting rows into the
-            // fired rows, and the next row must not be fired by the same press.
             selected=ticket.Id;Note("MAKE: "+Label(ticket));Sync();return true;
+        }
+        public bool Hold()
+        {
+            Sync();if(ConsumeRecovered()){Note("Selection changed — confirm again");return false;}
+            var expo=Station!=null?Station.Expo:null;var ticket=Selected;
+            if(expo==null || ticket==null){Note("No orders");return false;}
+            if(!expo.TryHold(ticket)){Note(ticket.State==KitchenTicketState.Waiting?"Already on Hold":"That order can no longer be held");return false;}
+            Note("HOLD: "+Label(ticket));Sync();return true;
         }
         static string Label(KitchenTicket ticket)=>ticket.Recipe!=null ? ticket.Recipe.displayName:"Order";
         string Seat(KitchenTicket ticket)
@@ -112,7 +118,7 @@ namespace ThrownTogether
             var matrix=GUI.matrix;var color=GUI.color;var background=GUI.backgroundColor;bool enabled=GUI.enabled;int depth=GUI.depth;GUI.depth=-100;
             GUI.matrix=Matrix4x4.Scale(new Vector3(Screen.width/1280f,Screen.height/720f,1));
             float x=second?666:18;
-            int visible=Mathf.Clamp(rows.Count,1,VisibleRows);float height=98+visible*42;float top=694-height;
+            int visible=Mathf.Clamp(rows.Count,1,VisibleRows);float height=122+visible*42;float top=694-height;
             var text=new GUIStyle(GUI.skin.label){fontSize=18,alignment=TextAnchor.MiddleLeft,wordWrap=false};
             text.normal.textColor=Color.white;
             var centred=new GUIStyle(text){alignment=TextAnchor.MiddleCenter};
@@ -149,9 +155,12 @@ namespace ThrownTogether
                 GUI.DrawTexture(bar,Texture2D.whiteTexture);GUI.color=new Color(1,1,1,opacity);
                 GUI.Label(new Rect(x+478,y-6,84,38),Mathf.RoundToInt(patience*100)+"%",small);
             }
-            if(rows.Count>VisibleRows)
-                GUI.Label(new Rect(x+12,650,180,22),"Order "+(index+1)+" of "+rows.Count,small);
-            GUI.Label(new Rect(x+196,650,388,22),"Stick / D-pad: choose • A / E: fire • B / Q: close",small);
+            GUI.Label(new Rect(x+12,626,172,28),rows.Count==0?"No orders":"Order "+(index+1)+" of "+rows.Count,small);
+            // Explicit idempotent commands: repeated A cannot toggle a coworker's change.
+            GUI.Label(new Rect(x+196,626,188,28),(!HoldAction?"> ":"")+"FIRE / MAKE",centred);
+            GUI.Label(new Rect(x+392,626,188,28),(HoldAction?"> ":"")+"HOLD",centred);
+            GUI.DrawTexture(new Rect(x+(HoldAction?392:196),654,188,3),Texture2D.whiteTexture);
+            GUI.Label(new Rect(x+12,662,572,24),"Up/down: order • Left/right: action • A: apply • B: close",small);
             GUI.matrix=matrix;GUI.color=color;GUI.backgroundColor=background;GUI.enabled=enabled;GUI.depth=depth;
         }
     }

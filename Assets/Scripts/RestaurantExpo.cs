@@ -28,13 +28,13 @@ namespace ThrownTogether
         public int Capacity=>board.Capacity;
         public int ActiveCount=>board.ActiveCount;
         public IReadOnlyList<KitchenTicket> Tickets=>board.Tickets;
+        public IReadOnlyList<KitchenTicket> OpenTickets=>board.Tickets.Where(Live).ToArray();
         public IReadOnlyList<KitchenTicket> WaitingTickets=>board.WaitingTickets;
         public IReadOnlyList<KitchenTicket> ActiveTickets=>board.ActiveTickets;
         public KitchenTicket TicketFor(DiningTable table)=>table!=null && current.TryGetValue(table,out var ticket)?ticket:null;
         public DiningTable TableFor(KitchenTicket ticket)=>ticket!=null && seats.TryGetValue(ticket,out var table) && table!=null && TicketFor(table)==ticket?table:null;
         public float PatienceRemaining(KitchenTicket ticket)=>TableFor(ticket)?.PatienceRemaining??0;
         static bool Live(KitchenTicket ticket)=>ticket.State!=KitchenTicketState.Served && ticket.State!=KitchenTicketState.Cancelled;
-        static bool Fired(KitchenTicket ticket)=>ticket!=null && (ticket.State==KitchenTicketState.Active || ticket.State==KitchenTicketState.Ready);
 
         internal void Seat(DiningTable table)
         {
@@ -59,7 +59,7 @@ namespace ThrownTogether
                     !table.WaitingForMeal || table.order.recipe!=ticket.Recipe))Cancel(ticket);
             }
             foreach(var pair in dishes.ToArray())
-                if(!Fired(pair.Key) || pair.Value==null || !pair.Key.Recipe.Matches(pair.Value.Payload))Unbind(pair.Key);
+                if(!Live(pair.Key) || pair.Value==null || !pair.Key.Recipe.Matches(pair.Value.Payload))Unbind(pair.Key);
             foreach(var pair in claims.ToArray())
                 if(pair.Value.Carrier==null)claims.Remove(pair.Key);
         }
@@ -69,12 +69,19 @@ namespace ThrownTogether
             var table=TableFor(ticket);
             bool fired=!day.Closed && !day.AwaitingMenu && table!=null && table.WaitingForMeal &&
                 table.PatienceRemaining>0 && board.TryFire(ticket,day.Elapsed);
-            if(fired)day.StageExpoPass();return fired;
+            if(fired){if(dishes.ContainsKey(ticket))board.TryMarkReady(ticket);day.StageExpoPass();}return fired;
+        }
+        public bool TryHold(KitchenTicket ticket)
+        {
+            Refresh();var table=TableFor(ticket);
+            // Keep physical dishes and in-flight claims: Hold affects kitchen work only.
+            return !day.Closed && !day.AwaitingMenu && table!=null && table.WaitingForMeal &&
+                table.PatienceRemaining>0 && board.TryHold(ticket);
         }
         public bool CanServe(DiningTable table,ItemPayload food)
         {
             var ticket=TicketFor(table);
-            return !day.Closed && !day.AwaitingMenu && Fired(ticket) && table!=null &&
+            return !day.Closed && !day.AwaitingMenu && ticket!=null && Live(ticket) && table!=null &&
                 table.WaitingForMeal && table.PatienceRemaining>0 && ticket.Recipe.Matches(food);
         }
         public KitchenTicket BoundTicket(Carryable dish)
@@ -90,7 +97,7 @@ namespace ThrownTogether
             // Honor an existing association. An in-flight claim cannot be collected twice.
             foreach(var pair in dishes)
                 if(pair.Value==dish)return !claims.ContainsKey(pair.Key) && TableFor(pair.Key)?.CanServe(dish.Payload)==true?pair.Key:null;
-            return board.ActiveTickets.FirstOrDefault(t=>!dishes.ContainsKey(t) && !claims.ContainsKey(t) &&
+            return OpenTickets.FirstOrDefault(t=>!dishes.ContainsKey(t) && !claims.ContainsKey(t) &&
                 TableFor(t)?.CanServe(dish.Payload)==true);
         }
         void Bind(KitchenTicket ticket,Carryable dish)

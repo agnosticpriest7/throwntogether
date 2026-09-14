@@ -41,7 +41,6 @@ namespace ThrownTogether
             if(Arriving)return "Customer arriving";
             if(!Occupied)return "Clean table — ready for a customer";
             if(order.Phase==OrderPhase.Eating)return "Customer eating";
-            if(day.Expo?.TicketFor(this)?.State==KitchenTicketState.Waiting)return "Fire this order at Expo first";
             return chef.Hands.Item!=null && CanServe(chef.Hands.Item.Payload) ? "Serve "+order.recipe.displayName:"Needs "+order.recipe.displayName;
         }
         public bool TakeDirty(CarrySlot hands)

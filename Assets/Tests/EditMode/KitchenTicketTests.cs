@@ -92,18 +92,31 @@ namespace ThrownTogether.Tests
             Assert.That(board.TryInvalidateReady(a),Is.False,"Only a Ready ticket can be invalidated");
             Assert.That(board.TryMarkReady(b),Is.False,"An unfired order cannot be plated");
         }
-        [Test] public void ServeSucceedsFromActiveOrReadyButNeverFromWaiting()
+        [Test] public void ServeSucceedsFromWaitingActiveOrReadyExactlyOnce()
         {
             var board=new KitchenTicketBoard(2);var recipe=Dish("fries");
             var direct=board.Create(recipe,0);var staged=board.Create(recipe,0);
-            Assert.That(board.TryServe(direct),Is.False,"Firing is required before service");
-            Assert.That(direct.State,Is.EqualTo(KitchenTicketState.Waiting));
+            var held=board.Create(recipe,0);Assert.That(board.TryServe(held),Is.True,"Hold is only a kitchen instruction");
+            Assert.That(board.TryServe(held),Is.False);
             Assert.That(board.TryFire(direct,1),Is.True);
             Assert.That(board.TryServe(direct),Is.True,"A carried dish may be delivered without staging");
             Assert.That(board.TryServe(direct),Is.False);Assert.That(board.ActiveCount,Is.Zero);
             Assert.That(board.TryFire(staged,2),Is.True);Assert.That(board.TryMarkReady(staged),Is.True);
             Assert.That(board.TryServe(staged),Is.True);
             Assert.That(staged.State,Is.EqualTo(KitchenTicketState.Served));Assert.That(board.ActiveCount,Is.Zero);
+        }
+        [Test] public void HoldFreesKitchenCapacityWithoutReorderingTicketsOrRevivingTerminalOrders()
+        {
+            var board=new KitchenTicketBoard(1);var recipe=Dish("fries");
+            var a=board.Create(recipe,0);var b=board.Create(recipe,1);
+            Assert.That(board.TryFire(a,2),Is.True);Assert.That(board.TryMarkReady(a),Is.True);
+            Assert.That(board.TryHold(a),Is.True);Assert.That(board.ActiveCount,Is.Zero);
+            Assert.That(board.TryHold(a),Is.False);Assert.That(board.TryFire(b,3),Is.True);
+            Assert.That(board.Tickets,Is.EqualTo(new[]{a,b}));
+            Assert.That(board.TryServe(a),Is.True);Assert.That(board.TryHold(a),Is.False);
+            Assert.That(board.TryCancel(b),Is.True);Assert.That(board.TryHold(b),Is.False);
+            Assert.That(board.TryHold(null),Is.False);
+            var foreign=new KitchenTicketBoard().Create(recipe,0);Assert.That(board.TryHold(foreign),Is.False);
         }
         [Test] public void CancellationFromEveryLiveStateFreesCapacityAppropriately()
         {

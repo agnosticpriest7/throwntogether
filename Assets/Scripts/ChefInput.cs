@@ -45,6 +45,12 @@ namespace ThrownTogether
             if(RestaurantMenu.GameplayBlocked || !expo.Usable(chef))return false;
             return expo.Fire();
         }
+        public bool HoldSelectedExpoTicket()
+        {
+            if(ReferenceEquals(expo.Station,null) || !isActiveAndEnabled || !InputFocused || RestaurantMenu.GameplayBlocked || !expo.Usable(chef))return false;
+            return expo.Hold();
+        }
+        public bool ExpoHoldAction=>expo.HoldAction;
         public int ExpoRowCount=>expo.RowCount;
         public int ExpoSelectedRow=>expo.SelectedIndex;
         public int ExpoVisibleTop=>expo.ScrollOffset;
@@ -62,12 +68,17 @@ namespace ThrownTogether
             // Re-read the board first: a diner who left since the last frame must be
             // noticed here, not after the confirm has already been evaluated.
             expo.Refresh();
-            if(Mathf.Abs(axis.y)<.35f || Mathf.Abs(axis.x)>Mathf.Abs(axis.y))expoNavigationHeld=false;
-            else if(!expoNavigationHeld){expo.Navigate(axis.y>0?-1:1);expoNavigationHeld=true;}
+            if(axis.magnitude<.35f)expoNavigationHeld=false;
+            else if(!expoNavigationHeld)
+            {
+                if(Mathf.Abs(axis.x)>Mathf.Abs(axis.y))expo.ChooseAction(axis.x>0);
+                else expo.Navigate(axis.y>0?-1:1);
+                expoNavigationHeld=true;
+            }
             // A vanished selection must not let the held press fire a different diner.
             if(expo.ConsumeRecovered())AwaitUseRelease=true;
             if(AwaitUseRelease){if(!use.IsPressed())AwaitUseRelease=false;}
-            else if(use.WasPressedThisFrame())FireSelectedExpoTicket();
+            else if(use.WasPressedThisFrame()){if(expo.HoldAction)HoldSelectedExpoTicket();else FireSelectedExpoTicket();}
         }
         public bool ChooseIngredient(int index)
         {

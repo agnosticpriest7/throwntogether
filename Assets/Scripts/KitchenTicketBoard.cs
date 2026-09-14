@@ -64,11 +64,15 @@ namespace ThrownTogether
         }
         public bool TryMarkReady(KitchenTicket ticket)=>Move(ticket,KitchenTicketState.Active,KitchenTicketState.Ready);
         public bool TryInvalidateReady(KitchenTicket ticket)=>Move(ticket,KitchenTicketState.Ready,KitchenTicketState.Active);
-        // Active is accepted directly so a player carrying a matching dish to the table
-        // does not have to stage it first.
-        public bool TryServe(KitchenTicket ticket)
+        public bool TryHold(KitchenTicket ticket)
         {
             if(!Owns(ticket) || !Holding(ticket.State))return false;
+            ticket.MoveTo(KitchenTicketState.Waiting);return true;
+        }
+        // Fire/Hold is a kitchen instruction, never a restriction on delivery.
+        public bool TryServe(KitchenTicket ticket)
+        {
+            if(!Owns(ticket) || Terminal(ticket.State))return false;
             ticket.MoveTo(KitchenTicketState.Served);return true;
         }
         public bool TryCancel(KitchenTicket ticket)

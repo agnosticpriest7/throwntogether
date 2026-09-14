@@ -109,7 +109,7 @@ namespace ThrownTogether.Tests
         {InputSystem.QueueStateEvent(pad,state);InputSystem.Update();target.Tick(0);}
         static void Press(Gamepad pad,ChefInput target,GamepadButton button)
         {Send(pad,target,new GamepadState());Send(pad,target,new GamepadState().WithButton(button));}
-        // Rows reorder as orders are fired, so walk to the top and then down.
+        // Navigate to a stable ticket without depending on the caller's cursor position.
         static void SelectRow(Gamepad pad,ChefInput input,KitchenTicket target)
         {
             for(int i=0;i<12 && input.SelectedExpoTicket!=target;i++)Press(pad,input,GamepadButton.DpadUp);
@@ -472,11 +472,11 @@ namespace ThrownTogether.Tests
                     var moved=input.SelectedExpoTicket;Assert.That(input.ExpoSelectedRow,Is.EqualTo(3));
                     Press(pad,input,GamepadButton.South);
                     Assert.That(moved.State,Is.EqualTo(KitchenTicketState.Active));
-                    // Firing sends the row to the fired section at the end of the list.
-                    Assert.That(input.SelectedExpoTicket,Is.SameAs(moved),"Selection follows the ticket through reordering");
-                    Assert.That(input.ExpoSelectedRow,Is.EqualTo(6));
-                    Visible("after the list reordered");
-                    var doomed=expo.TableFor(moved);Assert.That(doomed,Is.Not.Null);
+                    Assert.That(input.SelectedExpoTicket,Is.SameAs(moved));
+                    Assert.That(input.ExpoSelectedRow,Is.EqualTo(3),"Fire changes status, never row position");
+                    Visible("after firing without reordering");
+                    for(int i=0;i<3;i++)Press(pad,input,GamepadButton.DpadDown);
+                    var doomed=expo.TableFor(input.SelectedExpoTicket);Assert.That(doomed,Is.Not.Null);
                     doomed.BeginDeparture();
                     Send(pad,input,new GamepadState());
                     Assert.That(input.ExpoRowCount,Is.EqualTo(6),"The departed diner left the list");
@@ -492,6 +492,45 @@ namespace ThrownTogether.Tests
             Assert.That(seats.Length,Is.EqualTo(7));
             yield return null;LogAssert.NoUnexpectedReceived();
         }
+        [UnityTest] public IEnumerator ControllerChoosesFireOrHoldWithoutMovingOrders()
+        {
+            station=Install(Counter);var seats=ExtraSeats(3);var expo=station.Expo;var input=Ready(chef,station);
+            var order=expo.OpenTickets.ToArray();
+            using(new DeviceScope())
+            {
+                var pad=InputSystem.AddDevice<Gamepad>();input.BindDevices(pad);
+                try
+                {
+                    input.OpenExpo(station);Press(pad,input,GamepadButton.DpadDown);
+                    var chosen=input.SelectedExpoTicket;Assert.That(chosen,Is.SameAs(order[1]));
+                    Press(pad,input,GamepadButton.South);Assert.That(chosen.State,Is.EqualTo(KitchenTicketState.Active));
+                    Assert.That(input.ExpoSelectedRow,Is.EqualTo(1));CollectionAssert.AreEqual(order,ExpoOrderStrip.Visible(expo));
+                    Press(pad,input,GamepadButton.DpadRight);Assert.That(input.ExpoHoldAction,Is.True);
+                    Press(pad,input,GamepadButton.South);Assert.That(chosen.State,Is.EqualTo(KitchenTicketState.Waiting));
+                    Assert.That(expo.ActiveCount,Is.Zero);Assert.That(input.ExpoSelectedRow,Is.EqualTo(1));
+                    CollectionAssert.AreEqual(order,ExpoOrderStrip.Visible(expo));
+                    Press(pad,input,GamepadButton.South);Assert.That(chosen.State,Is.EqualTo(KitchenTicketState.Waiting),"Repeated Hold is not a toggle");
+                    Press(pad,input,GamepadButton.DpadLeft);Assert.That(input.ExpoHoldAction,Is.False);
+                    Press(pad,input,GamepadButton.South);Assert.That(chosen.State,Is.EqualTo(KitchenTicketState.Active));
+                    expo.TryFire(order[0]);Assert.That(input.ExpoSelectedRow,Is.EqualTo(1),"Another chef's fire leaves this cursor and order fixed");
+                    CollectionAssert.AreEqual(order,ExpoOrderStrip.Visible(expo));
+                    input.SetInputFocus(false);Assert.That(input.HoldSelectedExpoTicket(),Is.False);input.SetInputFocus(true);
+                    Assert.That(chosen.State,Is.EqualTo(KitchenTicketState.Active));
+                }
+                finally{input.BindDevices((InputDevice[])null);InputSystem.RemoveDevice(pad);}
+            }
+            yield return null;LogAssert.NoUnexpectedReceived();
+        }
+        [UnityTest] public IEnumerator HoldPreservesInFlightDishAndClaimForDelivery()
+        {
+            SeatTwo();var expo=day.Expo;var ticket=expo.OpenTickets[0];var table=expo.TableFor(ticket);var dish=Plate(ticket.Recipe);
+            Assert.That(expo.TryFire(ticket),Is.True);var claim=expo.TryClaim(dish,chef);Assert.That(claim,Is.Not.Null);
+            Assert.That(ticket.State,Is.EqualTo(KitchenTicketState.Ready));Assert.That(expo.TryHold(ticket),Is.True);
+            Assert.That(expo.BoundTicket(dish),Is.SameAs(ticket));Assert.That(expo.ActiveCount,Is.Zero);
+            Assert.That(table.Deliver(dish,claim),Is.True,"Kitchen Hold does not recall a server or block a prepared dish");
+            Assert.That(ticket.State,Is.EqualTo(KitchenTicketState.Served));Assert.That(day.Served,Is.EqualTo(1));
+            Assert.That(expo.TryHold(ticket),Is.False);Assert.That(table.Deliver(dish,claim),Is.False);yield return null;
+        }
         [UnityTest] public IEnumerator ProductionExpoStripTracksHoldMakeReadyAndImmediateRemoval()
         {
             station=day.GetComponent<KitchenFurniture>().Find("expo").GetComponent<ExpoStation>();
@@ -501,7 +540,8 @@ namespace ThrownTogether.Tests
             Assert.That(ExpoOrderStrip.Tint(ticket).r,Is.GreaterThan(ExpoOrderStrip.Tint(ticket).g));
             var pass=stations.OfType<ServiceStation>().Single();var dish=Plate(ticket.Recipe);
             Assert.That(pass.pickupSlot.TryTake(dish),Is.True);
-            Assert.That(expo.TryStage(dish),Is.False,"Advance preparation must not bypass Fire");
+            Assert.That(expo.TryStage(dish),Is.True,"Held orders can reserve matching prepared food");
+            Assert.That(ticket.State,Is.EqualTo(KitchenTicketState.Waiting),"Staging does not change the kitchen instruction");
             Assert.That(expo.TryFire(ticket),Is.True);
             Assert.That(ticket.State,Is.EqualTo(KitchenTicketState.Ready),"A matching dish already on the pass becomes READY on Fire");
             Assert.That(ExpoOrderStrip.Label(ticket),Is.EqualTo("READY"));Assert.That(ExpoOrderStrip.Tint(ticket).g,Is.GreaterThan(ExpoOrderStrip.Tint(ticket).r));
