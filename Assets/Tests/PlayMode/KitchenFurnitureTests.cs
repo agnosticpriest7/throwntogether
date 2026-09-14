@@ -155,7 +155,8 @@ namespace ThrownTogether.Tests
         {
             var account=RestaurantAccounts.Current;int funded=account.StartDay();Assert.That(account.Settle(funded,1000,0),Is.True);
             foreach(var offer in day.Settings.purchases.Where(p=>p.stationPrefab!=null))Assert.That(account.Buy(offer.id,offer.cost),Is.True);
-            var f=hud.GetComponent<KitchenFurniture>();Assert.That(f.Begin(),Is.True);Assert.That(f.Count,Is.EqualTo(15));
+            int expected=11+day.Settings.purchases.Count(p=>p.stationPrefab!=null);
+            var f=hud.GetComponent<KitchenFurniture>();Assert.That(f.Begin(),Is.True);Assert.That(f.Count,Is.EqualTo(expected));
             Assert.That(f.TryMove("purchase:counter-bay",10,0),Is.True,f.Message);Assert.That(f.Save(),Is.True,f.Message);
             var menu=hud.GetComponent<RestaurantMenu>();menu.OpenRestaurant();
             var pad=InputSystem.AddDevice<Gamepad>();
@@ -171,7 +172,7 @@ namespace ThrownTogether.Tests
             }
             finally{InputSystem.RemoveDevice(pad);InputSystem.settings.backgroundBehavior=background;InputSystem.settings.editorInputBehaviorInPlayMode=editor;}
             RestaurantAccounts.UseStorage(memory);yield return Load();f=hud.GetComponent<KitchenFurniture>();Assert.That(f.Find("purchase:counter-bay").position,Is.EqualTo(KitchenFurniture.Slots[10]));
-            Assert.That(f.Count,Is.EqualTo(15));LogAssert.NoUnexpectedReceived();
+            Assert.That(f.Count,Is.EqualTo(expected));LogAssert.NoUnexpectedReceived();
         }
         [UnityTest] public IEnumerator MovesSaveReloadCancelAndServiceLock()
         {

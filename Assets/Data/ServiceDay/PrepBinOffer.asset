@@ -19,5 +19,7 @@ MonoBehaviour:
   cost: 60
   stationPrefab: {fileID: 9193004908416919266, guid: e552a4f26f448c44d8be9c11d657898a, type: 3}
   layoutPositions:
-  - {x: -2.75, y: 0, z: 2.5}
+  - {x: -2.75, y: 0, z: 0.55}
+  - {x: -7.2, y: 0, z: 3.2}
+  - {x: -7.35, y: 0, z: 3.35}
   processingSpeed: 1.25

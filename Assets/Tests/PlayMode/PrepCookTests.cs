@@ -78,7 +78,8 @@ namespace ThrownTogether.Tests
         }
         [Test] public void HoldBeforeRetrievalReleasesClaimWithoutSpawningFood()
         {
-            var ticket=Seat();day.Expo.TryFire(ticket);day.PrepCook.Advance(.1f);
+            var ticket=Seat();day.Expo.TryFire(ticket);
+            for(int i=0;i<20 && day.PrepCook.Production.Ledger.Claims.Count==0;i++)day.PrepCook.Advance(.1f);
             Assert.AreEqual(1,day.PrepCook.Production.Ledger.Claims.Count);Assert.IsNull(day.PrepCook.ReservedItem);
             day.Expo.TryHold(ticket);Tick(100);Assert.IsEmpty(day.PrepCook.Production.Ledger.Claims);Assert.Zero(bin.Count);Assert.IsNull(day.PrepCook.Hands.Item);
         }

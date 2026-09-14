@@ -421,6 +421,7 @@ namespace ThrownTogether.Tests
         [UnityTest] public IEnumerator PaidImprovementsApplyOnNextDayIncludingServerAndFryerSpeed()
         {
             var account=RestaurantAccounts.Current;Assert.That(account.Settle(day.DayNumber,1500,0),Is.True);
+            int expectedCash=1500-day.Settings.purchases.Sum(p=>p.cost)-day.Settings.serverRole.hireCost-day.Settings.dishwasherRole.hireCost-day.Settings.busserRole.hireCost;
             foreach(var offer in day.Settings.purchases)Assert.That(account.Buy(offer.id,offer.cost),Is.True);
             Assert.That(account.Buy(day.Settings.serverRole.id,day.Settings.serverRole.hireCost),Is.True);
             Assert.That(account.Buy(day.Settings.dishwasherRole.id,day.Settings.dishwasherRole.hireCost),Is.True);
@@ -433,7 +434,7 @@ namespace ThrownTogether.Tests
 #endif
             scene=SceneManager.GetSceneAt(SceneManager.sceneCount-1);SceneManager.SetActiveScene(scene);yield return null;
             day=Object.FindObjectsByType<RestaurantDay>().Single(s=>s.gameObject.scene==scene);
-            Assert.That(day.DayNumber,Is.EqualTo(2));Assert.That(account.Data.cash,Is.EqualTo(470));
+            Assert.That(day.DayNumber,Is.EqualTo(2));Assert.That(account.Data.cash,Is.EqualTo(expectedCash));
             Assert.That(day.GetComponent<DiningServer>(),Is.Not.Null);
             Assert.That(day.GetComponent<KitchenDishwasher>(),Is.Not.Null);
             Assert.That(day.GetComponent<DiningBusser>(),Is.Not.Null);Assert.That(day.Tables.Length,Is.EqualTo(4));Assert.That(day.TargetCustomers,Is.EqualTo(12));
