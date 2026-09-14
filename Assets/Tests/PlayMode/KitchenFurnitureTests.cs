@@ -39,6 +39,25 @@ namespace ThrownTogether.Tests
             SceneManager.SetActiveScene(original);foreach(var g in suspended)if(g!=null)g.SetActive(true);
             Time.timeScale=1;SessionOptions.ShiftOrders=6;SessionOptions.Kitchen=0;RestaurantAccounts.ResetCache();
         }
+        [UnityTest] public IEnumerator EveryCareerLayoutStartsWithReachableExpoAndAcceptsAppliancePurchases()
+        {
+            int layouts=hud.GetComponent<KitchenLayout>().choices.Length;
+            for(int index=0;index<layouts;index++)
+            {
+                memory=new Memory();RestaurantAccounts.UseStorage(memory);SessionOptions.Kitchen=index;
+                yield return Load();
+                var f=hud.GetComponent<KitchenFurniture>();
+                Assert.That(day.Expo,Is.Not.Null,"Layout "+index+": "+day.ExpoProblem);
+                Assert.That(f.Find("expo"),Is.Not.Null);
+                Assert.That(f.Validate(out var why),Is.True,"Layout "+index+": "+why);
+                var account=RestaurantAccounts.Current;int paid=account.StartDay();account.Settle(paid,5000,0);
+                foreach(var offer in day.Settings.purchases.Where(p=>p.stationPrefab!=null))
+                    Assert.That(f.TryPurchase(offer),Is.True,"Layout "+index+": "+f.Message);
+                Assert.That(f.Validate(out why),Is.True,"Layout "+index+": "+why);
+                KitchenTestAccess.Approach(chef,f.Find("expo").GetComponent<ExpoStation>());
+            }
+            LogAssert.NoUnexpectedReceived();
+        }
         [UnityTest] public IEnumerator ExpoInstallsWithoutReplacingEquipmentAndPersistsArrangement()
         {
             var f=hud.GetComponent<KitchenFurniture>();var account=RestaurantAccounts.Current;

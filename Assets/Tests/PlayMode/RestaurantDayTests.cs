@@ -325,6 +325,7 @@ namespace ThrownTogether.Tests
                 // The destination comes from the real plate slot, never the interaction component.
                 // This catches order-logic roots incorrectly registered as targets at (0,0,0).
                 var surface=table.order.tableSlot.transform.position;
+                Assert.That(day.Expo.TryFire(day.Expo.TicketFor(table)),Is.True);
                 var dish=CookDish(table.order.recipe);
                 var motor=chef.GetComponent<CharacterController>();motor.enabled=false;
                 chef.transform.position=new Vector3(0,.04f,-3.35f);motor.enabled=true;Physics.SyncTransforms();
@@ -358,7 +359,7 @@ namespace ThrownTogether.Tests
         [UnityTest] public IEnumerator ServerChainsQueuedMealsWithoutReturningHome()
         {
             var recipe=DailyMenu.Catalog.First(r=>r.ingredient.id=="ingredient.potato" && r.requiredState==FoodState.Cooked);
-            foreach(var table in day.Tables){table.ReserveSeat();table.Seat(recipe);}
+            foreach(var table in day.Tables){table.ReserveSeat();table.Seat(recipe);Assert.That(day.Expo.TryFire(day.Expo.TicketFor(table)),Is.True);}
             var stock=stations.OfType<SourceStation>().Single(s=>s.plates);var pass=stations.OfType<ServiceStation>().Single();
             var first=stock.TakeCleanPlate();first.Configure(new ItemPayload{isPlate=true,ingredient=recipe.ingredient,state=recipe.requiredState});pass.pickupSlot.TryTake(first);
             var server=day.gameObject.AddComponent<DiningServer>();server.Initialize(day,pass);
@@ -391,6 +392,9 @@ namespace ThrownTogether.Tests
             var offers=day.Settings.purchases.Where(p=>p.stationPrefab!=null).ToArray();
             for(int index=0;index<layout.choices.Length;index++)
             {
+                // Legacy authored positions do not include the snapped career layout's Expo.
+                // Actual career installation/purchases across all layouts have separate coverage.
+                day.GetComponent<KitchenFurniture>().Find("expo").gameObject.SetActive(false);
                 layout.Apply(index);var added=offers.Select(p=>Object.Instantiate(p.stationPrefab,p.layoutPositions[index],Quaternion.identity)).ToArray();Physics.SyncTransforms();
                 try
                 {
