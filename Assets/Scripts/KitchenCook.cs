@@ -1,27 +1,24 @@
-using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 
 namespace ThrownTogether
 {
-    // One physical hot-line cook. Expo selects demand; food and appliance ownership
-    // remain the same CarrySlots used by players. Appliance Update owns cooking time.
+    // One physical cook. Completed components are assembled on ordinary counters.
+    // The projection can be stale; every transfer checks the real item/slot again.
     public sealed class KitchenCook : MonoBehaviour
     {
-        enum Phase { Idle, Fetch, Load, Cooking, Plate, Stage, Park }
+        enum Phase { Idle, Fetch, Load, Cooking, Plate, Assemble, SetDown, Swap, Stage, Park }
         RestaurantDay day;DiningWalker walker;CarrySlot hands;ServiceStation pass;
-        KitchenTicket ticket;ProcessingRecipe process;ProcessingStation appliance;
-        Carryable selected,job;Interactable target;Phase phase;float retry;
+        KitchenTicket ticket;CookProduction.Component component;ProcessingStation appliance;
+        Carryable selected,job,assemblyPlate;Interactable target;Phase phase;float retry;
         public string Status {get;private set;}="Waiting for fired orders";
         public CarrySlot Hands=>hands;
         public KitchenTicket CurrentTicket=>ticket;
-        public static ProcessingRecipe HotStep(RecipeDefinition recipe)=>recipe==null || recipe.additionalIngredients.Length!=0?null:
-            recipe.steps.LastOrDefault(s=>s!=null && s.ingredient==recipe.ingredient && s.output==recipe.requiredState &&
-                (s.output==FoodState.Cooked || s.output==FoodState.Grilled || s.output==FoodState.Griddled));
+        public static ProcessingRecipe HotStep(RecipeDefinition recipe)=>recipe==null || recipe.additionalIngredients.Length!=0?null:CookProduction.HotFor(recipe,recipe.ingredient,recipe.requiredState);
         public void Initialize(RestaurantDay owner)
         {
             day=owner;pass=FindObjectsByType<ServiceStation>(FindObjectsSortMode.None).First(s=>s.gameObject.scene==gameObject.scene);
-            transform.position=KitchenStaffRoute.Approach(pass.transform)??new Vector3(0,0,0);
+            transform.position=KitchenStaffRoute.Approach(pass.transform)??Vector3.zero;
             walker=gameObject.AddComponent<DiningWalker>();walker.Initialize(day.Settings.walkingVisual,1);
             var grip=new GameObject("Cook hands");grip.transform.SetParent(transform,false);grip.transform.localPosition=new Vector3(0,1.25f,.65f);hands=grip.AddComponent<CarrySlot>();
         }
@@ -34,67 +31,57 @@ namespace ThrownTogether
             target=s;walker.Go(route);return true;
         }
         void Wait(string reason){Status=reason;retry=.4f;}
-        void Idle(){phase=Phase.Idle;ticket=null;job=null;selected=null;target=null;retry=.15f;Status="Waiting for fired orders";}
-        static bool Plain(Carryable item,IngredientDefinition food,FoodState state)=>item!=null && item.Payload!=null && !item.Payload.isPlate && !item.Payload.dirty && item.Payload.additions.Count==0 && item.Payload.ingredient==food && item.Payload.state==state;
-        Interactable Location(Carryable item)
-        {
-            if(item?.Owner==null)return null;
-            var bin=item.Owner.GetComponentInParent<PrepBin>();if(bin!=null)return bin;
-            var counter=item.Owner.GetComponentInParent<CounterStation>();
-            return counter!=null && counter.slot==item.Owner?counter:null;
-        }
+        void Idle(){phase=Phase.Idle;ticket=null;component=null;job=null;selected=null;assemblyPlate=null;target=null;retry=.15f;Status="Waiting for fired orders";}
+        static Interactable Location(Carryable i)=>CookProduction.Location(i);
+        bool Reachable(Interactable s)=>s!=null && s.isActiveAndEnabled && KitchenStaffRoute.ToStation(transform.position,s.transform)!=null;
+        bool CanCollect(Carryable item)=>item!=null && Location(item)!=null && !(Location(item) is ProcessingStation p && p.Busy) && !(day.PrepCook!=null && day.PrepCook.ReservedItem==item) && Reachable(Location(item));
         bool Pickup(Carryable item)
         {
-            var location=Location(item);if(location==null || !Near(location))return false;
+            var location=Location(item);if(!CanCollect(item) || !Near(location))return false;
             if(location is PrepBin bin)return bin.Take(hands);
-            if(location is ProcessingStation p && p.Busy)return false;
             return hands.TryTake(item);
         }
+        CookProduction.Order Plan(Carryable excluded=null)=>CookProduction.Snapshot(day,excluded).FirstOrDefault(o=>o.Ticket==ticket);
         bool CoveredByPlayerWork()
         {
-            var food=FindObjectsByType<Carryable>(FindObjectsSortMode.None).Where(i=>i!=job && i!=selected && i.gameObject.scene==gameObject.scene && i.Owner!=null && i.Owner.GetComponentInParent<DiningTable>()==null).ToArray();
-            var used=new HashSet<Carryable>();
-            foreach(var order in day.Expo.OpenTickets)
-            {
-                var hot=HotStep(order.Recipe);if(hot==null)continue;
-                var found=food.FirstOrDefault(i=>!used.Contains(i) && day.Expo.BoundTicket(i)==order)??food.FirstOrDefault(i=>!used.Contains(i) && day.Expo.BoundTicket(i)==null &&
-                    (order.Recipe.Matches(i.Payload) || Plain(i,hot.ingredient,hot.output) || Location(i) is ProcessingStation p && p.CurrentProcess==hot));
-                if(found!=null)used.Add(found);
-                if(order==ticket)return found!=null;
-            }
-            return false;
+            if(component==null)return false;
+            var plan=Plan(job);var c=plan?.Components.FirstOrDefault(p=>p.Ingredient==component.Ingredient && p.State==component.State);
+            return c!=null && (c.OnPlate || c.Supply!=null && c.Supply!=selected);
         }
+        CounterStation FreeCounter()=>Interactable.Active.Where(s=>s!=null && s.gameObject.scene==gameObject.scene && s.GetType()==typeof(CounterStation)).Cast<CounterStation>().Where(s=>s.slot.Item==null && Reachable(s)).OrderBy(s=>(s.transform.position-transform.position).sqrMagnitude).FirstOrDefault();
         void FindWork()
         {
             if(day.Expo==null || !day.HasInstalledExpo){Wait("Requires an installed Expo desk");return;}
-            var food=FindObjectsByType<Carryable>(FindObjectsSortMode.None).Where(i=>i.gameObject.scene==gameObject.scene && i.Owner!=null && i.Owner.GetComponentInParent<DiningTable>()==null).ToArray();
-            var used=new HashSet<Carryable>();string reason="Waiting for fired single-dish orders";
-            foreach(var order in day.Expo.OpenTickets)
+            var plans=CookProduction.Snapshot(day);
+            var allocated=plans.SelectMany(p=>p.Components).Where(c=>c.Supply!=null).Select(c=>c.Supply).ToHashSet();
+            string reason="Waiting for fired orders";
+            foreach(var order in plans.Where(o=>o.Ticket.State==KitchenTicketState.Active))
             {
-                var hot=HotStep(order.Recipe);if(hot==null)continue;
-                var existing=food.FirstOrDefault(i=>!used.Contains(i) && day.Expo.BoundTicket(i)==order)??
-                    food.FirstOrDefault(i=>!used.Contains(i) && day.Expo.BoundTicket(i)==null &&
-                        (order.Recipe.Matches(i.Payload) || Plain(i,hot.ingredient,hot.output) ||
-                        Location(i) is ProcessingStation p && p.CurrentProcess==hot));
-                if(existing!=null)used.Add(existing);
-                if(order.State!=KitchenTicketState.Active)continue;
-                if(existing!=null)
+                if(order.Plate!=null && order.Ticket.Recipe.Matches(order.Plate.Payload))
                 {
-                    var place=Location(existing);
-                    if(place==null || place is ProcessingStation busy && busy.Busy){reason="Order already in player/station work";continue;}
-                    ticket=order;process=hot;selected=existing;
-                    if(Go(place)){phase=Phase.Fetch;Status="Collecting "+order.Recipe.displayName;return;}
-                    reason="Finished food path blocked";continue;
+                    if(!CanCollect(order.Plate)){reason="Completed dish with player / server";continue;}
+                    ticket=order.Ticket;selected=order.Plate;component=null;Go(Location(selected));phase=Phase.Fetch;Status="Collecting "+ticket.Recipe.displayName;return;
                 }
-                var free=FindObjectsByType<ProcessingStation>(FindObjectsSortMode.None).FirstOrDefault(p=>p.gameObject.scene==gameObject.scene && p.isActiveAndEnabled && !p.requiresAttendance && !p.Busy && p.slot.Item==null &&
-                    p.ProcessFor(new ItemPayload{ingredient=hot.ingredient,state=hot.input})==hot && KitchenStaffRoute.ToStation(transform.position,p.transform)!=null);
-                if(free==null){reason="Waiting for a compatible appliance";continue;}
-                var input=food.FirstOrDefault(i=>!used.Contains(i) && Plain(i,hot.ingredient,hot.input) && Location(i)!=null &&
-                    !(Location(i) is ProcessingStation cooking && cooking.Busy) && KitchenStaffRoute.ToStation(transform.position,Location(i).transform)!=null);
-                Interactable pickup=input!=null?Location(input):hot.input==FoodState.Raw?FindObjectsByType<SourceStation>(FindObjectsSortMode.None).FirstOrDefault(s=>s.gameObject.scene==gameObject.scene && s.Offers(hot.ingredient) && hot.ingredient.Unlocked && KitchenStaffRoute.ToStation(transform.position,s.transform)!=null):null;
-                if(pickup==null){reason="Needs "+hot.ingredient.NameFor(hot.input);continue;}
-                ticket=order;process=hot;appliance=free;selected=input;
-                if(Go(pickup)){phase=Phase.Fetch;Status="Collecting for "+order.Recipe.displayName;return;}
+                if(order.Plate!=null && !CanCollect(order.Plate)){reason="Assembly plate with player or path blocked";continue;}
+                // With no empty counter, use a stocked component first so pickup
+                // frees the very surface needed for assembling the meal.
+                bool noCounter=order.Plate==null && FreeCounter()==null;
+                foreach(var c in order.Components.Where(c=>!c.OnPlate).OrderBy(c=>noCounter && c.Hot?.input==FoodState.Raw?1:0))
+                {
+                    if(c.Supply!=null)
+                    {
+                        if(!CanCollect(c.Supply)){reason=Location(c.Supply) is ProcessingStation p && p.Busy?"Waiting for "+c.Ingredient.NameFor(c.State):"Component with player / prep worker";continue;}
+                        ticket=order.Ticket;component=c;selected=c.Supply;Go(Location(selected));phase=Phase.Fetch;Status="Collecting "+c.Ingredient.NameFor(c.State);return;
+                    }
+                    if(c.Hot==null){reason="Needs "+c.Ingredient.NameFor(c.State);continue;}
+                    var compatible=FindObjectsByType<ProcessingStation>(FindObjectsSortMode.None).Where(p=>p.gameObject.scene==gameObject.scene && p.isActiveAndEnabled && !p.requiresAttendance && p.ProcessFor(new ItemPayload{ingredient=c.Ingredient,state=c.Hot.input})==c.Hot).ToArray();
+                    var free=compatible.FirstOrDefault(p=>!p.Busy && p.slot.Item==null && Reachable(p));
+                    if(free==null){reason=compatible.Length==0?"Needs appliance for "+c.Ingredient.NameFor(c.State):"Appliance busy or path blocked";continue;}
+                    var input=FindObjectsByType<Carryable>(FindObjectsSortMode.InstanceID).FirstOrDefault(i=>i.gameObject.scene==gameObject.scene && !allocated.Contains(i) && CookProduction.Plain(i,c.Ingredient,c.Hot.input) && CanCollect(i));
+                    Interactable pickup=input!=null?Location(input):c.Hot.input==FoodState.Raw?FindObjectsByType<SourceStation>(FindObjectsSortMode.None).FirstOrDefault(s=>s.gameObject.scene==gameObject.scene && s.Offers(c.Ingredient) && c.Ingredient.Unlocked && Reachable(s)):null;
+                    if(pickup==null){reason="Needs "+c.Ingredient.NameFor(c.Hot.input);continue;}
+                    ticket=order.Ticket;component=c;appliance=free;selected=input;Go(pickup);phase=Phase.Fetch;Status="Collecting "+c.Ingredient.NameFor(c.Hot.input);return;
+                }
             }
             Wait(reason);
         }
@@ -102,41 +89,92 @@ namespace ThrownTogether
         {
             phase=Phase.Park;
             foreach(var s in Interactable.Active.Where(s=>s!=null && s.gameObject.scene==gameObject.scene &&
-                (s is PrepBin b && b.CanStore(hands.Item.Payload) || s.GetType()==typeof(CounterStation) && ((CounterStation)s).slot.Item==null)))if(Go(s)){Status="Holding order — storing food safely";return;}
-            target=null;Wait("Hold/finished order — needs free counter; food retained");
+                (s is PrepBin b && b.CanStore(hands.Item.Payload) || s.GetType()==typeof(CounterStation) && ((CounterStation)s).slot.Item==null)))if(Go(s)){Status="Storing unused component";return;}
+            target=null;Wait("Needs free counter — food retained");
+        }
+        void SetDown()
+        {
+            phase=Phase.SetDown;
+            if(!Go(FreeCounter()) && !SwapRoute())Wait("Needs free assembly counter — plate retained");
+            else Status="Setting down assembly plate";
+        }
+        bool SwapRoute()
+        {
+            if(!Fired)return false;
+            var plans=CookProduction.Snapshot(day);var plan=plans.FirstOrDefault(p=>p.Ticket==ticket);
+            if(plan==null || plan.Plate!=hands.Item)return false;
+            var reserved=plans.Where(p=>p!=plan).SelectMany(p=>p.Components).Select(c=>c.Supply).Where(i=>i!=null).ToHashSet();
+            foreach(var c in plan.Components.Where(c=>!c.OnPlate))
+            foreach(var counter in Interactable.Active.Where(s=>s!=null && s.gameObject.scene==gameObject.scene && s.GetType()==typeof(CounterStation)).Cast<CounterStation>())
+            {
+                var input=counter.slot.Item;if(input==null || reserved.Contains(input) || !CanCollect(input))continue;
+                bool ready=CookProduction.Plain(input,c.Ingredient,c.State);
+                if(!ready && (c.Hot==null || !CookProduction.Plain(input,c.Ingredient,c.Hot.input)))continue;
+                var free=ready?null:FindObjectsByType<ProcessingStation>(FindObjectsSortMode.None).FirstOrDefault(p=>p.gameObject.scene==gameObject.scene && !p.requiresAttendance && !p.Busy && p.slot.Item==null && p.ProcessFor(input.Payload)==c.Hot && Reachable(p));
+                if(!ready && free==null)continue;
+                component=c;selected=input;appliance=free;phase=Phase.Swap;Go(counter);return true;
+            }
+            return false;
         }
         void ToPlate()
         {
-            if(hands.Item.Payload.isPlate){phase=Phase.Stage;if(!Go(pass))Wait("Pass path blocked");return;}
-            phase=Phase.Plate;var stock=FindObjectsByType<SourceStation>(FindObjectsSortMode.None).FirstOrDefault(s=>s.gameObject.scene==gameObject.scene && s.plates);
-            if(!Go(stock)){target=null;Wait("Plate stack unavailable — food retained");}
-            else Status="Plating "+process.ingredient.NameFor(process.output);
+            if(hands.Item.Payload.isPlate)
+            {
+                if(ticket.Recipe.Matches(hands.Item.Payload)){phase=Phase.Stage;Status="Taking "+ticket.Recipe.displayName+" to pass";if(!Go(pass))Wait("Pass path blocked");}
+                else SetDown();
+                return;
+            }
+            // Re-read the shared plate every time. A player may have moved, finished,
+            // or taken it while this component was cooking.
+            var plan=Plan(job);assemblyPlate=plan?.Plate;
+            if(assemblyPlate!=null)
+            {
+                if(assemblyPlate.Payload.Contains(component.Ingredient,component.State)){Park();return;}
+                phase=Phase.Assemble;
+                if(!CanCollect(assemblyPlate) || Location(assemblyPlate)?.GetType()!=typeof(CounterStation)){target=null;Wait("Assembly plate with player — component retained");return;}
+                Go(Location(assemblyPlate));Status="Assembling "+ticket.Recipe.displayName;return;
+            }
+            if(ticket.Recipe.additionalIngredients.Length>0 && !Fired){Park();return;}
+            phase=Phase.Plate;var stock=FindObjectsByType<SourceStation>(FindObjectsSortMode.None).FirstOrDefault(s=>s.gameObject.scene==gameObject.scene && s.plates && Reachable(s));
+            if(!Go(stock))Wait("Plate stack path blocked — food retained");
+            else Status="Plating "+component.Ingredient.NameFor(component.State);
         }
         public void Advance(float seconds)
         {
             if(day==null || day.Closed || day.AwaitingMenu || !isActiveAndEnabled || seconds<=0)return;
             if(retry>0){retry-=seconds;return;}
             if(phase==Phase.Idle){FindWork();return;}
-            if(phase==Phase.Fetch && (!Fired || CoveredByPlayerWork())){Idle();return;}
-            if(phase==Phase.Load && (!Fired || CoveredByPlayerWork()) && hands.Item!=null){Park();return;}
+            if(phase==Phase.Fetch && !Fired){Idle();return;}
+            if(phase==Phase.Load && !Fired && hands.Item!=null){Park();return;}
             if(phase!=Phase.Fetch && (job==null || job.Owner!=hands && (appliance==null || job.Owner!=appliance.slot))){Idle();return;}
             if(target==null || !target.isActiveAndEnabled)
-            {if(hands.Item==null){Idle();return;}if(phase==Phase.Park)Park();else if(phase==Phase.Plate)ToPlate();else if(!Go(phase==Phase.Stage?(Interactable)pass:appliance))Wait("Destination unavailable — food retained");return;}
+            {
+                if(hands.Item==null){Idle();return;}
+                if(phase==Phase.Park)Park();else if(phase==Phase.SetDown || phase==Phase.Swap)SetDown();else if(phase==Phase.Plate || phase==Phase.Assemble)ToPlate();else if(!Go(phase==Phase.Stage?(Interactable)pass:appliance))Wait("Destination unavailable — food retained");return;
+            }
             if(!walker.Arrived)
             {if(!KitchenStaffRoute.Clear(transform.position)){Wait("Path blocked");return;}walker.Advance(seconds,day.Settings.walkingSpeed*RestaurantAccounts.Current.StaffSpeed("cook"),hands.Item!=null);return;}
             if(!Near(target)){if(!Go(target))Wait("Path blocked");return;}
             transform.LookAt(new Vector3(target.transform.position.x,transform.position.y,target.transform.position.z));
             if(phase==Phase.Fetch)
             {
-                bool got=selected!=null?Pickup(selected):target is SourceStation source && source.DispenseTo(this,hands,process.ingredient);
+                if(CoveredByPlayerWork()){Idle();return;}
+                if(selected!=null && (component==null?!ticket.Recipe.Matches(selected.Payload):
+                    !CookProduction.Plain(selected,component.Ingredient,component.State) && (component.Hot==null || !CookProduction.Plain(selected,component.Ingredient,component.Hot.input)))){Idle();return;}
+                bool got=selected!=null?Pickup(selected):target is SourceStation source && source.DispenseTo(this,hands,component.Ingredient);
                 if(!got){Idle();return;}job=hands.Item;
-                if(job.Payload.isPlate || job.Payload.state==process.output){ToPlate();return;}
+                if(job.Payload.isPlate || job.Payload.state==component.State){ToPlate();return;}
                 phase=Phase.Load;Status="Loading "+appliance.stationName;if(!Go(appliance))Wait("Appliance path blocked");return;
             }
             if(phase==Phase.Load)
             {
-                if(!appliance.StartHotBy(this,hands)){Wait("Appliance occupied — food retained");return;}
-                phase=Phase.Cooking;Status="Cooking "+ticket.Recipe.displayName;return;
+                if(CoveredByPlayerWork()){Park();return;}
+                if(!appliance.StartHotBy(this,hands))
+                {
+                    var other=FindObjectsByType<ProcessingStation>(FindObjectsSortMode.None).FirstOrDefault(p=>p!=appliance && p.gameObject.scene==gameObject.scene && !p.requiresAttendance && !p.Busy && p.slot.Item==null && p.ProcessFor(job.Payload)==component.Hot && Reachable(p));
+                    if(other!=null){appliance=other;Go(other);Status="Using another available appliance";}else Wait("Appliance occupied — food retained");return;
+                }
+                phase=Phase.Cooking;Status="Cooking "+component.Ingredient.NameFor(component.State);return;
             }
             if(phase==Phase.Cooking)
             {
@@ -145,12 +183,33 @@ namespace ThrownTogether
             }
             if(phase==Phase.Plate)
             {
+                if(Plan(job)?.Plate!=null){ToPlate();return;}
+                if(ticket.Recipe.additionalIngredients.Length>0 && !Fired){Park();return;}
                 var plate=((SourceStation)target).TakeCleanPlate();if(plate==null){Wait("No clean plates — food retained");return;}
-                plate.Payload.AddFood(job.Payload);hands.Release();Destroy(job.gameObject);plate.RefreshVisual();hands.TryTake(plate);job=plate;
-                phase=Phase.Stage;Status="Taking dish to pass";Go(pass);return;
+                plate.Payload.AddFood(job.Payload);hands.Release();Destroy(job.gameObject);plate.RefreshVisual();hands.TryTake(plate);job=plate;ToPlate();return;
+            }
+            if(phase==Phase.Assemble)
+            {
+                if(assemblyPlate==null || Location(assemblyPlate)!=target || !ticket.Recipe.AcceptsPortions(assemblyPlate.Payload) || !ItemPayload.CanPlate(assemblyPlate.Payload,job.Payload)){ToPlate();return;}
+                assemblyPlate.Payload.AddFood(job.Payload);hands.Release();Destroy(job.gameObject);assemblyPlate.RefreshVisual();target.ShowSuccess();
+                if(ticket.Recipe.Matches(assemblyPlate.Payload)){hands.TryTake(assemblyPlate);job=assemblyPlate;ToPlate();}else Idle();return;
+            }
+            if(phase==Phase.SetDown)
+            {
+                if(target.GetType()==typeof(CounterStation) && ((CounterStation)target).slot.TryTake(job)){target.ShowSuccess();Idle();}else SetDown();return;
+            }
+            if(phase==Phase.Swap)
+            {
+                var counter=(CounterStation)target;
+                if(!Fired || counter.slot.Item!=selected || !ticket.Recipe.AcceptsPortions(job.Payload) || job.Payload.Contains(component.Ingredient,component.State) ||
+                    !CookProduction.Plain(selected,component.Ingredient,component.State) && (component.Hot==null || !CookProduction.Plain(selected,component.Ingredient,component.Hot.input))){SetDown();return;}
+                // Both slots are validated and exchanged synchronously, never dropped.
+                var plate=hands.Release();var input=counter.slot.Release();counter.slot.TryTake(plate);hands.TryTake(input);job=input;
+                if(input.Payload.state==component.State)ToPlate();else{phase=Phase.Load;Go(appliance);Status="Loading next component";}return;
             }
             if(phase==Phase.Stage)
             {
+                if(!ticket.Recipe.Matches(job.Payload)){Park();return;}
                 if(!pass.pickupSlot.TryTake(job)){Wait("Serving counter full — holding dish");return;}
                 if(!day.Expo.TryStageFor(ticket,job))day.Expo.TryStage(job);pass.ShowSuccess();Idle();return;
             }

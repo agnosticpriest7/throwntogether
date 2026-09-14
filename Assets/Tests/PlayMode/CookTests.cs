@@ -106,5 +106,107 @@ namespace ThrownTogether.Tests
             day.Tables[0].order.Advance(10);day.Tables[0].BeginDeparture();day.Tables[0].Depart();
             for(int i=0;i<4000 && plates.CleanPlatesRemaining<5;i++)Step();Assert.AreEqual(5,plates.CleanPlatesRemaining);Assert.IsNull(day.Tables[0].order.tableSlot.Item);
         }
+        Carryable Portion(IngredientDefinition ingredient,FoodState state)
+        {
+            var source=Object.FindObjectsByType<SourceStation>().First(s=>s.gameObject.scene==scene && s.Offers(ingredient));
+            var item=Object.Instantiate(source.itemPrefab);item.Configure(new ItemPayload{ingredient=ingredient,state=state});
+            var counter=Object.FindObjectsByType<CounterStation>().First(c=>c.gameObject.scene==scene && c.GetType()==typeof(CounterStation) && c.slot.Item==null);Assert.IsTrue(counter.slot.TryTake(item));return item;
+        }
+        void StockParts(RecipeDefinition recipe)
+        {
+            foreach(var part in CookProduction.Portions(recipe))
+            {
+                var hot=CookProduction.HotFor(recipe,part.ingredient,part.state);
+                if(hot==null || hot.input!=FoodState.Raw)Portion(part.ingredient,hot?.input??part.state);
+            }
+        }
+        RecipeDefinition ChickenFries=>DailyMenu.Catalog.Single(r=>r.id=="chicken-fries" || r.displayName=="Chicken & Fries");
+        void ReturnServedPlate(int index=0)
+        {
+            var plate=day.Tables[index].order.tableSlot.Release();plate.Configure(ItemPayload.Plate());Assert.IsTrue(plates.ReturnCleanPlate(plate));day.Tables[index].Depart();Tick(5);
+        }
+        [Test] public void EntireMenuIncludingCompoundAndColdDishesAssemblesFromPhysicalPortions()
+        {
+            StartCook();foreach(var recipe in DailyMenu.Catalog)
+            {
+                StockParts(recipe);var ticket=Seat(recipe);Assert.IsTrue(day.Expo.TryFire(ticket));Tick(3000);
+                Assert.IsNotNull(pass.pickupSlot.Item,recipe.displayName+": "+day.Cook.Status);Assert.IsTrue(recipe.Matches(pass.pickupSlot.Item.Payload),recipe.displayName);
+                Assert.AreSame(ticket,day.Expo.BoundTicket(pass.pickupSlot.Item));Assert.AreEqual(4,plates.CleanPlatesRemaining);
+                Assert.IsTrue(day.Tables[0].Deliver(pass.pickupSlot.Item));ReturnServedPlate();
+            }
+        }
+        [Test] public void CompoundHoldFinishesCurrentComponentButDoesNotStartNext()
+        {
+            StartCook();StockParts(ChickenFries);var ticket=Seat(ChickenFries);day.Expo.TryFire(ticket);
+            var grill=Object.FindObjectsByType<ProcessingStation>().First(s=>s.gameObject.scene==scene && s.ProcessFor(ItemPayload.Food(ChickenFries.ingredient))!=null);
+            for(int i=0;i<1000 && !grill.Busy;i++)day.Cook.Advance(.1f);Assert.IsTrue(grill.Busy);day.Expo.TryHold(ticket);Tick(1500);
+            Assert.IsNull(pass.pickupSlot.Item);Assert.AreEqual(5,plates.CleanPlatesRemaining);
+            Assert.IsTrue(Object.FindObjectsByType<Carryable>().Any(i=>i.gameObject.scene==scene && CookProduction.Plain(i,ChickenFries.ingredient,ChickenFries.requiredState)));
+            Assert.IsFalse(Object.FindObjectsByType<Carryable>().Any(i=>i.gameObject.scene==scene && CookProduction.Plain(i,Fries.ingredient,FoodState.Cooked)));
+            day.Expo.TryFire(ticket);Tick(2500);Assert.IsTrue(ChickenFries.Matches(pass.pickupSlot.Item?.Payload),day.Cook.Status);
+        }
+        [Test] public void PlayerMovingPartialPlatePausesAssemblyAndResumesWithoutAnotherPlate()
+        {
+            StartCook();var ticket=Seat(ChickenFries);day.Expo.TryFire(ticket);
+            Tick(1200);var partial=CookProduction.Snapshot(day).Single(o=>o.Ticket==ticket).Plate;Assert.IsNotNull(partial,day.Cook.Status);Assert.AreEqual(1,partial.Payload.IngredientCount);
+            var counter=(CounterStation)CookProduction.Location(partial);chef.Hands.TryTake(partial);StockParts(ChickenFries);Tick(600);
+            Assert.IsNull(pass.pickupSlot.Item);Assert.AreEqual(4,plates.CleanPlatesRemaining);Assert.AreSame(partial,chef.Hands.Item);StringAssert.Contains("player",day.Cook.Status);
+            counter.slot.TryTake(partial);Tick(2500);Assert.AreSame(partial,pass.pickupSlot.Item);Assert.IsTrue(ChickenFries.Matches(partial.Payload));
+        }
+        [Test] public void AllocationCountsSharedPortionsAndWholePlatesOnlyOnce()
+        {
+            StartCook();var first=Seat(ChickenFries);var second=Seat(Fries,1);day.Expo.TryFire(first);day.Expo.TryFire(second);
+            var shared=Portion(Fries.ingredient,FoodState.Cooked);var snapshot=CookProduction.Snapshot(day);
+            Assert.AreEqual(1,snapshot.SelectMany(o=>o.Components).Count(c=>c.Supply==shared));
+            Assert.AreSame(shared,snapshot.Single(o=>o.Ticket==first).Components.Single(c=>c.Ingredient==Fries.ingredient).Supply);
+            var plate=plates.TakeCleanPlate();plate.Payload.AddFood(shared.Payload);plate.Payload.AddFood(new ItemPayload{ingredient=ChickenFries.ingredient,state=ChickenFries.requiredState});
+            var slot=shared.Owner;slot.Release();Object.DestroyImmediate(shared.gameObject);slot.TryTake(plate);snapshot=CookProduction.Snapshot(day);
+            Assert.AreSame(plate,snapshot.Single(o=>o.Ticket==first).Plate);Assert.IsNull(snapshot.Single(o=>o.Ticket==second).Plate);Assert.IsNull(snapshot.Single(o=>o.Ticket==second).Components.Single().Supply);
+        }
+        [Test] public void PlayerCookingCompoundComponentIsReusedWithoutDuplicate()
+        {
+            StartCook();var potato=Portion(Fries.ingredient,FoodState.Cut);chef.Hands.TryTake(potato);
+            var fryer=Object.FindObjectsByType<ProcessingStation>().First(p=>p.gameObject.scene==scene && p.ProcessFor(potato.Payload)==Hot());
+            ProcessingRecipe Hot()=>KitchenCook.HotStep(Fries);
+            Assert.IsTrue(fryer.Interact(chef));var ticket=Seat(ChickenFries);day.Expo.TryFire(ticket);Tick(2500);
+            Assert.IsTrue(ChickenFries.Matches(pass.pickupSlot.Item?.Payload),day.Cook.Status);
+            Assert.AreEqual(1,Object.FindObjectsByType<Carryable>().Count(i=>i.gameObject.scene==scene && i.Owner!=null && i.Payload.Contains(Fries.ingredient,FoodState.Cooked)));
+            Assert.IsNull(fryer.slot.Item);
+        }
+        [Test] public void CancelledCompoundOrderRetainsFoodAndDoesNotStageIncompleteDish()
+        {
+            StartCook();var ticket=Seat(ChickenFries);day.Expo.TryFire(ticket);Tick(1200);
+            var partial=CookProduction.Snapshot(day).Single(o=>o.Ticket==ticket).Plate;Assert.IsNotNull(partial);day.Tables[0].BeginDeparture();Tick(800);
+            Assert.IsNull(pass.pickupSlot.Item);Assert.IsNotNull(partial.Owner);Assert.AreEqual(1,partial.Payload.IngredientCount);Assert.AreEqual(4,plates.CleanPlatesRemaining);
+        }
+        [Test] public void PrepAndCookCompleteThreeComponentOmeletWithoutManualStock()
+        {
+            Assert.IsTrue(RestaurantAccounts.Current.Buy(day.Settings.prepCookRole.id,day.Settings.prepCookRole.hireCost));StartCook();
+            var recipe=DailyMenu.Catalog.Single(r=>r.displayName=="Garden Omelet");var ticket=Seat(recipe);day.Expo.TryFire(ticket);
+            for(int i=0;i<5000 && pass.pickupSlot.Item==null;i++){day.PrepCook.Advance(.1f);Tick(1);}
+            Assert.IsTrue(recipe.Matches(pass.pickupSlot.Item?.Payload),day.PrepCook.Status+" / "+day.Cook.Status);Assert.AreEqual(4,plates.CleanPlatesRemaining);
+        }
+        [Test] public void PlayerCompletingCompoundDishDuringCollectionStopsNewCooking()
+        {
+            StartCook();StockParts(ChickenFries);var ticket=Seat(ChickenFries);day.Expo.TryFire(ticket);
+            for(int i=0;i<1000 && day.Cook.Hands.Item==null;i++)day.Cook.Advance(.1f);
+            var input=day.Cook.Hands.Item;Assert.IsNotNull(input);
+            var plate=plates.TakeCleanPlate();foreach(var p in CookProduction.Portions(ChickenFries))plate.Payload.AddFood(new ItemPayload{ingredient=p.ingredient,state=p.state});chef.Hands.TryTake(plate);
+            Tick(1000);Assert.AreEqual(FoodState.Raw,input.Payload.state);Assert.IsNotNull(input.Owner);Assert.IsNull(pass.pickupSlot.Item);Assert.AreSame(plate,chef.Hands.Item);
+        }
+        [Test] public void MissingPreparedIngredientStatusIdentifiesWhatPlayerMustSupply()
+        {
+            StartCook();var ticket=Seat(ChickenFries);day.Expo.TryFire(ticket);Tick(1200);
+            StringAssert.Contains(Fries.ingredient.NameFor(FoodState.Cut),day.Cook.Status);Assert.IsNull(pass.pickupSlot.Item);
+            StockParts(ChickenFries);Tick(2500);Assert.IsTrue(ChickenFries.Matches(pass.pickupSlot.Item?.Payload),day.Cook.Status);
+        }
+        [Test] public void CountersFilledDuringCookingExchangePlateForNextComponentWithoutDeadlock()
+        {
+            StartCook();var recipe=DailyMenu.Catalog.Single(r=>r.displayName=="Garden Omelet");var ticket=Seat(recipe);day.Expo.TryFire(ticket);
+            for(int i=0;i<1000 && day.Cook.Hands.Item?.Payload.isPlate!=true;i++)Tick(1);
+            var plate=day.Cook.Hands.Item;Assert.IsNotNull(plate);Assert.IsTrue(plate.Payload.isPlate);
+            StockParts(recipe);Assert.IsFalse(Object.FindObjectsByType<CounterStation>().Any(c=>c.gameObject.scene==scene && c.GetType()==typeof(CounterStation) && c.slot.Item==null));
+            Tick(3500);Assert.AreSame(plate,pass.pickupSlot.Item,day.Cook.Status);Assert.IsTrue(recipe.Matches(plate.Payload));Assert.AreEqual(4,plates.CleanPlatesRemaining);
+        }
     }
 }
