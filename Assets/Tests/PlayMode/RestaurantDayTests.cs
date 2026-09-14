@@ -108,6 +108,135 @@ namespace ThrownTogether.Tests
             yield return null;
         }
 
+
+        Carryable ExpoPlate(RecipeDefinition recipe)
+        {
+            var plate=stations.OfType<SourceStation>().Single(x=>x.plates).TakeCleanPlate();
+            var payload=new ItemPayload{isPlate=true,ingredient=recipe.ingredient,state=recipe.requiredState};
+            foreach(var part in recipe.additionalIngredients)payload.additions.Add(new IngredientPortion{ingredient=part.ingredient,state=part.state});
+            plate.Configure(payload);return plate;
+        }
+        RecipeDefinition SeatExpoPair()
+        {
+            day.EnableExpo();
+            var recipe=DailyMenu.Catalog.First(r=>r.ingredient.id=="ingredient.potato" && r.requiredState==FoodState.Cooked);
+            foreach(var table in day.Tables){table.ReserveSeat();table.Seat(recipe);}
+            return recipe;
+        }
+        [UnityTest] public IEnumerator ExpoTracksRealSeatingAndRequiresFireBeforePlayerService()
+        {
+            var expo=day.EnableExpo();Assert.That(expo.Tickets,Is.Empty);day.Advance(18);
+            var table=day.Tables.First(t=>t.WaitingForMeal);var ticket=expo.TicketFor(table);
+            Assert.That(ticket,Is.Not.Null);Assert.That(ticket.State,Is.EqualTo(KitchenTicketState.Waiting));
+            Assert.That(expo.Tickets.Count,Is.EqualTo(day.Tables.Count(t=>t.WaitingForMeal)));
+            var dish=CookDish(table.order.recipe);
+            Assert.That(table.Deliver(dish),Is.False);Assert.That(chef.Hands.Item,Is.SameAs(dish));Assert.That(day.Served,Is.Zero);
+            Assert.That(expo.TryFire(ticket),Is.True);Assert.That(expo.TryFire(ticket),Is.False);
+            Use(table);Assert.That(day.Served,Is.EqualTo(1));Assert.That(ticket.State,Is.EqualTo(KitchenTicketState.Served));
+            Assert.That(table.Deliver(dish),Is.False);Assert.That(day.Served,Is.EqualTo(1));
+            table.order.Advance(8);day.Advance(2);
+            Assert.That(ticket.State,Is.EqualTo(KitchenTicketState.Served),"Normal departure cannot cancel a served ticket");
+            Assert.That(expo.ActiveCount,Is.Zero);yield return null;
+        }
+        [UnityTest] public IEnumerator ExpoBindsIdenticalDishesInFireOrderAndManualServeRetargetsAtomically()
+        {
+            var recipe=SeatExpoPair();var expo=day.Expo;var a=expo.TicketFor(day.Tables[0]);var b=expo.TicketFor(day.Tables[1]);
+            Assert.That(expo.TryFire(b),Is.True);Assert.That(expo.TryFire(a),Is.True);
+            var first=ExpoPlate(recipe);var second=ExpoPlate(recipe);
+            Assert.That(expo.TryStage(first),Is.True);Assert.That(expo.BoundTicket(first),Is.SameAs(b));
+            Assert.That(expo.TryStage(second),Is.True);Assert.That(expo.BoundTicket(second),Is.SameAs(a));
+            Assert.That(expo.ActiveCount,Is.EqualTo(2));
+            // The player's physical choice overrides staging: first dish goes to A.
+            Assert.That(day.Tables[0].Deliver(first),Is.True);
+            Assert.That(a.State,Is.EqualTo(KitchenTicketState.Served));
+            Assert.That(b.State,Is.EqualTo(KitchenTicketState.Active));
+            Assert.That(expo.BoundTicket(second),Is.Null);
+            Assert.That(expo.TryStage(second),Is.True);Assert.That(expo.BoundTicket(second),Is.SameAs(b));
+            Assert.That(day.Tables[1].Deliver(second),Is.True);Assert.That(day.Served,Is.EqualTo(2));
+            Assert.That(expo.ActiveCount,Is.Zero);yield return null;
+        }
+        [UnityTest] public IEnumerator ExpoCancelledClaimCannotServeReplacementDinerOrReleaseTheirClaim()
+        {
+            var recipe=SeatExpoPair();var expo=day.Expo;var table=day.Tables[0];var old=expo.TicketFor(table);
+            expo.TryFire(old);var dish=ExpoPlate(recipe);
+            var stale=expo.TryClaim(dish,chef);Assert.That(stale,Is.Not.Null);
+            table.BeginDeparture();table.Depart();table.ReserveSeat();table.Seat(recipe);
+            var fresh=expo.TicketFor(table);Assert.That(fresh.Id,Is.Not.EqualTo(old.Id));
+            Assert.That(old.State,Is.EqualTo(KitchenTicketState.Cancelled));Assert.That(expo.TryFire(old),Is.False);
+            Assert.That(expo.TryFire(fresh),Is.True);
+            var current=expo.TryClaim(dish,day);Assert.That(current,Is.Not.Null);
+            Assert.That(table.Deliver(dish,stale),Is.False);Assert.That(day.Served,Is.Zero);
+            expo.ReleaseClaim(stale);
+            Assert.That(table.Deliver(dish,current),Is.True);Assert.That(fresh.State,Is.EqualTo(KitchenTicketState.Served));
+            Assert.That(day.Served,Is.EqualTo(1));yield return null;
+        }
+        [UnityTest] public IEnumerator ExpoTrashedOrDestroyedDishReopensWorkWithoutCancellingTheOrder()
+        {
+            var recipe=SeatExpoPair();var expo=day.Expo;var ticket=expo.TicketFor(day.Tables[0]);expo.TryFire(ticket);
+            var dish=ExpoPlate(recipe);expo.TryStage(dish);
+            Assert.That(chef.Hands.TryTake(dish),Is.True);Use(stations.OfType<TrashStation>().Single());
+            day.Advance(.1f);Assert.That(ticket.State,Is.EqualTo(KitchenTicketState.Active));
+            Assert.That(expo.BoundTicket(dish),Is.Null);Assert.That(dish.Payload.dirty,Is.True);Assert.That(day.WasteFees,Is.EqualTo(1));
+            var replacement=ExpoPlate(recipe);expo.TryStage(replacement);Object.Destroy(replacement);yield return null;
+            day.Advance(.1f);Assert.That(ticket.State,Is.EqualTo(KitchenTicketState.Active));
+            Assert.That(expo.ActiveCount,Is.EqualTo(1));LogAssert.NoUnexpectedReceived();
+        }
+        [UnityTest] public IEnumerator ExpoPatienceRunsWhileUnfiredAndLateFireServiceStillWorks()
+        {
+            var expo=day.EnableExpo();day.Advance(301);
+            Assert.That(day.AdmissionsClosed,Is.True);Assert.That(day.Closed,Is.False);
+            Assert.That(expo.Tickets.Any(t=>t.State==KitchenTicketState.Cancelled),Is.True,"Unfired tickets do not stop patience");
+            var table=day.Tables.First(t=>t.WaitingForMeal);var ticket=expo.TicketFor(table);
+            Assert.That(expo.TryFire(ticket),Is.True);Assert.That(table.Deliver(ExpoPlate(ticket.Recipe)),Is.True);
+            Assert.That(day.Paid,Is.False);FinishDay();
+            Assert.That(day.Paid,Is.True);Assert.That(day.Served,Is.EqualTo(1));Assert.That(ticket.State,Is.EqualTo(KitchenTicketState.Served));
+            Assert.That(expo.TryFire(ticket),Is.False);yield return null;
+        }
+        [UnityTest] public IEnumerator ExpoDoorQueueReusesClearedSeatWithNewTicketWhileOldGuestWalksOut()
+        {
+            var expo=day.EnableExpo();day.Advance(60);Assert.That(day.WaitingOutside,Is.GreaterThan(0));
+            var table=day.Tables.First(t=>t.WaitingForMeal);var old=expo.TicketFor(table);
+            expo.TryFire(old);var dish=CookDish(old.Recipe);Use(table);table.order.Advance(8);day.Advance(.1f);Use(table);
+            for(int i=0;i<160 && expo.TicketFor(table)==old;i++)day.Advance(.1f);
+            var fresh=expo.TicketFor(table);
+            Assert.That(fresh,Is.Not.SameAs(old));Assert.That(fresh.State,Is.EqualTo(KitchenTicketState.Waiting));
+            Assert.That(old.State,Is.EqualTo(KitchenTicketState.Served));day.Advance(12);
+            Assert.That(expo.TicketFor(table),Is.SameAs(fresh));Assert.That(table.WaitingForMeal,Is.True);yield return null;
+        }
+        [UnityTest] public IEnumerator ExpoServerWaitsForFireAndDeliversOldestFiredTicket()
+        {
+            var recipe=SeatExpoPair();var expo=day.Expo;var pass=stations.OfType<ServiceStation>().Single();
+            var server=day.gameObject.AddComponent<DiningServer>();server.Initialize(day,pass);
+            var dish=ExpoPlate(recipe);pass.pickupSlot.TryTake(dish);
+            for(int i=0;i<50;i++)server.Advance(.1f);
+            Assert.That(pass.pickupSlot.Item,Is.SameAs(dish));Assert.That(day.Served,Is.Zero);
+            expo.TryFire(expo.TicketFor(day.Tables[1]));expo.TryFire(expo.TicketFor(day.Tables[0]));
+            for(int i=0;i<400 && day.Served==0;i++)server.Advance(.1f);
+            Assert.That(day.Served,Is.EqualTo(1));Assert.That(day.Tables[1].order.tableSlot.Item,Is.SameAs(dish));
+            Assert.That(day.Tables[0].WaitingForMeal,Is.True);yield return null;
+        }
+        [UnityTest] public IEnumerator ExpoServerReturnsCancelledDeliveryInsteadOfServingTheNextOccupant()
+        {
+            var recipe=SeatExpoPair();var expo=day.Expo;var table=day.Tables[0];var ticket=expo.TicketFor(table);expo.TryFire(ticket);
+            var pass=stations.OfType<ServiceStation>().Single();var dish=ExpoPlate(recipe);pass.pickupSlot.TryTake(dish);
+            var server=day.gameObject.AddComponent<DiningServer>();server.Initialize(day,pass);
+            for(int i=0;i<200 && pass.pickupSlot.Item!=null;i++)server.Advance(.1f);
+            Assert.That(pass.pickupSlot.Item,Is.Null);table.BeginDeparture();table.Depart();table.ReserveSeat();table.Seat(recipe);
+            // Fresh order has not been fired: the old in-flight dish must return.
+            for(int i=0;i<500;i++)server.Advance(.1f);
+            Assert.That(pass.pickupSlot.Item,Is.SameAs(dish));Assert.That(day.Served,Is.Zero);
+            Assert.That(expo.TicketFor(table).State,Is.EqualTo(KitchenTicketState.Waiting));yield return null;
+        }
+        [UnityTest] public IEnumerator ExpoStagingThroughPassAndDuplicateCarrierClaimsStayConsistent()
+        {
+            var recipe=SeatExpoPair();var expo=day.Expo;var ticket=expo.TicketFor(day.Tables[0]);expo.TryFire(ticket);
+            var dish=ExpoPlate(recipe);chef.Hands.TryTake(dish);Use(stations.OfType<ServiceStation>().Single());
+            Assert.That(expo.BoundTicket(dish),Is.SameAs(ticket));Assert.That(ticket.State,Is.EqualTo(KitchenTicketState.Ready));
+            var claim=expo.TryClaim(dish,chef);Assert.That(claim,Is.Not.Null);
+            Assert.That(expo.TryClaim(dish,day),Is.Null);Assert.That(expo.CanCollect(dish),Is.False);
+            expo.ReleaseClaim(claim);Assert.That(expo.TryClaim(dish,day),Is.Not.Null);yield return null;
+        }
+
         void WalkTo(float x,float z)
         {
             var target=new Vector3(x,0,z);

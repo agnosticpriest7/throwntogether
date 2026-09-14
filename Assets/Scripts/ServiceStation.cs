@@ -23,7 +23,8 @@ namespace ThrownTogether
             {
                 if(shift.Day.Closed)return false;
                 if(chef.Hands.Item==null)return pickupSlot.Item!=null && chef.Hands.TryTake(pickupSlot.Item);
-                return pickupSlot.TryTake(chef.Hands.Item);
+                if(!pickupSlot.TryTake(chef.Hands.Item))return false;
+                shift.Day.Expo?.TryStage(pickupSlot.Item);return true;
             }
             var item=chef.Hands.Item;
             if(delivery!=null || item==null) return false;

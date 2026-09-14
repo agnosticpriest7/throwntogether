@@ -6,6 +6,16 @@ namespace ThrownTogether
     public sealed class RestaurantDay : MonoBehaviour
     {
         public DayServiceDefinition Settings {get;private set;}
+        public RestaurantExpo Expo {get;private set;}
+        // Enabled by the physical Expo when installed; no invisible Fire gate in old scenes.
+        public RestaurantExpo EnableExpo()
+        {
+            if(Expo!=null)return Expo;
+            if(Settings==null || Tables==null || Closed)return null;
+            Expo=new RestaurantExpo(this,Mathf.Max(1,Settings.activeQueueCapacity));
+            foreach(var table in Tables)if(table.WaitingForMeal)Expo.Seat(table);
+            return Expo;
+        }
         public DiningTable[] Tables {get;private set;}
         public float Elapsed {get;private set;}
         public bool Closed {get;private set;}
@@ -150,7 +160,7 @@ namespace ThrownTogether
                     guest.walker.Go(new Vector3(TableApproach(guest.table).x,0,guest.walker.transform.position.z));
                 }
             }
-            server?.Advance(dt);dishwasher?.Advance(dt);busser?.Advance(dt);
+            Expo?.Refresh();server?.Advance(dt);dishwasher?.Advance(dt);busser?.Advance(dt);
             if(AdmissionsClosed && guests.Count==0){Closed=true;RetryPayment();}
         }
         public void RecordMeal(RecipeDefinition recipe,float waiting)

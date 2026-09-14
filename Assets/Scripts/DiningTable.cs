@@ -11,7 +11,7 @@ namespace ThrownTogether
         public bool Leaving {get;private set;}
         public bool WaitingForMeal => Occupied && !Arriving && !Leaving && order.Phase==OrderPhase.Waiting;
         public float PatienceRemaining => WaitingForMeal ? Mathf.Clamp01(1-(day.Elapsed-SeatedAt)/Mathf.Max(1,day.Settings.seatedPatience)):1;
-        public void BeginDeparture(){Leaving=true;ReservedForServer=false;order.ResetOrder(null);SetGuestVisible(false);}
+        public void BeginDeparture(){day.Expo?.Depart(this);Leaving=true;ReservedForServer=false;order.ResetOrder(null);SetGuestVisible(false);}
         public bool ReservedForServer {get;set;}
         public float SeatedAt {get;private set;}
         public bool Clean => !Occupied && order.tableSlot.Item==null;
@@ -21,16 +21,17 @@ namespace ThrownTogether
         {
             Arriving=false;order.ResetOrder(recipe);SeatedAt=day.Elapsed;
             var presentation=order.GetComponent<CustomerPresentation>();if(presentation?.seatedVisual!=null)CustomerPresentation.ApplyCustomerLook(presentation.seatedVisual,look);
-            SetGuestVisible(true);
+            SetGuestVisible(true);day.Expo?.Seat(this);
         }
-        public void Depart(){Occupied=false;Leaving=false;Arriving=false;SetGuestVisible(false);if(order.tableSlot.Item==null)order.ResetOrder(null);}
+        public void Depart(){day.Expo?.Depart(this);Occupied=false;Leaving=false;Arriving=false;SetGuestVisible(false);if(order.tableSlot.Item==null)order.ResetOrder(null);}
         public void SetGuestVisible(bool visible)
         {var presentation=order.GetComponent<CustomerPresentation>();if(presentation!=null && presentation.seatedVisual!=null)presentation.seatedVisual.gameObject.SetActive(visible);}
-        public bool CanServe(ItemPayload dish)=>!day.Closed && !Arriving && !Leaving && Occupied && order.tableSlot.Item==null && order.CanAccept(dish);
-        public bool Deliver(Carryable dish)
+        public bool CanServe(ItemPayload dish)=>!day.Closed && !Arriving && !Leaving && Occupied && order.tableSlot.Item==null && order.CanAccept(dish) && (day.Expo==null || day.Expo.CanServe(this,dish));
+        public bool Deliver(Carryable dish,ExpoDeliveryClaim claim=null)
         {
             if(dish==null || !CanServe(dish.Payload))return false;
-            order.Receive(dish);ReservedForServer=false;
+            if(day.Expo!=null){bool delivered=day.Expo.TryDeliver(this,dish,claim);if(delivered)ShowSuccess(true);return delivered;}
+            order.Receive(dish);if(order.tableSlot.Item!=dish || order.Phase!=OrderPhase.Eating)return false;ReservedForServer=false;
             day.RecordMeal(order.recipe,day.Elapsed-SeatedAt);ShowSuccess(true);return true;
         }
         public override string Prompt(ChefController chef)
@@ -40,6 +41,7 @@ namespace ThrownTogether
             if(Arriving)return "Customer arriving";
             if(!Occupied)return "Clean table — ready for a customer";
             if(order.Phase==OrderPhase.Eating)return "Customer eating";
+            if(day.Expo?.TicketFor(this)?.State==KitchenTicketState.Waiting)return "Fire this order at Expo first";
             return chef.Hands.Item!=null && CanServe(chef.Hands.Item.Payload) ? "Serve "+order.recipe.displayName:"Needs "+order.recipe.displayName;
         }
         public bool TakeDirty(CarrySlot hands)
