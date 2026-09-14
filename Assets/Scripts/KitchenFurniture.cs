@@ -77,7 +77,7 @@ namespace ThrownTogether
             var instance=Instantiate(offer.stationPrefab);instance.name=offer.displayName;
             var piece=new Piece{id="candidate",root=instance.transform};pieces.Add(piece);
             bool fits=false;
-            foreach(int slot in Enumerable.Range(0,Slots.Length).Where(s=>At(s)==null).ToArray())
+            foreach(int slot in Enumerable.Range(0,Find("expo")!=null?Slots.Length:Slots.Length-1).Where(s=>At(s)==null).ToArray())
             {Place(piece,slot,0);if(Validate(out var unused)){fits=true;break;}}
             if(!fits){pieces.Remove(piece);instance.SetActive(false);Destroy(instance);Message="No safe free bay. Sell equipment or rearrange first.";return false;}
             var account=RestaurantAccounts.Current;

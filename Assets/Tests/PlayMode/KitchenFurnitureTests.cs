@@ -55,15 +55,30 @@ namespace ThrownTogether.Tests
             Assert.That(memory.json,Is.EqualTo(saved),"Installation must not write a migration or charge money");
             Assert.That(account.Data.cash,Is.EqualTo(cash));
             Assert.That(f.InstallExpo(prefab),Is.SameAs(expo));Assert.That(f.Count,Is.EqualTo(count+1));
-            Assert.That(f.Begin(),Is.True);Assert.That(f.TryMove("expo",6,1),Is.True,f.Message);
+            Assert.That(f.Begin(),Is.True);Assert.That(Enumerable.Range(0,20).Any(slot=>f.TryMove("expo",slot,1)),Is.True,f.Message);int chosen=f.AssignedSlot("expo");
             Assert.That(f.Save(),Is.True,f.Message);
             RestaurantAccounts.UseStorage(memory);yield return Load();f=hud.GetComponent<KitchenFurniture>();
             expo=f.InstallExpo(prefab);Assert.That(expo,Is.Not.Null,f.Message);
-            Assert.That(f.AssignedSlot("expo"),Is.EqualTo(6));Assert.That(expo.transform.eulerAngles.y,Is.EqualTo(90).Within(.01f));
+            Assert.That(f.AssignedSlot("expo"),Is.EqualTo(chosen));Assert.That(expo.transform.eulerAngles.y,Is.EqualTo(90).Within(.01f));
             CollectionAssert.AreEquivalent(owned,RestaurantAccounts.Current.Data.equipment.Select(x=>x.instanceId));
             Assert.That(f.Validate(out why),Is.True,why);
             Assert.That(f.Begin(),Is.True);Assert.That(f.TryMove("expo",20,0),Is.True,f.Message);f.Cancel();
-            Assert.That(f.AssignedSlot("expo"),Is.EqualTo(6));LogAssert.NoUnexpectedReceived();
+            Assert.That(f.AssignedSlot("expo"),Is.EqualTo(chosen));LogAssert.NoUnexpectedReceived();
+        }
+        [UnityTest] public IEnumerator ExpoFitsAfterOldKitchenStopsAcceptingPurchases()
+        {
+            var account=RestaurantAccounts.Current;int funded=account.StartDay();account.Settle(funded,10000,0);
+            var f=hud.GetComponent<KitchenFurniture>();var offer=day.Settings.purchases.First(p=>p.stationPrefab!=null && p.kind==RestaurantPurchaseKind.CounterBay);
+            int bought=0;while(bought<20 && f.TryPurchase(offer))bought++;
+            Assert.That(bought,Is.GreaterThan(0));Assert.That(bought,Is.LessThan(20),"Finite old bays must fill");
+            Assert.That(f.TryPurchase(offer),Is.False);
+            int before=f.Count;string saved=memory.json;
+            var positions=account.Data.equipment.ToDictionary(x=>x.instanceId,x=>f.Find("purchase:"+x.instanceId).position);
+            var expo=f.InstallExpo(Resources.Load<ExpoStation>("ExpoCounter"));
+            Assert.That(expo,Is.Not.Null,f.Message);Assert.That(f.Count,Is.EqualTo(before+1));
+            Assert.That(memory.json,Is.EqualTo(saved));
+            foreach(var pair in positions)Assert.That(f.Find("purchase:"+pair.Key).position,Is.EqualTo(pair.Value));
+            Assert.That(f.Validate(out var why),Is.True,why);yield return null;LogAssert.NoUnexpectedReceived();
         }
         [UnityTest] public IEnumerator ManagementHubRepeatEquipmentAndPlateSupplySurviveReload()
         {
