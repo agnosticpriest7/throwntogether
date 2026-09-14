@@ -6,6 +6,22 @@ namespace ThrownTogether
     // Presentation only. The registry remains the authority for firing and serving.
     public static class ExpoOrderStrip
     {
+        static Texture2D readyMark;
+        static Texture2D ReadyMark
+        {
+            get
+            {
+                if(readyMark!=null)return readyMark;
+                readyMark=new Texture2D(16,16,TextureFormat.RGBA32,false){filterMode=FilterMode.Point,hideFlags=HideFlags.HideAndDontSave};
+                var pixels=new Color[256];
+                for(int x=2;x<=13;x++)
+                {
+                    int y=x<=6?10-x:x-2;
+                    for(int offset=0;offset<3;offset++)pixels[(y+offset)*16+x]=Color.white;
+                }
+                readyMark.SetPixels(pixels);readyMark.Apply(false,true);return readyMark;
+            }
+        }
         public static string Label(KitchenTicket ticket)=>ticket.State==KitchenTicketState.Waiting?"HOLD":ticket.State==KitchenTicketState.Ready?"READY":"MAKE";
         public static Color Tint(KitchenTicket ticket)=>ticket.State==KitchenTicketState.Waiting?new Color(.62f,.13f,.12f):new Color(.08f,.48f,.25f);
         public static KitchenTicket[] Visible(RestaurantExpo expo)=>expo.ActiveTickets.Concat(expo.WaitingTickets.Take(4)).ToArray();
@@ -31,10 +47,7 @@ namespace ThrownTogether
                 var table=expo.TableFor(ticket);int seat=table==null?-1:System.Array.IndexOf(day.Tables,table);
                 GUI.Label(new Rect(left,669,82,22),Label(ticket)+(seat>=0?" T"+(seat+1):""),text);
                 if(ticket.State==KitchenTicketState.Ready)
-                {
-                    var matrix=GUI.matrix;GUIUtility.RotateAroundPivot(45,new Vector2(left+62,628));GUI.DrawTexture(new Rect(left+62,628,8,3),Texture2D.whiteTexture);GUI.matrix=matrix;
-                    GUIUtility.RotateAroundPivot(-45,new Vector2(left+67,635));GUI.DrawTexture(new Rect(left+67,635,15,3),Texture2D.whiteTexture);GUI.matrix=matrix;
-                }
+                    GUI.DrawTexture(new Rect(left+61,615,18,18),ReadyMark);
             }
             GUI.color=prior;GUI.depth=depth;
         }

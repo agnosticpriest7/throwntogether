@@ -6,3 +6,5 @@
 
 See ../../EXPO_IMPLEMENTATION.md for test provenance and remaining production startup/deployment work.
 - production-hold.png: actual production Game View, automatic Expo and persistent HOLD dish strip, 2026-09-14.
+- production-ready.png: final READY tile and correctly placed checkmark after actual fries cooking/pass staging.
+- production-coop.png: two independent Expo browsers using synthetic gamepads; no physical controller claim.
