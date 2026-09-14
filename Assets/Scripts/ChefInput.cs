@@ -17,8 +17,57 @@ namespace ThrownTogether
         public void OpenStorage(SourceStation source)
         {
             if(source==null || chef.Hands.Item!=null)return;
+            expo.Close();
             Storage=source;StorageIndex=storageChoices.TryGetValue(source,out int index)?Mathf.Clamp(index,0,source.Ingredients.Length-1):0;
             storageNavigationHeld=true;RequireActionRelease();chef.CancelWork();
+        }
+        // Per-chef Expo browser. Storage and Expo are mutually exclusive; opening either
+        // closes the other, and neither pauses time or touches the other player.
+        readonly ExpoTicketBrowser expo=new ExpoTicketBrowser();
+        private bool expoNavigationHeld;
+        public ExpoStation Expo=>expo.Station;
+        public KitchenTicket SelectedExpoTicket=>expo.Selected;
+        public bool OpenExpo(ExpoStation station)
+        {
+            if(station==null || !station.isActiveAndEnabled || station.gameObject.scene!=gameObject.scene)return false;
+            if(!isActiveAndEnabled || !InputFocused || RestaurantMenu.GameplayBlocked)return false;
+            if(station.Expo==null || !InReach(station))return false;
+            // Held food is preserved: unlike storage, Expo does not need empty hands.
+            Storage=null;expo.Open(station);
+            expoNavigationHeld=true;RequireActionRelease();chef.CancelWork();return true;
+        }
+        // The public confirmation re-checks everything OpenExpo did, so a direct caller
+        // cannot fire while disabled, unfocused, paused, out of reach or after the
+        // station or day closed. RestaurantExpo.TryFire remains the domain authority.
+        public bool FireSelectedExpoTicket()
+        {
+            if(ReferenceEquals(expo.Station,null) || !isActiveAndEnabled || !InputFocused)return false;
+            if(RestaurantMenu.GameplayBlocked || !expo.Usable(chef))return false;
+            return expo.Fire();
+        }
+        public int ExpoRowCount=>expo.RowCount;
+        public int ExpoSelectedRow=>expo.SelectedIndex;
+        public int ExpoVisibleTop=>expo.ScrollOffset;
+        public static int ExpoVisibleRows=>ExpoTicketBrowser.VisibleRows;
+        // ReferenceEquals so a destroyed station is still cleaned up rather than skipped
+        // by Unity's null-like comparison.
+        public void CloseExpo(){if(ReferenceEquals(expo.Station,null))return;expo.Close();expoNavigationHeld=false;RequireActionRelease();}
+        bool InReach(Component target)
+        {
+            var delta=chef.transform.position-target.transform.position;delta.y=0;return delta.magnitude<=chef.reach;
+        }
+        private void TickExpo(Vector2 axis)
+        {
+            if(!expo.Usable(chef) || cancelStorage.WasPressedThisFrame()){CloseExpo();return;}
+            // Re-read the board first: a diner who left since the last frame must be
+            // noticed here, not after the confirm has already been evaluated.
+            expo.Refresh();
+            if(Mathf.Abs(axis.y)<.35f || Mathf.Abs(axis.x)>Mathf.Abs(axis.y))expoNavigationHeld=false;
+            else if(!expoNavigationHeld){expo.Navigate(axis.y>0?-1:1);expoNavigationHeld=true;}
+            // A vanished selection must not let the held press fire a different diner.
+            if(expo.ConsumeRecovered())AwaitUseRelease=true;
+            if(AwaitUseRelease){if(!use.IsPressed())AwaitUseRelease=false;}
+            else if(use.WasPressedThisFrame())FireSelectedExpoTicket();
         }
         public bool ChooseIngredient(int index)
         {
@@ -43,7 +92,9 @@ namespace ThrownTogether
         }
         private void OnGUI()
         {
-            if(Storage==null || RestaurantMenu.GameplayBlocked)return;
+            if(RestaurantMenu.GameplayBlocked)return;
+            if(expo.Station!=null){expo.Draw(FindFirstObjectByType<LocalCoopSession>()?.PlayerTwo==chef);return;}
+            if(Storage==null)return;
             var matrix=GUI.matrix;var color=GUI.color;GUI.matrix=Matrix4x4.Scale(new Vector3(Screen.width/1280f,Screen.height/720f,1));
             bool second=FindFirstObjectByType<LocalCoopSession>()?.PlayerTwo==chef;float x=second?666:18;
             GUI.color=new Color(.035f,.055f,.07f,.96f);GUI.DrawTexture(new Rect(x,480,596,214),Texture2D.whiteTexture);GUI.color=Color.white;
@@ -110,7 +161,7 @@ namespace ThrownTogether
             LastActiveDevice=null;
         }
         private void OnEnable() { if(InputFocused) controls.Enable(); }
-        private void OnDisable() { controls.Disable(); chef.CancelWork(); CloseStorage(); }
+        private void OnDisable() { controls.Disable(); chef.CancelWork(); CloseStorage(); CloseExpo(); }
 #if UNITY_WEBGL && !UNITY_EDITOR
         private void OnApplicationFocus(bool focused) { if(!focused) SetInputFocus(false); }
         private void OnApplicationPause(bool paused) { if(paused) SetInputFocus(false); }
@@ -127,11 +178,12 @@ namespace ThrownTogether
         }
         public void Tick(float seconds)
         {
-            if(RestaurantMenu.GameplayBlocked) { CloseStorage(); return; }
+            if(RestaurantMenu.GameplayBlocked) { CloseStorage(); CloseExpo(); return; }
 #if UNITY_WEBGL && !UNITY_EDITOR
             SetInputFocus(WebInputFocus.HasFocus);
 #endif
-            if(!InputFocused){CloseStorage();return;}
+            if(!InputFocused){CloseStorage();CloseExpo();return;}
+            if(!ReferenceEquals(expo.Station,null)){TickExpo((move.ReadValue<Vector2>()+storageNavigate.ReadValue<Vector2>()).normalized);return;}
             if(Storage!=null){TickStorage((move.ReadValue<Vector2>()+storageNavigate.ReadValue<Vector2>()).normalized);return;}
             chef.Move(move.ReadValue<Vector2>(),seconds);
             // Each action must release independently: a browser-held Menu signal
