@@ -24,6 +24,7 @@ namespace ThrownTogether
         public EmployeeRoleDefinition serverRole;
         public EmployeeRoleDefinition dishwasherRole;
         public EmployeeRoleDefinition busserRole;
+        public EmployeeRoleDefinition prepCookRole;
         public Vector3 sidewalkStart=new Vector3(-14,0,-7.1f), sidewalkExit=new Vector3(17,0,-7.1f);
     }
 }

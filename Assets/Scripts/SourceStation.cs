@@ -16,6 +16,14 @@ namespace ThrownTogether
             if(chef.Hands.TryTake(item)){ShowSuccess(false);return true;}Destroy(item.gameObject);return false;
         }
         public Carryable itemPrefab;
+        public bool DispenseTo(MonoBehaviour worker,CarrySlot hands,IngredientDefinition choice)
+        {
+            if(worker==null || !worker.isActiveAndEnabled || hands==null || hands.Item!=null || choice==null ||
+                !isActiveAndEnabled || !Offers(choice) || !choice.Unlocked || itemPrefab==null ||
+                Vector3.Distance(worker.transform.position,transform.position)>1.85f)return false;
+            var item=Instantiate(itemPrefab);item.Configure(ItemPayload.Food(choice));
+            if(hands.TryTake(item)){ShowSuccess();return true;}Destroy(item.gameObject);return false;
+        }
         public bool plates;
         public const int PlateCapacity=5;
         private int issued;

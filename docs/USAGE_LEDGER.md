@@ -101,3 +101,9 @@ Reused management, colliders, staff routes and atomic account storage. Added foc
 2026-09-14 — Resumed Expo verification/deployment after approval-service recovery. Fixed only the scaled READY marker, completed live canonical service and next-day checks, reran all 201 tests and deployed 0.18.0-dev. No usage estimate; physical TV/controller review remains with the owner.
 
 2026-09-14 — Owner correction: stable Expo rows with explicit Fire/Hold commands; Hold never blocks manual/server delivery. Reused existing menu/input, board and claim architecture. 204 candidate automated checks passed; live held-order cooking/delivery verified. Account-wide usage unavailable; no estimate recorded.
+
+### 2026-09-14 — Prep Cook foundation (in progress)
+Prepared Claude PREP-001 ledger assignment; implemented physical five-portion prep bin and offer. Three targeted PlayMode tests passed, canonical Console error count zero. Employee integration/full regression/release pending. Account usage not available; no estimate recorded.
+
+### 2026-09-14 — Prep Cook integration candidate
+Reviewed/imported Claude PREP-001 f51f6a3; implemented physical worker, demand projection, bins, saved assignment and management. Canonical live service loop succeeded, Console clear. 90 EditMode and initial seven PlayMode cases passed; final isolated regression/release pending. Actual account-wide usage unavailable; no estimate made.

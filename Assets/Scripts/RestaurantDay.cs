@@ -7,6 +7,7 @@ namespace ThrownTogether
     {
         public DayServiceDefinition Settings {get;private set;}
         public RestaurantExpo Expo {get;private set;}
+        public KitchenPrepCook PrepCook {get;private set;}
         public string ExpoProblem {get;private set;}="";
         ServiceStation expoPass;
         public bool EnsureExpo()
@@ -99,6 +100,8 @@ namespace ThrownTogether
             {dishwasher=gameObject.AddComponent<KitchenDishwasher>();dishwasher.Initialize(this);}
             if(Settings.busserRole!=null && account.Owns(Settings.busserRole.id))
             {busser=gameObject.AddComponent<DiningBusser>();busser.Initialize(this);}
+            if(Settings.prepCookRole!=null && account.Owns(Settings.prepCookRole.id))
+            {var worker=new GameObject("Hired prep cook");worker.transform.SetParent(transform);PrepCook=worker.AddComponent<KitchenPrepCook>();PrepCook.Initialize(this);}
         }
         DiningWalker Walker(string label,int look,Vector3 position)
         {
@@ -173,7 +176,7 @@ namespace ThrownTogether
                     guest.walker.Go(new Vector3(TableApproach(guest.table).x,0,guest.walker.transform.position.z));
                 }
             }
-            Expo?.Refresh();StageExpoPass();server?.Advance(dt);dishwasher?.Advance(dt);busser?.Advance(dt);
+            Expo?.Refresh();StageExpoPass();server?.Advance(dt);dishwasher?.Advance(dt);busser?.Advance(dt);PrepCook?.Advance(dt);
             if(AdmissionsClosed && guests.Count==0){Closed=true;RetryPayment();}
         }
         public void RecordMeal(RecipeDefinition recipe,float waiting)

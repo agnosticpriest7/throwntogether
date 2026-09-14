@@ -129,6 +129,7 @@ namespace ThrownTogether
         }
         public void NavigateBack()
         {
+            if(Page=="Prep cook"){SetPage("Employees");return;}
             if(Page=="Restaurant")return;
             if(Page=="Confirm"){SetPage(confirmReturnPage);return;}
             if(Page=="Employees" || Page=="Shop" || Page=="Today's Menu" && !IsFrontEnd){SetPage("Restaurant");return;}
@@ -232,14 +233,32 @@ namespace ThrownTogether
             if(Page=="Employees")
             {
                 var config=Resources.Load<DayServiceDefinition>("ServiceDay");var account=RestaurantAccounts.Current;
-                foreach(var role in new[]{config.serverRole,config.dishwasherRole,config.busserRole})
+                foreach(var role in new[]{config.serverRole,config.dishwasherRole,config.busserRole,config.prepCookRole})
                 {
                     var employee=role;if(employee==null)continue;
                     bool hired=account.Owns(employee.id);int level=account.TrainingLevel(employee.id);
                     Add(employee.displayName+(hired?" — Hired • Training "+level+"/3":" — Hire $"+employee.hireCost),()=>Buy(employee.id,employee.hireCost));rows[rows.Count-1].enabled=!hired;
                     if(hired){Add(level<3?"Train "+employee.displayName+" — $"+account.TrainingPrice(employee.id)+" • speed +"+((level+1)*10)+"%":"Maximum training — speed +30%",()=>{message=account.Train(employee.id)?"Training purchased. Applies next service.":string.IsNullOrEmpty(account.Problem)?"Not enough money.":account.Problem;});rows[rows.Count-1].enabled=level<3;}
                 }
+                if(account.Owns("prep-cook"))Add("Prep cook assignment",()=>SetPage("Prep cook"));
                 Add("Back to Day Complete",NavigateBack);return;
+            }
+            if(Page=="Prep cook")
+            {
+                var account=RestaurantAccounts.Current;var assignment=account.PrepAssignment(SessionOptions.Kitchen);
+                var furniture=GetComponent<KitchenFurniture>();var stations=furniture.PrepStations;
+                var stationIds=new[]{""}.Concat(stations.Select(p=>p.Key)).ToArray();
+                var labels=new[]{"Automatic — free prep station"}.Concat(stations.Select(p=>"Bay "+(furniture.AssignedSlot(p.Key)+1)+" — "+p.Value.stationName)).ToArray();
+                if(!stationIds.Contains(assignment.station)){stationIds=stationIds.Concat(new[]{assignment.station}).ToArray();labels=labels.Concat(new[]{"Missing station — choose another"}).ToArray();}
+                int selected=Math.Max(0,Array.IndexOf(stationIds,assignment.station));
+                Choice("Station",labels,()=>selected,v=>{if(!account.AssignPrep(SessionOptions.Kitchen,stationIds[v],assignment.ingredient))message=account.Problem;});
+                var ingredients=DailyMenu.Catalog.Where(r=>r.Unlocked(account)).SelectMany(r=>r.steps).Where(p=>p!=null && p.input==FoodState.Raw && p.output==FoodState.Cut).Select(p=>p.ingredient).Where(i=>i!=null).Distinct().ToArray();
+                var ids=new[]{""}.Concat(ingredients.Select(i=>i.id)).ToArray();var names=new[]{"Automatic — fired orders"}.Concat(ingredients.Select(i=>i.displayName)).ToArray();
+                if(!ids.Contains(assignment.ingredient)){ids=ids.Concat(new[]{assignment.ingredient}).ToArray();names=names.Concat(new[]{"Unavailable ingredient — choose another"}).ToArray();}
+                int food=Math.Max(0,Array.IndexOf(ids,assignment.ingredient));
+                Choice("Ingredient",names,()=>food,v=>{if(!account.AssignPrep(SessionOptions.Kitchen,assignment.station,ids[v]))message=account.Problem;});
+                Add("Fired orders only • uses bins or free counters",()=>{});rows[rows.Count-1].enabled=false;
+                Add("Back to Employees",()=>SetPage("Employees"));return;
             }
             if(Page=="Shop") { BuildShopRows();return; }
             if(Page=="Restaurant")

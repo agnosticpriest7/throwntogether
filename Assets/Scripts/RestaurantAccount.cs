@@ -5,6 +5,7 @@ namespace ThrownTogether
 {
     [Serializable] public sealed class OwnedEquipment { public string instanceId, offerId; public int paid; }
     [Serializable] public sealed class StaffTraining { public string role; public int level; }
+    [Serializable] public sealed class PrepCookAssignment { public int kitchen; public string station="",ingredient=""; }
     [Serializable] public sealed class RestaurantSave
     {
         public int schemaVersion=1, cash, nextDay=1, activeDay, settledDay, completedDays;
@@ -14,6 +15,7 @@ namespace ThrownTogether
         public FurniturePlacement[] furniture=new FurniturePlacement[0];
         public OwnedEquipment[] equipment=new OwnedEquipment[0];
         public StaffTraining[] training=new StaffTraining[0];
+        public PrepCookAssignment[] prepAssignments=new PrepCookAssignment[0];
     }
     // Separate from audio/display settings. Writes commit a copy, never partially debit live state.
     public sealed class RestaurantAccount
@@ -35,6 +37,7 @@ namespace ThrownTogether
                 if(loaded.selectedMenu==null)loaded.selectedMenu=new string[0];
                 if(loaded.equipment==null)loaded.equipment=new OwnedEquipment[0];
                 if(loaded.training==null)loaded.training=new StaffTraining[0];
+                if(loaded.prepAssignments==null)loaded.prepAssignments=new PrepCookAssignment[0];
                 // Optional schema-1 addition: preserve old saves and begin with their existing dishes.
                 if(!json.Contains("\"selectedMenu\""))loaded.selectedMenu=System.Array.ConvertAll(System.Array.FindAll(DailyMenu.Catalog,r=>r.requiredPurchases.Length==0),r=>r.id);
                 Data=loaded;
@@ -88,6 +91,13 @@ namespace ThrownTogether
         }
         public static int Resale(int cost)=>Mathf.FloorToInt(cost*.75f);
         public int TrainingLevel(string role)=>Data.training.FirstOrDefault(t=>t.role==role)?.level??0;
+        public PrepCookAssignment PrepAssignment(int kitchen)
+        {var a=Data.prepAssignments.FirstOrDefault(p=>p!=null && p.kitchen==kitchen);return new PrepCookAssignment{kitchen=kitchen,station=a?.station??"",ingredient=a?.ingredient??""};}
+        public bool AssignPrep(int kitchen,string station,string ingredient)
+        {
+            if(!Owns("prep-cook") || Data.activeDay>Data.settledDay || kitchen<0 || kitchen>2 || station==null || ingredient==null)return false;
+            var next=Copy();next.prepAssignments=next.prepAssignments.Where(a=>a!=null && a.kitchen!=kitchen).Concat(new[]{new PrepCookAssignment{kitchen=kitchen,station=station,ingredient=ingredient}}).ToArray();return Commit(next);
+        }
         public float StaffSpeed(string role)=>1+.1f*TrainingLevel(role);
         public int TrainingPrice(string role)=>50*(TrainingLevel(role)+1);
         public bool Train(string role)

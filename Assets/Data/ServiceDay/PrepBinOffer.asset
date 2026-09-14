@@ -1,0 +1,23 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 290d6a22633f0f6489912498fb6ff4a5, type: 3}
+  m_Name: PrepBinOffer
+  m_EditorClassIdentifier: ThrownTogether.Runtime::ThrownTogether.RestaurantUpgradeDefinition
+  id: prep-bin
+  displayName: Prep Bin
+  description: Stores five portions of one chopped ingredient.
+  kind: 0
+  cost: 60
+  stationPrefab: {fileID: 9193004908416919266, guid: e552a4f26f448c44d8be9c11d657898a, type: 3}
+  layoutPositions:
+  - {x: -2.75, y: 0, z: 2.5}
+  processingSpeed: 1.25
