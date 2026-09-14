@@ -8,15 +8,16 @@ namespace ThrownTogether
         public DayServiceDefinition Settings {get;private set;}
         public RestaurantExpo Expo {get;private set;}
         public KitchenPrepCook PrepCook {get;private set;}
+        public KitchenCook Cook {get;private set;}
+        public bool HasInstalledExpo=>FindObjectsByType<ExpoStation>(FindObjectsSortMode.None).Any(s=>s.gameObject.scene==gameObject.scene && s.isActiveAndEnabled);
         public string ExpoProblem {get;private set;}="";
         ServiceStation expoPass;
         public bool EnsureExpo()
         {
-            if(Expo!=null)return true;
-            var furniture=GetComponent<KitchenFurniture>();
-            var station=furniture?.InstallExpo(Resources.Load<ExpoStation>("ExpoCounter"));
-            ExpoProblem=station!=null?"":"Expo needs a clear bay. Open Arrange Kitchen, keep routes clear, then retry Start Day. "+furniture?.Message;
-            return station!=null;
+            var stations=FindObjectsByType<ExpoStation>(FindObjectsSortMode.None).Where(s=>s.gameObject.scene==gameObject.scene && s.isActiveAndEnabled).ToArray();
+            foreach(var station in stations)station.Initialize(this);
+            if(stations.Length==0)Expo=null;
+            ExpoProblem="";return true;
         }
         internal void StageExpoPass(){if(Expo!=null && expoPass?.pickupSlot.Item!=null && Expo.BoundTicket(expoPass.pickupSlot.Item)==null)Expo.TryStage(expoPass.pickupSlot.Item);}
         // Enabled by the physical Expo when installed; no invisible Fire gate in old scenes.
@@ -46,11 +47,14 @@ namespace ThrownTogether
         public int NetIncome=>Mathf.Max(0,BaseIncome+Bonuses+VarietyBonus-WasteFees);
         public bool StartService()
         {
-            if(!AwaitingMenu || !DailyMenu.CanStart(RestaurantAccounts.Current) || !EnsureExpo())return false;
+            if(!AwaitingMenu || !DailyMenu.CanStart(RestaurantAccounts.Current))return false;
+            ApplyPurchases();EnsureExpo();
+            if(Settings.cookRole!=null && RestaurantAccounts.Current.Owns("cook") && HasInstalledExpo && Cook==null)
+            {var worker=new GameObject("Hired cook");worker.transform.SetParent(transform);Cook=worker.AddComponent<KitchenCook>();Cook.Initialize(this);}
             int number=RestaurantAccounts.Current.StartDay();if(number==0)return false;
             Menu=DailyMenu.Resolve(RestaurantAccounts.Current);DayNumber=number;AwaitingMenu=false;return true;
         }
-        private void Start(){if(AwaitingMenu)GetComponent<RestaurantMenu>().ChooseDailyMenu(()=>{if(StartService())GetComponent<RestaurantMenu>().Close();});}
+        private void Start(){if(AwaitingMenu)GetComponent<RestaurantMenu>().OpenRestaurant();}
         public float LastWasteAt {get;private set;}=-100;
         public bool RecordWaste(){if(Closed)return false;WasteFees+=Mathf.Max(0,Settings.wasteCost);LastWasteAt=Elapsed;return true;}
         public int LostCustomers {get;private set;}
@@ -80,27 +84,32 @@ namespace ThrownTogether
             gameObject.AddComponent<KitchenFurniture>().Initialize(GetComponent<KitchenLayout>());
             ApplyPurchases();
             expoPass=FindObjectsByType<ServiceStation>().FirstOrDefault(s=>s.gameObject.scene==gameObject.scene);
-            EnsureExpo();StartService();
+            EnsureExpo();bool manage=SessionOptions.ManageBeforeService;SessionOptions.ManageBeforeService=false;if(!manage)StartService();
         }
         void ApplyPurchases()
         {
             var account=RestaurantAccounts.Current;
+            if(shift.diningExpansion!=null && !shift.diningExpansion.activeSelf && Settings.purchases.Any(p=>p!=null && p.kind==RestaurantPurchaseKind.DiningTables && account.Owns(p.id)))
+            {
+                shift.diningExpansion.SetActive(true);shift.seats=shift.seats.Concat(shift.expansionSeats).Distinct().ToArray();
+                var extra=shift.expansionSeats.Select(o=>{o.manualService=true;o.mealSeconds=Settings.eatingSeconds;o.ResetOrder(null);var t=o.tableSlot.transform.parent.gameObject.AddComponent<DiningTable>();t.day=this;t.order=o;t.stationName="Dining table";t.SetGuestVisible(false);return t;});Tables=Tables.Concat(extra).ToArray();
+            }
             GetComponent<KitchenFurniture>().IncludeNewPurchases();
             foreach(var purchase in Settings.purchases)
                 if(purchase!=null && account.Owns(purchase.id) && purchase.kind==RestaurantPurchaseKind.FasterFryers)
                     foreach(var fryer in FindObjectsByType<ProcessingStation>(FindObjectsSortMode.None))
                         if(fryer.gameObject.scene==gameObject.scene && !fryer.requiresAttendance && fryer.appliance!=null && fryer.appliance.id.Contains("fryer"))fryer.processingSpeed=purchase.processingSpeed;
             GetComponent<KitchenFurniture>().ApplySaved();
-            if(Settings.serverRole!=null && account.Owns(Settings.serverRole.id))
+            if(server==null && Settings.serverRole!=null && account.Owns(Settings.serverRole.id))
             {
                 var pass=FindObjectsByType<ServiceStation>(FindObjectsSortMode.None).First(s=>s.gameObject.scene==gameObject.scene);
                 server=gameObject.AddComponent<DiningServer>();server.Initialize(this,pass);
             }
-            if(Settings.dishwasherRole!=null && account.Owns(Settings.dishwasherRole.id))
+            if(dishwasher==null && Settings.dishwasherRole!=null && account.Owns(Settings.dishwasherRole.id))
             {dishwasher=gameObject.AddComponent<KitchenDishwasher>();dishwasher.Initialize(this);}
-            if(Settings.busserRole!=null && account.Owns(Settings.busserRole.id))
+            if(busser==null && Settings.busserRole!=null && account.Owns(Settings.busserRole.id))
             {busser=gameObject.AddComponent<DiningBusser>();busser.Initialize(this);}
-            if(Settings.prepCookRole!=null && account.Owns(Settings.prepCookRole.id))
+            if(PrepCook==null && Settings.prepCookRole!=null && account.Owns(Settings.prepCookRole.id))
             {var worker=new GameObject("Hired prep cook");worker.transform.SetParent(transform);PrepCook=worker.AddComponent<KitchenPrepCook>();PrepCook.Initialize(this);}
         }
         DiningWalker Walker(string label,int look,Vector3 position)
@@ -176,7 +185,7 @@ namespace ThrownTogether
                     guest.walker.Go(new Vector3(TableApproach(guest.table).x,0,guest.walker.transform.position.z));
                 }
             }
-            Expo?.Refresh();StageExpoPass();server?.Advance(dt);dishwasher?.Advance(dt);busser?.Advance(dt);PrepCook?.Advance(dt);
+            Expo?.Refresh();StageExpoPass();server?.Advance(dt);dishwasher?.Advance(dt);busser?.Advance(dt);PrepCook?.Advance(dt);Cook?.Advance(dt);
             if(AdmissionsClosed && guests.Count==0){Closed=true;RetryPayment();}
         }
         public void RecordMeal(RecipeDefinition recipe,float waiting)

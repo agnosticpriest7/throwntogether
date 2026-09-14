@@ -1,0 +1,25 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 290d6a22633f0f6489912498fb6ff4a5, type: 3}
+  m_Name: ExpoDeskOffer
+  m_EditorClassIdentifier: ThrownTogether.Runtime::ThrownTogether.RestaurantUpgradeDefinition
+  id: expo-desk
+  displayName: Expo Desk
+  description: Fire and hold kitchen orders. Required to hire a cook.
+  kind: 0
+  cost: 100
+  stationPrefab: {fileID: 833008056204419658, guid: 489b7756c0d41c84cac5d550748052a1, type: 3}
+  layoutPositions:
+  - {x: 2.45, y: 0, z: 3.4}
+  - {x: 2.45, y: 0, z: 3.4}
+  - {x: 2.45, y: 0, z: 3.4}
+  processingSpeed: 1.25

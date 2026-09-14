@@ -63,3 +63,5 @@ Owner approved direct stock-to-hand plating, a multi-plate sink, seated customer
 
 
 2026-09-11 — Approved menu/storage progression pass: preserve three starting dishes, add ten appliance-gated dishes; Griddle $125, Grill $150. Separate griddled/grilled states and component-by-component plate assembly reuse current stations. Require three daily menu choices; reward four distinct served dishes with 5% base-revenue variety bonus capped $15. Two physical category sources with per-chef controller grids replace individual crates; unlimited free ingredients remain intentional for this pass. Prices are initial playtest tuning.
+
+2026-09-14 — Owner approved cook next, gated by a built Expo desk, plus Career Resume/Reset and all pre-round management before service. Initial tuning: Expo , Cook ; existing training prices. Preserve legacy desks at no charge. Cook works green tickets; prep restocking remains independent. Single-component hot dishes first; compound assembly deferred.

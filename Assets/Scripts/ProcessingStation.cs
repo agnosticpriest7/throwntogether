@@ -30,6 +30,15 @@ namespace ThrownTogether
             if(appliance!=null) foreach(var candidate in appliance.supportedProcesses) if(candidate!=null && candidate.Accepts(item)) return candidate;
             return recipe!=null && recipe.Accepts(item) ? recipe : null;
         }
+        public ProcessingRecipe CurrentProcess=>Busy?activeRecipe:null;
+        public ProcessingRecipe ProcessFor(ItemPayload item)=>Select(item);
+        public bool StartHotBy(MonoBehaviour worker,CarrySlot hands)
+        {
+            if(requiresAttendance || worker==null || !worker.isActiveAndEnabled || hands?.Item==null || Busy || slot.Item!=null || Vector3.Distance(worker.transform.position,transform.position)>1.85f)return false;
+            var selected=Select(hands.Item.Payload);if(selected==null)return false;
+            if(!slot.TryTake(hands.Item))return false;
+            activeRecipe=selected;elapsed=0;Busy=true;staff=null;return true;
+        }
         private float elapsed;
         public bool Busy { get; private set; }
         public override float Progress => Busy ? Mathf.Clamp01(elapsed/activeRecipe.duration) : -1;

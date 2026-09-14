@@ -113,3 +113,5 @@ Reviewed/imported Claude PREP-001 f51f6a3; implemented physical worker, demand p
 2026-09-14 — Owner-approved continuous multi-bin restocking: reused prep worker, storage, furniture IDs and controller choices; nine live worker tests passed. Percentage targets, breaks and waste systems deferred. Actual account-wide usage unknown; no estimate.
 
 2026-09-14 — Restocking release completed: 229 full-pipeline checks passed; 0.19.1-dev public build identity verified. Account-wide usage unavailable; no estimate recorded.
+
+2026-09-14 — Cook and Career entry integration: reused staff paths, processing, plating, ticket authority, shop and management. Canonical live cooking/delivery and management entry verified. Full regression/release pending. Actual account-wide usage unavailable; no estimate.

@@ -111,6 +111,13 @@ namespace ThrownTogether
             Refresh();var ticket=Candidate(dish);if(ticket==null)return false;
             Bind(ticket,dish);return true;
         }
+        public bool TryStageFor(KitchenTicket ticket,Carryable dish)
+        {
+            Refresh();var table=TableFor(ticket);
+            if(!SameScene(dish) || table==null || !CanServe(table,dish.Payload) ||
+                dishes.ContainsKey(ticket) || BoundTicket(dish)!=null)return false;
+            Bind(ticket,dish);return true;
+        }
         public bool CanCollect(Carryable dish)
         {Refresh();return Candidate(dish)!=null;}
         public ExpoDeliveryClaim TryClaim(Carryable dish,Object carrier)

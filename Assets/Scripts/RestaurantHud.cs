@@ -80,6 +80,8 @@ namespace ThrownTogether
             if(day?.Expo!=null && !ShowControlHelp && chef.GetComponent<ChefInput>().Expo==null && (coop?.PlayerTwo==null || coop.PlayerTwo.GetComponent<ChefInput>().Expo==null))ExpoOrderStrip.Draw(day,presentation.ServiceOpacity);
             if(day?.PrepCook!=null && !day.Closed && !ShowControlHelp && !menu.IsOpen && chef.GetComponent<ChefInput>().Expo==null && (coop?.PlayerTwo==null || coop.PlayerTwo.GetComponent<ChefInput>().Expo==null))
             {Panel(new Rect(18,628,325,58));GUI.Label(new Rect(25,630,311,54),"PREP COOK\n"+day.PrepCook.Status,small);}
+            if(day?.Cook!=null && !day.Closed && !ShowControlHelp && !menu.IsOpen && chef.GetComponent<ChefInput>().Expo==null && (coop?.PlayerTwo==null || coop.PlayerTwo.GetComponent<ChefInput>().Expo==null))
+            {Panel(new Rect(937,628,325,58));GUI.Label(new Rect(944,630,311,54),"COOK\n"+day.Cook.Status,small);}
             // Identity is carried by apron colors and target borders; no floating panels cover chefs.
             bool two=coop!=null && coop.PlayerTwo!=null;
             if(ShowControlHelp)

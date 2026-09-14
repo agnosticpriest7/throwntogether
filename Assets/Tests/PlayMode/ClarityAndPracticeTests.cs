@@ -403,13 +403,13 @@ namespace ThrownTogether.Tests
             }
             finally {menu.Close();}
         }
-        [UnityTest] public IEnumerator ChoosingCareerKitchenSkipsWardrobeAndDefaultsRemainDistinct()
+        [UnityTest] public IEnumerator CareerOffersResumeAndResetWithoutMandatoryWardrobe()
         {
             var menu=hud.GetComponent<RestaurantMenu>();
             try
             {
-                SessionOptions.ShiftOrders=0;menu.OpenFrontEnd();menu.ShowLevels(false);menu.ActivateSelection();
-                Assert.That(menu.Page,Is.EqualTo("Today's Menu"));Assert.That(RestaurantMenu.GameplayBlocked,Is.True);
+                SessionOptions.ShiftOrders=0;menu.OpenFrontEnd();menu.ShowCareer();
+                Assert.That(menu.Page,Is.EqualTo("Career"));Assert.That(menu.VisibleOptions,Is.EqualTo(new[]{"Resume career","Reset Career"}));Assert.That(RestaurantMenu.GameplayBlocked,Is.True);
                 Assert.That(Time.timeScale,Is.Zero);Assert.That(SceneManager.GetActiveScene(),Is.EqualTo(scene));
                 yield return null;
                 Assert.That(ChefWardrobe.ForPlayer(0).bodyColor,Is.Not.EqualTo(ChefWardrobe.ForPlayer(1).bodyColor));

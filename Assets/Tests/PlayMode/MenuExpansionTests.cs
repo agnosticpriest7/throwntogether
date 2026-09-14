@@ -39,8 +39,8 @@ namespace ThrownTogether.Tests
             SceneManager.SetActiveScene(original);foreach(var g in suspended)if(g!=null)g.SetActive(true);
             Time.timeScale=1;SessionOptions.ShiftOrders=6;SessionOptions.Kitchen=0;RestaurantAccounts.ResetCache();
         }
-        void BaseMenu(){foreach(var r in DailyMenu.Catalog.Where(r=>r.requiredPurchases.Length==0))DailyMenu.Toggle(RestaurantAccounts.Current,r);}
-        void Use(Interactable station){if(station is DiningTable table && table.WaitingForMeal && day.Expo.TicketFor(table)?.State==KitchenTicketState.Waiting)Assert.That(day.Expo.TryFire(day.Expo.TicketFor(table)),Is.True);KitchenTestAccess.Approach(chef,station);Assert.That(chef.Use(),Is.True,station.stationName+": "+chef.Feedback);KitchenTestAccess.SelectDefault(chef,station);}
+        void BaseMenu(){var menu=hud.GetComponent<RestaurantMenu>();if(menu.Page=="Restaurant"){menu.SelectRow(System.Array.FindIndex(menu.VisibleOptions,s=>s.StartsWith("Next Day")));menu.ActivateSelection();}foreach(var r in DailyMenu.Catalog.Where(r=>r.requiredPurchases.Length==0))DailyMenu.Toggle(RestaurantAccounts.Current,r);}
+        void Use(Interactable station){if(station is DiningTable table && table.WaitingForMeal && day.Expo?.TicketFor(table)?.State==KitchenTicketState.Waiting)Assert.That(day.Expo.TryFire(day.Expo.TicketFor(table)),Is.True);KitchenTestAccess.Approach(chef,station);Assert.That(chef.Use(),Is.True,station.stationName+": "+chef.Feedback);KitchenTestAccess.SelectDefault(chef,station);}
         T Find<T>() where T:Component=>Object.FindObjectsByType<T>().First(t=>t.gameObject.scene==scene);
         void UnlockAll()
         {
@@ -50,7 +50,8 @@ namespace ThrownTogether.Tests
         }
         [UnityTest] public IEnumerator FirstMenuPurchaseNextMenuOrdersAndVarietySettlementAreOneFlow()
         {
-            var menu=hud.GetComponent<RestaurantMenu>();Assert.That(day.AwaitingMenu,Is.True);Assert.That(menu.Page,Is.EqualTo("Today's Menu"));
+            var menu=hud.GetComponent<RestaurantMenu>();Assert.That(day.AwaitingMenu,Is.True);Assert.That(menu.Page,Is.EqualTo("Restaurant"));
+            menu.SelectRow(System.Array.FindIndex(menu.VisibleOptions,s=>s.StartsWith("Next Day")));menu.ActivateSelection();Assert.That(menu.Page,Is.EqualTo("Today's Menu"));
             day.Advance(100);Assert.That(day.Elapsed,Is.Zero);Assert.That(day.DayNumber,Is.Zero);Assert.That(menu.StartSelectedMenu(),Is.False);
             BaseMenu();Assert.That(menu.StartSelectedMenu(),Is.True);yield return null;yield return null;
             Assert.That(day.AwaitingMenu,Is.False);Assert.That(day.Menu.Length,Is.EqualTo(3));
@@ -129,7 +130,7 @@ namespace ThrownTogether.Tests
             {
                 void Send(GamepadState state){InputSystem.QueueStateEvent(pad,state);InputSystem.Update();menu.Tick(true);}
                 void Press(GamepadButton button){Send(new GamepadState());Send(new GamepadState().WithButton(button));Send(new GamepadState());}
-                Press(GamepadButton.South);Assert.That(day.AwaitingMenu,Is.True);
+                int next=System.Array.FindIndex(menu.VisibleOptions,s=>s.StartsWith("Next Day"));for(int i=0;i<next;i++)Press(GamepadButton.DpadDown);Press(GamepadButton.South);Assert.That(menu.Page,Is.EqualTo("Today's Menu"));Assert.That(day.AwaitingMenu,Is.True);
                 for(int i=0;i<3;i++){Press(GamepadButton.DpadDown);Press(GamepadButton.South);}
                 Assert.That(DailyMenu.Resolve(RestaurantAccounts.Current).Length,Is.EqualTo(3));
                 for(int i=0;i<3;i++)Press(GamepadButton.DpadUp);Press(GamepadButton.South);

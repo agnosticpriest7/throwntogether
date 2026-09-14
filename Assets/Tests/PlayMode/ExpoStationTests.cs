@@ -33,6 +33,7 @@ namespace ThrownTogether.Tests
         [UnitySetUp] public IEnumerator Setup()
         {
             Time.timeScale=1;RestaurantAccounts.UseStorage(new Memory());
+            RestaurantAccounts.Current.BuyEquipment("expo-desk",0);
             RestaurantAccounts.Current.SetMenu(DailyMenu.Catalog.Where(r=>r.requiredPurchases.Length==0).Select(r=>r.id).ToArray());
             SessionOptions.ShiftOrders=0;SessionOptions.Kitchen=0;
             original=SceneManager.GetActiveScene();

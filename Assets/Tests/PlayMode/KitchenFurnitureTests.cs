@@ -19,6 +19,7 @@ namespace ThrownTogether.Tests
         {
             original=SceneManager.GetActiveScene();suspended=Object.FindObjectsByType<RestaurantHud>().Any(h=>h.gameObject.scene==original)?original.GetRootGameObjects().Where(g=>g.activeSelf).ToArray():new GameObject[0];foreach(var g in suspended)g.SetActive(false);
             memory=new Memory();RestaurantAccounts.UseStorage(memory);SessionOptions.Kitchen=0;SessionOptions.ShiftOrders=0;Time.timeScale=1;
+            RestaurantAccounts.Current.BuyEquipment("expo-desk",0);
             yield return Load();
         }
         IEnumerator Load()
@@ -47,12 +48,13 @@ namespace ThrownTogether.Tests
                 memory=new Memory();RestaurantAccounts.UseStorage(memory);SessionOptions.Kitchen=index;
                 yield return Load();
                 var f=hud.GetComponent<KitchenFurniture>();
-                Assert.That(day.Expo,Is.Not.Null,"Layout "+index+": "+day.ExpoProblem);
-                Assert.That(f.Find("expo"),Is.Not.Null);
+                Assert.That(day.Expo,Is.Null,"New careers must purchase their Expo");
+                Assert.That(f.Find("expo"),Is.Null);
                 Assert.That(f.Validate(out var why),Is.True,"Layout "+index+": "+why);
                 var account=RestaurantAccounts.Current;int paid=account.StartDay();account.Settle(paid,5000,0);
                 foreach(var offer in day.Settings.purchases.Where(p=>p.stationPrefab!=null))
                     Assert.That(f.TryPurchase(offer),Is.True,"Layout "+index+": "+f.Message);
+                Assert.That(day.EnsureExpo(),Is.True);Assert.That(day.Expo,Is.Not.Null);
                 Assert.That(f.Validate(out why),Is.True,"Layout "+index+": "+why);
                 KitchenTestAccess.Approach(chef,f.Find("expo").GetComponent<ExpoStation>());
             }
@@ -108,7 +110,7 @@ namespace ThrownTogether.Tests
         {
             var account=RestaurantAccounts.Current;int paid=account.StartDay();account.Settle(paid,3000,0);
             var menu=hud.GetComponent<RestaurantMenu>();menu.OpenRestaurant();menu.NavigateBack();Assert.That(menu.Page,Is.EqualTo("Restaurant"));
-            Assert.That(menu.VisibleOptions[0],Is.EqualTo("Employee Management"));Assert.That(menu.VisibleOptions[3],Does.StartWith("Next Day"));
+            Assert.That(menu.VisibleOptions[0],Is.EqualTo("Employee Management"));Assert.That(menu.VisibleOptions.Any(s=>s.StartsWith("Next Day")),Is.True);
             menu.SelectRow(0);menu.ActivateSelection();Assert.That(menu.Page,Is.EqualTo("Employees"));menu.NavigateBack();Assert.That(menu.Page,Is.EqualTo("Restaurant"));
             var f=hud.GetComponent<KitchenFurniture>();var offer=day.Settings.purchases.First(p=>p.stationPrefab!=null && p.kind==RestaurantPurchaseKind.FryerBay);
             Assert.That(f.TryPurchase(offer),Is.True,f.Message);Assert.That(f.TryPurchase(offer),Is.True,f.Message);Assert.That(account.Quantity(offer.id),Is.EqualTo(2));
@@ -154,8 +156,8 @@ namespace ThrownTogether.Tests
         [UnityTest] public IEnumerator PurchasedEquipmentCanBeArrangedAndControllerCanSaveWithoutMouse()
         {
             var account=RestaurantAccounts.Current;int funded=account.StartDay();Assert.That(account.Settle(funded,1000,0),Is.True);
-            foreach(var offer in day.Settings.purchases.Where(p=>p.stationPrefab!=null))Assert.That(account.Buy(offer.id,offer.cost),Is.True);
-            int expected=11+day.Settings.purchases.Count(p=>p.stationPrefab!=null);
+            foreach(var offer in day.Settings.purchases.Where(p=>p.stationPrefab!=null && !account.Owns(p.id)))Assert.That(account.Buy(offer.id,offer.cost),Is.True);
+            int expected=10+day.Settings.purchases.Where(p=>p.stationPrefab!=null).Sum(p=>account.Quantity(p.id));
             var f=hud.GetComponent<KitchenFurniture>();Assert.That(f.Begin(),Is.True);Assert.That(f.Count,Is.EqualTo(expected));
             Assert.That(f.TryMove("purchase:counter-bay",10,0),Is.True,f.Message);Assert.That(f.Save(),Is.True,f.Message);
             var menu=hud.GetComponent<RestaurantMenu>();menu.OpenRestaurant();
@@ -185,6 +187,7 @@ namespace ThrownTogether.Tests
             Assert.That(furniture.Save(),Is.True,furniture.Message);RestaurantAccounts.UseStorage(memory);yield return Load();
             furniture=hud.GetComponent<KitchenFurniture>();Assert.That(furniture.Find("base:3").position,Is.EqualTo(KitchenFurniture.Slots[6]));
             foreach(var r in DailyMenu.Catalog.Where(r=>r.requiredPurchases.Length==0))DailyMenu.Toggle(RestaurantAccounts.Current,r);
+            var menu=hud.GetComponent<RestaurantMenu>();menu.SelectRow(System.Array.FindIndex(menu.VisibleOptions,s=>s.StartsWith("Next Day")));menu.ActivateSelection();
             Assert.That(hud.GetComponent<RestaurantMenu>().StartSelectedMenu(),Is.True);yield return null;yield return null;
             Assert.That(furniture.Begin(),Is.False,"No movement during service");
             var potato=DailyMenu.Catalog.First(r=>r.id.Contains("fries")).ingredient;KitchenTestAccess.Take(chef,potato);

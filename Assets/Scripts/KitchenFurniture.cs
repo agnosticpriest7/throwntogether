@@ -28,7 +28,7 @@ namespace ThrownTogether
         public string Message {get;private set;}="";
         public int Count=>pieces.Count;
         public int MoveFee=>RestaurantAccounts.Current.ArrangementFee;
-        public int AssignedSlot(string id)=>pieces.First(p=>p.id==id).slot;
+        public int AssignedSlot(string id)=>pieces.First(p=>p.id==id || id=="expo" && p.root.GetComponent<ExpoStation>()!=null).slot;
         public bool CanEdit=>day!=null && (day.AwaitingMenu || day.Closed && day.Paid) && GetComponent<DayPresentation>()?.Transitioning!=true;
         public void Initialize(KitchenLayout value)
         {
@@ -41,7 +41,7 @@ namespace ThrownTogether
             if(pieces.Any(p=>p.id==id))return;
             var piece=new Piece{id=id,root=root,before=root.position,rotation=root.rotation,slot=-1};
             int[] anchors={0,1,3,4,5,6,7,8,10,11}, bays={5,4,7,2,14,12,13,18,8,19};
-            int preferred=id=="expo" ? Slots.Length-1 : -1;
+            int preferred=id=="expo" || root.GetComponent<ExpoStation>()!=null ? Slots.Length-1 : -1;
             for(int i=0;i<anchors.Length;i++)if(id=="base:"+anchors[i] && (SessionOptions.Kitchen==0 || anchors[i]==8 || anchors[i]==11))preferred=bays[i];
             bool SpawnSafe(int i)=>new[]{layout.choices[SessionOptions.Kitchen].playerOneSpawn,layout.choices[SessionOptions.Kitchen].playerTwoSpawn}.All(p=>Mathf.Abs(p.x-Slots[i].x)>1.3f || Mathf.Abs(p.z-Slots[i].z)>1.3f);
             if(preferred<0 || At(preferred)!=null || !SpawnSafe(preferred))preferred=Enumerable.Range(0,Slots.Length).Where(i=>At(i)==null && SpawnSafe(i) && (i<18 || id=="base:8" || id=="base:11" || id=="expo")).OrderBy(i=>Vector3.SqrMagnitude(Slots[i]-root.position)).First();
@@ -70,7 +70,7 @@ namespace ThrownTogether
         static int Nearest(Vector3 position)
         {for(int i=0;i<Slots.Length;i++)if(Vector3.Distance(position,Slots[i])<.15f)return i;return -1;}
         Piece At(int slot)=>pieces.FirstOrDefault(p=>p.slot==slot);
-        public Transform Find(string id)=>pieces.FirstOrDefault(p=>p.id==id)?.root;
+        public Transform Find(string id)=>pieces.FirstOrDefault(p=>p.id==id || id=="expo" && p.root!=null && p.root.GetComponent<ExpoStation>()!=null)?.root;
         public KeyValuePair<string,ProcessingStation>[] PrepStations=>pieces.Where(p=>p.root!=null).Select(p=>new KeyValuePair<string,ProcessingStation>(p.id,p.root.GetComponentInChildren<ProcessingStation>())).Where(p=>p.Value!=null && p.Value.requiresAttendance).ToArray();
         public KeyValuePair<string,PrepBin>[] PrepBins=>pieces.Where(p=>p.root!=null).Select(p=>new KeyValuePair<string,PrepBin>(p.id,p.root.GetComponentInChildren<PrepBin>())).Where(p=>p.Value!=null).ToArray();
         public bool TryPurchase(RestaurantUpgradeDefinition offer)
@@ -79,7 +79,7 @@ namespace ThrownTogether
             var instance=Instantiate(offer.stationPrefab);instance.name=offer.displayName;
             var piece=new Piece{id="candidate",root=instance.transform};pieces.Add(piece);
             bool fits=false;
-            foreach(int slot in Enumerable.Range(0,Find("expo")!=null?Slots.Length:Slots.Length-1).Where(s=>At(s)==null).ToArray())
+            foreach(int slot in Enumerable.Range(0,Slots.Length).Where(s=>At(s)==null && (s<Slots.Length-1 || instance.GetComponent<ExpoStation>()!=null)).OrderBy(s=>instance.GetComponent<ExpoStation>()!=null && s==Slots.Length-1?0:1).ToArray())
             {Place(piece,slot,0);if(Validate(out var unused)){fits=true;break;}}
             if(!fits){pieces.Remove(piece);instance.SetActive(false);Destroy(instance);Message="No safe free bay. Sell equipment or rearrange first.";return false;}
             var account=RestaurantAccounts.Current;
@@ -132,7 +132,7 @@ namespace ThrownTogether
         public bool TryMove(string id,int slot,int turns)
         {
             if(!Editing || !CanEdit || slot<0 || slot>=Slots.Length || turns<0 || turns>3)return false;
-            var p=pieces.FirstOrDefault(v=>v.id==id);if(p==null)return false;
+            var p=pieces.FirstOrDefault(v=>v.root==Find(id));if(p==null)return false;
             var other=At(slot);if(other==p)other=null;
             var oldPosition=p.root.position;var oldRotation=p.root.rotation;int oldSlot=p.slot,oldTurns=p.turns;
             var otherPosition=other!=null?other.root.position:Vector3.zero;var otherRotation=other!=null?other.root.rotation:Quaternion.identity;int otherTurns=other!=null?other.turns:0;

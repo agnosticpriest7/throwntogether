@@ -20,6 +20,7 @@ namespace ThrownTogether.Tests
             Time.timeScale=1;RestaurantAccounts.UseStorage(new Memory());var account=RestaurantAccounts.Current;
             int paid=account.StartDay();account.Settle(paid,2000,0);
             Assert.IsTrue(account.Buy("prep-cook",150));Assert.IsTrue(account.BuyEquipment("prep-bin",60));
+            Assert.IsTrue(account.BuyEquipment("expo-desk",0));
             if(TestContext.CurrentContext.Test.Name.StartsWith("Restock"))
             {
                 account.BuyEquipment("prep-bin",60);var owned=account.Equipment("prep-bin",60).ToArray();

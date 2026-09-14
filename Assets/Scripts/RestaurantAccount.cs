@@ -11,6 +11,7 @@ namespace ThrownTogether
     {
         public int schemaVersion=1, cash, nextDay=1, activeDay, settledDay, completedDays;
         public int arrangementPaidBreak=-1;
+        public int expoOwnershipVersion=1,careerKitchen;
         public string[] purchases=new string[0];
         public string[] selectedMenu=new string[0];
         public FurniturePlacement[] furniture=new FurniturePlacement[0];
@@ -39,6 +40,14 @@ namespace ThrownTogether
                 if(loaded.equipment==null)loaded.equipment=new OwnedEquipment[0];
                 if(loaded.training==null)loaded.training=new StaffTraining[0];
                 if(loaded.prepAssignments==null)loaded.prepAssignments=new PrepCookAssignment[0];
+                if(!json.Contains("\"expoOwnershipVersion\""))
+                {
+                    // Earlier careers received an implicit desk. Preserve its identity/layout
+                    // as free owned equipment, without granting it to newly created careers.
+                    loaded.expoOwnershipVersion=1;
+                    loaded.equipment=loaded.equipment.Concat(new[]{new OwnedEquipment{instanceId="legacy-expo",offerId="expo-desk",paid=0}}).ToArray();
+                    foreach(var p in loaded.furniture)if(p!=null && p.id=="expo")p.id="purchase:legacy-expo";
+                }
                 // Optional schema-1 addition: preserve old saves and begin with their existing dishes.
                 if(!json.Contains("\"selectedMenu\""))loaded.selectedMenu=System.Array.ConvertAll(System.Array.FindAll(DailyMenu.Catalog,r=>r.requiredPurchases.Length==0),r=>r.id);
                 Data=loaded;
@@ -121,6 +130,15 @@ namespace ThrownTogether
         {
             var next=Copy();next.activeDay=next.nextDay++;return Commit(next)?next.activeDay:0;
         }
+        public bool PrepareCareer(int kitchen)
+        {
+            if(kitchen<0 || kitchen>2)return false;
+            var next=Copy();next.careerKitchen=kitchen;
+            // Mid-service food/customers are not saved. Resume the unfinished day
+            // from setup without awarding earnings or consuming another day number.
+            if(next.activeDay>next.settledDay){next.nextDay=next.activeDay;next.activeDay=next.settledDay;}
+            return Commit(next);
+        }
         public bool Settle(int day,int baseIncome,int bonus,int waste=0)
         {
             if(day<=0||day!=Data.activeDay||day<=Data.settledDay||baseIncome<0||bonus<0||waste<0)return false;
@@ -128,6 +146,7 @@ namespace ThrownTogether
         }
         public bool Buy(string id,int cost)
         {
+            if(id=="cook" && !Owns("expo-desk")){Problem="Cook requires an installed Expo desk.";return false;}
             if(string.IsNullOrWhiteSpace(id)||cost<0||Owns(id)||Data.cash<cost||Data.activeDay>Data.settledDay)return false;
             var next=Copy();next.cash-=cost;var owned=new string[next.purchases.Length+1];Array.Copy(next.purchases,owned,next.purchases.Length);owned[owned.Length-1]=id;next.purchases=owned;return Commit(next);
         }

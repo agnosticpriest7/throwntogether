@@ -16,6 +16,7 @@ namespace ThrownTogether.Tests
         [UnitySetUp] public IEnumerator Setup()
         {
             Time.timeScale=1;RestaurantAccounts.UseStorage(new Memory());RestaurantAccounts.Current.SetMenu(DailyMenu.Catalog.Where(r=>r.requiredPurchases.Length==0).Select(r=>r.id).ToArray());SessionOptions.ShiftOrders=0;SessionOptions.Kitchen=0;
+            RestaurantAccounts.Current.BuyEquipment("expo-desk",0);
             original=SceneManager.GetActiveScene();suspended=Object.FindObjectsByType<RestaurantHud>().Any(h=>h.gameObject.scene==original)?original.GetRootGameObjects().Where(g=>g.activeSelf).ToArray():new GameObject[0];foreach(var root in suspended)root.SetActive(false);
 #if UNITY_EDITOR
             yield return EditorSceneManager.LoadSceneAsyncInPlayMode("Assets/Scenes/RestaurantShift.unity",new LoadSceneParameters(LoadSceneMode.Additive));
