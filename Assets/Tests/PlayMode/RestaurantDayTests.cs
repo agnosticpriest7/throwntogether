@@ -422,8 +422,9 @@ namespace ThrownTogether.Tests
         [UnityTest] public IEnumerator PaidImprovementsApplyOnNextDayIncludingServerAndFryerSpeed()
         {
             var account=RestaurantAccounts.Current;Assert.That(account.Settle(day.DayNumber,1500,0),Is.True);
-            int expectedCash=1500-day.Settings.purchases.Sum(p=>p.cost)-day.Settings.serverRole.hireCost-day.Settings.dishwasherRole.hireCost-day.Settings.busserRole.hireCost;
-            foreach(var offer in day.Settings.purchases)Assert.That(account.Buy(offer.id,offer.cost),Is.True);
+            var unowned=day.Settings.purchases.Where(p=>!account.Owns(p.id)).ToArray();
+            int expectedCash=1500-unowned.Sum(p=>p.cost)-day.Settings.serverRole.hireCost-day.Settings.dishwasherRole.hireCost-day.Settings.busserRole.hireCost;
+            foreach(var offer in unowned)Assert.That(account.Buy(offer.id,offer.cost),Is.True);
             Assert.That(account.Buy(day.Settings.serverRole.id,day.Settings.serverRole.hireCost),Is.True);
             Assert.That(account.Buy(day.Settings.dishwasherRole.id,day.Settings.dishwasherRole.hireCost),Is.True);
             Assert.That(account.Buy(day.Settings.busserRole.id,day.Settings.busserRole.hireCost),Is.True);
