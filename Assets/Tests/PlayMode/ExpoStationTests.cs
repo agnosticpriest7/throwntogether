@@ -400,6 +400,7 @@ namespace ThrownTogether.Tests
                     Assert.That(last.State,Is.EqualTo(KitchenTicketState.Waiting),"No refusal changed any ticket");
                     Assert.That(expo.ActiveCount,Is.EqualTo(1));
                     Assert.That(input.OpenExpo(station),Is.True);
+                    SelectRow(pad,input,last); // Opening starts at the first arrival, irrespective of status.
                     Assert.That(input.SelectedExpoTicket,Is.SameAs(last));
                     Assert.That(input.FireSelectedExpoTicket(),Is.True,"The guards were the only obstacle");
                     Assert.That(last.State,Is.EqualTo(KitchenTicketState.Active));
