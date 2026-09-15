@@ -8,6 +8,8 @@ Expo uses a bottom horizontal strip of five visible order cards with scrolling, 
 
 Verification: 39 targeted PlayMode cases passed in an isolated current-source snapshot. Canonical Unity MCP reconnected and confirmed the expected Assets path. Live solo and two-player Expo captured with seven synthetic tickets registered through the seating API; screenshots in docs/art-reference/cook-expo-2026-09-14/. Review used memory-only account storage and restored RestaurantShift without saving. Console error query empty. One review-command compilation typo (array Count instead of Length) was corrected; no product compiler error. Full release gate recorded below when complete. TV/controller readability still requires owner validation.
 
+Release verified: 95 EditMode + 149 PlayMode + 14 Web checks passed (258 total). Web artifact 63,776,378 bytes / 10 verified files; builtAtUtc 2026-09-15T04:41:25.6711225Z, source 20454a67d3e2685f6e8ffe9bb47d9e2ce7425b37. Pages eacfc2af2170986fb3ea20db3dbc8cd715d9d515 reports built without error, and public build-info confirms 0.22.1-dev and the matching source. Physical controller/TV testing remains the owner's check.
+
 # Vertical Slice #1 — first service
 
 The authored `Assets/Scenes/RestaurantDevelopment.unity` scene is the Web entry in `build-config.json`. Bootstrap remains unchanged. Greybox only: one chef, one seated customer and one Fries order.
