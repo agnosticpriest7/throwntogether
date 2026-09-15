@@ -12,6 +12,8 @@ namespace ThrownTogether
         public int schemaVersion=1, cash, nextDay=1, activeDay, settledDay, completedDays;
         public int arrangementPaidBreak=-1;
         public int expoOwnershipVersion=1,careerKitchen;
+        public int layoutGridVersion=1;
+        public StaffHomePlacement[] staffHomes=new StaffHomePlacement[0];
         public string[] purchases=new string[0];
         public string[] selectedMenu=new string[0];
         public FurniturePlacement[] furniture=new FurniturePlacement[0];
@@ -40,6 +42,8 @@ namespace ThrownTogether
                 if(loaded.equipment==null)loaded.equipment=new OwnedEquipment[0];
                 if(loaded.training==null)loaded.training=new StaffTraining[0];
                 if(loaded.prepAssignments==null)loaded.prepAssignments=new PrepCookAssignment[0];
+                if(loaded.staffHomes==null)loaded.staffHomes=new StaffHomePlacement[0];
+                if(!json.Contains("\"layoutGridVersion\""))loaded.layoutGridVersion=0;
                 if(!json.Contains("\"expoOwnershipVersion\""))
                 {
                     // Earlier careers received an implicit desk. Preserve its identity/layout
@@ -74,14 +78,17 @@ namespace ThrownTogether
             var next=Copy();next.selectedMenu=System.Linq.Enumerable.ToArray(System.Linq.Enumerable.Distinct(ids));return Commit(next);
         }
         public int ArrangementFee=>Data.completedDays==0 || Data.arrangementPaidBreak==Data.settledDay?0:100;
-        public bool SetFurniture(int kitchen,FurniturePlacement[] placements,bool charge=false)
+        public bool SetFurniture(int kitchen,FurniturePlacement[] placements,bool charge=false,StaffHomePlacement[] homes=null)
         {
             if(Data.activeDay>Data.settledDay || kitchen<0 || kitchen>2 || placements==null)return false;
             if(Array.Exists(placements,p=>p==null || p.kitchen!=kitchen || string.IsNullOrWhiteSpace(p.id) || !KitchenFurniture.SlotAvailable(p.slot,Owns(RestaurantExpansion.KitchenId)) || p.turns<0 || p.turns>3))return false;
             if(System.Linq.Enumerable.Distinct(System.Linq.Enumerable.Select(placements,p=>p.id)).Count()!=placements.Length || System.Linq.Enumerable.Distinct(System.Linq.Enumerable.Select(placements,p=>p.slot)).Count()!=placements.Length)return false;
+            if(homes!=null && (homes.Any(h=>h==null || h.kitchen!=kitchen || !StaffHomes.Roles.Contains(h.role) || !float.IsFinite(h.position.x) || !float.IsFinite(h.position.y) || !float.IsFinite(h.position.z) || Mathf.Abs(h.position.y)>.01f) || homes.Select(h=>h.role).Distinct().Count()!=homes.Length))return false;
             int fee=charge?ArrangementFee:0;
             if(Data.cash<fee){Problem="Rearranging costs $"+fee+" for this break. Your draft is retained.";return false;}
-            var next=Copy();next.cash-=fee;if(charge)next.arrangementPaidBreak=next.settledDay;next.furniture=System.Linq.Enumerable.ToArray(System.Linq.Enumerable.Concat(System.Linq.Enumerable.Where(next.furniture??new FurniturePlacement[0],p=>p!=null && p.kitchen!=kitchen),placements));return Commit(next);
+            var next=Copy();next.cash-=fee;if(charge)next.arrangementPaidBreak=next.settledDay;next.furniture=System.Linq.Enumerable.ToArray(System.Linq.Enumerable.Concat(System.Linq.Enumerable.Where(next.furniture??new FurniturePlacement[0],p=>p!=null && p.kitchen!=kitchen),placements));
+            if(homes!=null)next.staffHomes=(next.staffHomes??new StaffHomePlacement[0]).Where(h=>h!=null && h.kitchen!=kitchen).Concat(homes.Select(h=>new StaffHomePlacement{kitchen=h.kitchen,role=h.role,position=h.position})).ToArray();
+            return Commit(next);
         }
         public bool Owns(string id)=>Array.IndexOf(Data.purchases,id)>=0 || Data.equipment.Any(e=>e.offerId==id);
         public int Quantity(string id)=>Data.equipment.Count(e=>e.offerId==id)+(Array.IndexOf(Data.purchases,id)>=0?1:0);

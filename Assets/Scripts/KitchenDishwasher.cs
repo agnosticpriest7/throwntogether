@@ -17,7 +17,19 @@ namespace ThrownTogether
         static bool Segment(Vector3 a,Vector3 b)
         {int steps=Mathf.CeilToInt(Vector3.Distance(a,b)/.1f);for(int i=0;i<=steps;i++)if(!Clear(Vector3.Lerp(a,b,steps==0?0:(float)i/steps)))return false;return true;}
         public static Vector3[] ToStation(Vector3 from,Transform target)
-            =>Search(from,p=>{var delta=target.position-p;delta.y=0;return delta.magnitude<=1.75f && Clear(p);});
+            =>Search(from,p=>{var delta=target.position-p;delta.y=0;return delta.magnitude<=1.75f && Clear(p) && CanFocus(p,target,delta);});
+        static bool CanFocus(Vector3 from,Transform target,Vector3 offset)
+        {
+            // Match player target scoring: a station enclosed by closer stations is not a usable approach.
+            var facing=offset.normalized;float score=offset.magnitude-.35f;
+            foreach(var other in Interactable.Active)
+            {
+                if(other==null || other.gameObject.scene!=target.gameObject.scene || other.transform==target)continue;
+                var delta=other.transform.position-from;delta.y=0;float distance=delta.magnitude,dot=Vector3.Dot(facing,delta.normalized);
+                if(distance<=1.8f && dot>=-.1f && distance-dot*.35f<score-.001f)return false;
+            }
+            return true;
+        }
         public static Vector3[] ToPoint(Vector3 from,Vector3 target)
         {
             var exact=new Vector3(target.x,0,target.z);var route=Search(from,p=>Vector3.Distance(p,exact)<.3f && Clear(p));
@@ -27,6 +39,12 @@ namespace ThrownTogether
         static Vector3[] Search(Vector3 from,System.Func<Vector3,bool> reached)
         {
             var start=Cell(from);var queue=new Queue<Vector2Int>();var parents=new Dictionary<Vector2Int,Vector2Int>();
+            if(!Segment(from,Point(start)))
+            {
+                var nearby=new List<Vector2Int>();for(int x=-1;x<=1;x++)for(int z=-1;z<=1;z++)nearby.Add(start+new Vector2Int(x,z));
+                var valid=nearby.Where(c=>Segment(from,Point(c))).OrderBy(c=>(Point(c)-from).sqrMagnitude).ToArray();
+                if(valid.Length==0)return null;start=valid[0];
+            }
             queue.Enqueue(start);parents[start]=start;
             var directions=new[]{Vector2Int.up,Vector2Int.down,Vector2Int.left,Vector2Int.right};
             while(queue.Count>0)
@@ -47,6 +65,8 @@ namespace ThrownTogether
         }
         public static Vector3? Approach(Transform station)
         {
+            var day=Object.FindObjectsByType<RestaurantDay>().FirstOrDefault(d=>d.gameObject.scene==station.gameObject.scene && d.Settings!=null);
+            if(day!=null){var route=ToStation(StaffHomes.Entrance(day),station);return route==null?null:route[route.Length-1];}
             for(int ring=3;ring<=4;ring++)foreach(var direction in new[]{Vector3.right,Vector3.left,Vector3.forward,Vector3.back})
             {var p=Point(Cell(station.position+direction*(ring*Step)));if(Clear(p))return p;}
             return null;
@@ -56,6 +76,7 @@ namespace ThrownTogether
     public sealed class KitchenDishwasher : MonoBehaviour
     {
         RestaurantDay day;WashingStation sink;SourceStation stock;DishReturnStation rack;DiningWalker walker;CarrySlot hands;Transform destination;float retry;
+        StaffMember member;
         public void Initialize(RestaurantDay owner)
         {
             day=owner;sink=FindObjectsByType<WashingStation>().First(s=>s.gameObject.scene==gameObject.scene);
@@ -66,12 +87,16 @@ namespace ThrownTogether
             walker=go.AddComponent<DiningWalker>();walker.Initialize(day.Settings.walkingVisual,0);
             var appearance=go.GetComponentInChildren<ChefAppearance>();if(appearance!=null){var look=ChefAppearanceData.Example(0);look.clothing=2;look.clothingColor=4;look.headwear=0;appearance.Apply(look);}
             var grip=new GameObject("Carried plate");grip.transform.SetParent(go.transform,false);grip.transform.localPosition=new Vector3(0,1.25f,.65f);hands=grip.AddComponent<CarrySlot>();destination=sink.transform;
+            member=StaffMember.Create(day,"dishwasher",walker,hands);destination=null;
         }
         bool Travel(Transform target)
         {var route=KitchenStaffRoute.ToStation(walker.transform.position,target);if(route==null){retry=1;return false;}destination=target;walker.Go(route);return true;}
         public void Advance(float seconds)
         {
             if(day.Closed || walker==null || seconds<=0)return;
+            if(!member.AllowWork(seconds))return;
+            if(hands.Item==null && sink.Count==0 && rack.Count==0){member.Idle(seconds);destination=null;return;}
+            if(destination==null && !Travel(sink.transform))return;
             if(retry>0){retry-=seconds;return;}
             float speed=RestaurantAccounts.Current.StaffSpeed(day.Settings.dishwasherRole.id);
             walker.Advance(seconds,day.Settings.walkingSpeed*speed,hands.Item!=null);if(!walker.Arrived)return;

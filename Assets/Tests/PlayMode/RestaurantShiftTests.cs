@@ -108,12 +108,21 @@ namespace ThrownTogether.Tests
             try
             {
                 foreach(float distance in new[]{1.5f,1.3f,1.7f})
-                foreach(var side in new[]{Vector3.back,Vector3.right,Vector3.forward,Vector3.left})
+                foreach(var side in new[]{Vector3.back,Vector3.right,Vector3.forward,Vector3.left,(Vector3.back+Vector3.right).normalized,(Vector3.back+Vector3.left).normalized,(Vector3.forward+Vector3.right).normalized,(Vector3.forward+Vector3.left).normalized})
                 {
                     var point=station.transform.position+side*distance;
                     if(Physics.CheckCapsule(point+Vector3.up*.4f,point+Vector3.up*1.5f,.32f,~0,QueryTriggerInteraction.Ignore))continue;
                     chef.transform.position=point+Vector3.up*.04f;chef.transform.rotation=Quaternion.LookRotation(-side);chef.FindFocus();
                     if(chef.Focus==station)return;
+                }
+                // Tight grid corners can be reachable between the eight sampled directions.
+                // Use the same quarter-metre floor sampling as the connected-access regression.
+                for(float x=Mathf.Floor((station.transform.position.x-1.8f)*4)/4;x<=station.transform.position.x+1.8f;x+=.25f)
+                for(float z=Mathf.Floor((station.transform.position.z-1.8f)*4)/4;z<=station.transform.position.z+1.8f;z+=.25f)
+                {
+                    var point=new Vector3(x,0,z);var direction=station.transform.position-point;direction.y=0;if(direction.magnitude>1.8f || direction.sqrMagnitude<.01f)continue;
+                    if(Physics.CheckCapsule(point+Vector3.up*.4f,point+Vector3.up*1.5f,.32f,~0,QueryTriggerInteraction.Ignore))continue;
+                    chef.transform.position=point+Vector3.up*.04f;chef.transform.rotation=Quaternion.LookRotation(direction);chef.FindFocus();if(chef.Focus==station)return;
                 }
                 Assert.Fail("No clear interaction approach to "+station.stationName);
             }

@@ -1,0 +1,15 @@
+# Starting grid and staff movement
+
+Fresh careers use the regular appliance grid. Quick Play starts use the same placement rules. Existing careers retain their legacy default positions and all saved slot indices; resetting a career opts into the new starting grid. Prep Island moves the starting fryer to the back, and Split Line moves the sink left, to keep their entrance aisles open. Fresh starts receive 6% more orthographic framing to keep outer-grid equipment visible; camera angle and character scale are unchanged.
+
+Arrange Kitchen: **LB / H** switches between equipment and staff homes. In staff mode, **RB / Tab** selects the next role, stick/D-pad moves the floor marker, **A** places the home, **Y** saves, and **B** returns to equipment. All five roles are configurable before hiring. Clear, reachable floor is required, away from the entrance and other explicitly placed homes. Moving furniture onto a saved home is rejected. Home edits and furniture share one atomic save and the existing $100-per-break fee; initial setup remains free. Cancel restores both.
+
+`StaffHomes` stores draft home coordinates, resolves defaults, validates routes and draws the editor markers. Optional `RestaurantSave.staffHomes` records are per kitchen and role, written with furniture by `SetFurniture`. `layoutGridVersion` distinguishes new starts from legacy saves. No existing save indices change.
+
+`StaffMember` wraps the existing role-specific work state machines with arrival, idle and departure movement. Staff are created after pre-service layout changes, arrive via the sidewalk/entrance, then begin work. The service clock stays at 11 AM and customer arrivals wait until all staff have entered. Idle staff walk to their chosen homes but still respond to new work without completing that walk first. Training and existing congestion affect their walking speed.
+
+After closing, customers finish their existing departure routes first. Staff then stow carried food on a reachable empty counter and exit through the entrance and down the sidewalk. Settlement and the existing nighttime management transition wait until every staff member has left. If all counters are full, the worker retains the food and the HUD asks the player to clear a counter; food is not destroyed or teleported. This is departure, not an automatic full-kitchen cleanup service.
+
+Staff station approaches now come from an entrance-connected route rather than the first clear point beside a station, which could be isolated behind a rearranged counter row. Approaches respect player target scoring, so surrounding equipment cannot count as a valid access point to a blocked station. Fresh owned equipment without a saved placement searches for a valid free grid position. The small route search also handles a clear start whose nearest rounded grid point is blocked. Service refuses an invalid layout before starting the financial day.
+
+Verification results and release identity are recorded in DEVELOPMENT_NOTES.md. Physical Xbox/TV timing and marker legibility require owner review.

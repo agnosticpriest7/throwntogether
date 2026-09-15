@@ -466,6 +466,7 @@ namespace ThrownTogether.Tests
             var pass=stations.OfType<ServiceStation>().Single();var server=day.gameObject.AddComponent<DiningServer>();server.Initialize(day,pass);
             var busser=day.gameObject.AddComponent<DiningBusser>();busser.Initialize(day);
             var serverBody=server.transform.Find("Hired server");var busserBody=busser.transform.Find("Hired busser");
+            for(int i=0;i<1000 && day.StaffEntering;i++)day.Advance(.1f);Assert.That(day.StaffEntering,Is.False);
             foreach(var body in new[]{serverBody,busserBody}){Assert.That(body.position.x,Is.GreaterThan(day.Settings.entrance.x+2));Assert.That(body.position.z,Is.InRange(-5.2f,-4.8f));Assert.That(KitchenStaffRoute.Clear(body.position),Is.True);}
             Assert.That(Vector3.Distance(serverBody.position,busserBody.position),Is.GreaterThan(1));
             day.Advance(18);var dish=CookFirstDish();Use(pass);server.Advance(.1f);server.Advance(.5f);Assert.That(pass.pickupSlot.Item,Is.SameAs(dish),"Server must physically reach the pass");

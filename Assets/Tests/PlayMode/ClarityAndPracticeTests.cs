@@ -113,12 +113,18 @@ namespace ThrownTogether.Tests
             {
                 Assert.That(layout.Apply(index),Is.True);motor.enabled=false;Physics.SyncTransforms();
                 foreach(var station in Interactable.Active.Where(s=>s.gameObject.scene==scene&&(s is ServiceStation||s is DishReturnStation)))
-                foreach(float x in new[]{2.25f,4.95f})
+                foreach(float side in new[]{-1f,1f})
                 {
-                    var p=new Vector3(x,.4f,station.transform.position.z);
-                    Assert.That(Physics.CheckCapsule(p,p+Vector3.up*1.1f,.32f,~0,QueryTriggerInteraction.Ignore),Is.False,"Layout "+index+" pass approach blocked: "+p);
-                    chef.transform.position=new Vector3(x,.03f,station.transform.position.z);
-                    chef.transform.rotation=Quaternion.LookRotation(new Vector3(3.6f-x,0,0));chef.FindFocus();Assert.That(chef.Focus,Is.SameAs(station));
+                    // The snapped counter need not be centered on the old wall opening; an angled approach is valid.
+                    bool accessible=false;
+                    foreach(float dz in new[]{0f,-.4f,.4f,-.8f,.8f})
+                    {
+                        var p=station.transform.position+new Vector3(side*1.35f,.4f,dz);
+                        if(Physics.CheckCapsule(p,p+Vector3.up*1.1f,.32f,~0,QueryTriggerInteraction.Ignore))continue;
+                        chef.transform.position=new Vector3(p.x,.03f,p.z);var direction=station.transform.position-chef.transform.position;direction.y=0;
+                        chef.transform.rotation=Quaternion.LookRotation(direction);chef.FindFocus();if(chef.Focus==station){accessible=true;break;}
+                    }
+                    Assert.That(accessible,Is.True,"Layout "+index+" must keep both sides usable: "+station.name);
                 }
                 // Enter from the clear approach beside the adjacent appliance, not through its corner.
                 for(float x=2.5f;x<5.3f;x+=.2f)
@@ -201,7 +207,7 @@ namespace ThrownTogether.Tests
             var motor=chef.GetComponent<CharacterController>();motor.enabled=false;Physics.SyncTransforms();
             // Two separate 0.64m capsules fit beside one another on both sides of the island.
             // This checks collision clearance, not subjective controller comfort.
-            foreach(float x in new[]{-3.8f,-3.0f,.9f,1.65f})
+            foreach(float x in new[]{-3.8f,-3.0f,0f,.7f})
             for(float z=-2.8f;z<=2.8f;z+=.2f)
             {
                 var p=new Vector3(x,.4f,z);

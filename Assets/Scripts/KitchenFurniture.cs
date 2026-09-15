@@ -32,10 +32,32 @@ namespace ThrownTogether
             return slots.ToArray();
         }
         public static bool SlotAvailable(int index,bool expanded)=>index>=0 && index<GridSlots.Length && (expanded || GridSlots[index].x>=-7.21f);
-        static bool Regular(int index)
+        public static bool Regular(int index)
         {
             var p=GridSlots[index];float x=(p.x+11)/1.9f,z=(5.8f-p.z)/2.04f;
             return Mathf.Abs(x-Mathf.Round(x))<.01f && Mathf.Abs(z-Mathf.Round(z))<.01f;
+        }
+        static readonly int[] StartingAnchors={0,1,3,4,5,6,7,8,10,11};
+        static readonly int[] StartingBays={5,4,7,2,14,12,13,18,8,19};
+        static int PreferredStart(int kitchen,string id)
+        {
+            if(kitchen==0 && id=="base:7")return 33; // Continue the narrow island, leaving both passing aisles clear.
+            if(kitchen==1 && id=="base:6")return 33;
+            if(kitchen==1 && id=="base:4")return 1;
+            if(kitchen==2 && id=="base:10")return 9;
+            for(int i=0;i<StartingAnchors.Length;i++)if(id=="base:"+StartingAnchors[i] && (kitchen==0 || StartingAnchors[i]==8 || StartingAnchors[i]==11))return StartingBays[i];
+            return -1;
+        }
+        public static void SnapFreshQuickPlay(KitchenLayout layout,int kitchen)
+        {
+            var occupied=new HashSet<int>();var definition=layout.choices[kitchen];
+            foreach(var anchor in StartingAnchors)
+            {
+                if(anchor>=layout.anchors.Length || layout.anchors[anchor].GetComponentInChildren<Interactable>()==null)continue;
+                int preferred=PreferredStart(kitchen,"base:"+anchor);var desired=preferred<0?layout.anchors[anchor].position:GridSlots[preferred];
+                int slot=Enumerable.Range(0,GridSlots.Length).Where(i=>SlotAvailable(i,false) && Regular(i) && !occupied.Contains(i) && new[]{definition.playerOneSpawn,definition.playerTwoSpawn}.All(p=>Mathf.Abs(p.x-GridSlots[i].x)>1.3f || Mathf.Abs(p.z-GridSlots[i].z)>1.3f)).OrderBy(i=>(GridSlots[i]-desired).sqrMagnitude).First();
+                occupied.Add(slot);layout.anchors[anchor].position=GridSlots[slot];
+            }
         }
         public Vector3[] Bays=>GridSlots;
         public bool Available(int index)=>SlotAvailable(index,GetComponent<RestaurantExpansion>()?.KitchenOpen==true);
@@ -44,6 +66,9 @@ namespace ThrownTogether
         sealed class Piece { public string id; public Transform root; public Vector3 before; public Quaternion rotation; public int slot=-1,turns; }
         readonly List<Piece> pieces=new List<Piece>();
         KitchenLayout layout; RestaurantDay day;
+        public StaffHomes Homes {get;private set;}
+        public bool HomeMode {get;private set;}
+        public void ToggleHomes(){if(!Editing)return;Held=-1;HomeMode=!HomeMode;Homes.ResetCursor();}
         public bool Editing {get;private set;}
         public int Selected {get;private set;}
         public int Held {get;private set;}=-1;
@@ -56,6 +81,7 @@ namespace ThrownTogether
         public void Initialize(KitchenLayout value)
         {
             layout=value;day=GetComponent<RestaurantDay>();
+            Homes=gameObject.AddComponent<StaffHomes>();Homes.Initialize(this,day);
             foreach(int index in new[]{0,1,3,4,5,6,7,8,10,11})
                 if(layout!=null && index<layout.anchors.Length && layout.anchors[index].GetComponentInChildren<Interactable>()!=null)Register("base:"+index,layout.anchors[index]);
         }
@@ -67,8 +93,21 @@ namespace ThrownTogether
             int preferred=id=="expo" || root.GetComponent<ExpoStation>()!=null ? 20 : -1;
             for(int i=0;i<anchors.Length;i++)if(id=="base:"+anchors[i] && (SessionOptions.Kitchen==0 || anchors[i]==8 || anchors[i]==11))preferred=bays[i];
             bool SpawnSafe(int i)=>new[]{layout.choices[SessionOptions.Kitchen].playerOneSpawn,layout.choices[SessionOptions.Kitchen].playerTwoSpawn}.All(p=>Mathf.Abs(p.x-Bays[i].x)>1.3f || Mathf.Abs(p.z-Bays[i].z)>1.3f);
+            if(RestaurantAccounts.Current.Data.layoutGridVersion>0)
+            {
+                // Preserve an east/west aisle below the Prep Island instead of closing it with the fryer.
+                int starter=PreferredStart(SessionOptions.Kitchen,id);if(starter>=0)preferred=starter;
+                var desired=preferred>=0?Bays[preferred]:root.position;
+                preferred=Enumerable.Range(0,Bays.Length).Where(i=>Available(i) && Regular(i) && At(i)==null && SpawnSafe(i)).OrderBy(i=>Vector3.SqrMagnitude(Bays[i]-desired)).First();
+            }
             if(preferred<0 || At(preferred)!=null || !SpawnSafe(preferred))preferred=Enumerable.Range(0,Bays.Length).Where(i=>Available(i) && At(i)==null && SpawnSafe(i) && (i<18 || i>=21 || id=="base:8" || id=="base:11" || id=="expo")).OrderBy(i=>i<ExpandedSlots.Length?0:1).ThenBy(i=>Vector3.SqrMagnitude(Bays[i]-root.position)).First();
             pieces.Add(piece);Place(piece,preferred,0);piece.before=root.position;piece.rotation=root.rotation;
+            if(RestaurantAccounts.Current.Data.layoutGridVersion>0 && id.StartsWith("purchase:") && !RestaurantAccounts.Current.Data.furniture.Any(p=>p.kitchen==SessionOptions.Kitchen && p.id==id) && !Validate(out _))
+            {
+                foreach(int free in Enumerable.Range(0,Bays.Length).Where(i=>Available(i) && Regular(i) && At(i)==null).ToArray())
+                {Place(piece,free,0);if(Validate(out _))break;}
+                piece.before=root.position;
+            }
         }
         // Install after owned equipment and its saved layout have been restored. The new
         // bay is appended, preserving every existing slot number and all owned capacity.
@@ -147,11 +186,12 @@ namespace ThrownTogether
         {
             if(!CanEdit)return false;
             IncludeNewPurchases();
+            Homes.BeginDraft();HomeMode=false;
             foreach(var p in pieces){p.before=p.root.position;p.rotation=p.root.rotation;}
             Editing=true;Held=-1;Selected=0;Message="A: pick/place • X: rotate • RB: equipment • Y: save • B: cancel | $"+MoveFee+" per break, only for saved changes";return true;
         }
         void Place(Piece p,int slot,int turns)
-        {p.slot=slot;p.turns=turns;p.root.SetPositionAndRotation(Bays[slot],Quaternion.Euler(0,turns*90,0));Physics.SyncTransforms();}
+        {p.slot=slot;p.turns=turns;p.root.SetPositionAndRotation(Bays[slot],Quaternion.Euler(0,turns*90,0));Physics.SyncTransforms();Homes?.Invalidate();}
         public bool TryMove(string id,int slot,int turns)
         {
             if(!Editing || !CanEdit || !Available(slot) || turns<0 || turns>3)return false;
@@ -185,6 +225,7 @@ namespace ThrownTogether
             if(KitchenStaffRoute.ToPoint(start,layout.choices[SessionOptions.Kitchen].playerTwoSpawn)==null ||
                 KitchenStaffRoute.ToPoint(start,new Vector3(day.Settings.entrance.x,0,-4.8f))==null)
             {problem="Keep both player spawns connected to the dining-room entrance.";return false;}
+            if(Homes!=null && !Homes.Validate(out problem))return false;
             foreach(var target in Interactable.Active.Where(s=>s.gameObject.scene==gameObject.scene && !(s is DiningTable)))
                 if(KitchenStaffRoute.ToStation(start,target.transform)==null){problem="Keep a clear walking route to every station and serving area.";return false;}
             problem="";return true;
@@ -194,29 +235,32 @@ namespace ThrownTogether
             if(Held>=0){Message="Place or cancel the selected equipment before saving.";return false;}
             if(!Editing || !CanEdit || !Validate(out var problem)){Message="Layout is not available or blocked; keep routes and player spawns clear.";return false;}
             var records=pieces.Where(p=>p.slot>=0).Select(p=>new FurniturePlacement{kitchen=SessionOptions.Kitchen,id=p.id,slot=p.slot,turns=p.turns}).ToArray();
-            bool changed=pieces.Any(p=>Vector3.Distance(p.before,p.root.position)>.01f || Quaternion.Angle(p.rotation,p.root.rotation)>.1f);
-            if(!RestaurantAccounts.Current.SetFurniture(SessionOptions.Kitchen,records,changed)){Message=RestaurantAccounts.Current.Problem;return false;}
+            bool changed=Homes.Changed || pieces.Any(p=>Vector3.Distance(p.before,p.root.position)>.01f || Quaternion.Angle(p.rotation,p.root.rotation)>.1f);
+            if(!RestaurantAccounts.Current.SetFurniture(SessionOptions.Kitchen,records,changed,Homes.Draft)){Message=RestaurantAccounts.Current.Problem;return false;}
             Editing=false;Held=-1;return true;
         }
         public void Cancel()
         {
             if(!Editing)return;
+            Homes.BeginDraft();HomeMode=false;
             foreach(var p in pieces){if(p.root==null)continue;p.root.SetPositionAndRotation(p.before,p.rotation);p.slot=Nearest(p.before);p.turns=(Mathf.RoundToInt(p.rotation.eulerAngles.y/90)%4+4)%4;}
             Physics.SyncTransforms();Editing=false;Held=-1;
         }
         public void Select(int index){Selected=Mathf.Clamp(index,0,Bays.Length+1);}
         public void Confirm()
         {
+            if(HomeMode){Homes.Place();return;}
             if(Selected==Bays.Length){Save();return;}
             if(Selected==Bays.Length+1){Cancel();return;}
             if(Held<0){var p=At(Selected);if(p!=null){Held=pieces.IndexOf(p);pendingTurns=p.turns;}else Message="Empty slot. Select equipment first.";}
             else if(TryMove(pieces[Held].id,Selected,pendingTurns))Held=-1;
         }
         public void Rotate(){if(Held>=0)pendingTurns=(pendingTurns+1)%4;else Message="Select equipment first to rotate it.";}
-        public void CyclePiece(){if(pieces.Count==0)return;Held=(Held+1)%pieces.Count;pendingTurns=pieces[Held].turns;if(pieces[Held].slot>=0)Selected=pieces[Held].slot;}
-        public bool Back(){if(Held>=0){Held=-1;return false;}Cancel();return true;}
+        public void CyclePiece(){if(HomeMode){Homes.Cycle();return;}if(pieces.Count==0)return;Held=(Held+1)%pieces.Count;pendingTurns=pieces[Held].turns;if(pieces[Held].slot>=0)Selected=pieces[Held].slot;}
+        public bool Back(){if(HomeMode){HomeMode=false;return false;}if(Held>=0){Held=-1;return false;}Cancel();return true;}
         public void Navigate(Vector2 direction)
         {
+            if(HomeMode){Homes.Navigate(direction);return;}
             Vector2 Point(int i){if(i==Bays.Length)return new Vector2(1060,670);if(i==Bays.Length+1)return new Vector2(1210,670);var p=GetComponent<RestaurantHud>().gameplayCamera.WorldToViewportPoint(Bays[i]);return new Vector2(p.x*1280,p.y*720);}
             var origin=Point(Selected);float best=float.MaxValue;int chosen=Selected;
             for(int i=0;i<Bays.Length+2;i++)
@@ -230,13 +274,15 @@ namespace ThrownTogether
             var prior=GUI.color;var matrix=GUI.matrix;GUI.depth=-150;
             GUI.matrix=Matrix4x4.Scale(new Vector3(Screen.width/1280f,Screen.height/720f,1));
             var style=new GUIStyle(GUI.skin.label){fontSize=16,alignment=TextAnchor.MiddleCenter};style.normal.textColor=Color.white;
-            GUI.Box(new Rect(15,10,1280-30,76),"KITCHEN LAYOUT — Move / D-pad   A: select/place   X / R: rotate   RB / Tab: equipment   Y: save   B: back");
-            GUI.Label(new Rect(30,40,1280-360,40),Message);
+            GUI.Box(new Rect(15,10,1280-30,76),"KITCHEN LAYOUT — A: place   X: rotate   RB: next   LB / H: staff homes   Y: save   B: back");
+            if(GUI.Button(new Rect(780,44,160,30),HomeMode?"Equipment (LB)":"Staff homes (LB)"))ToggleHomes();
+            GUI.Label(new Rect(30,40,735,40),Message);
             GUI.backgroundColor=Selected==Bays.Length?Color.yellow:Color.white;
             if(GUI.Button(new Rect(1280-315,44,140,30),"Save ($"+MoveFee+")") && Save())saved();
             GUI.backgroundColor=Selected==Bays.Length+1?Color.yellow:Color.white;
             if(GUI.Button(new Rect(1280-165,44,140,30),"Cancel")){Cancel();cancelled();}
             GUI.backgroundColor=Color.white;
+            if(HomeMode){Homes.Draw(camera);GUI.color=prior;GUI.matrix=matrix;GUI.depth=0;return;}
             for(int i=0;i<Bays.Length;i++)
             {
                 if(!Selectable(i))continue;

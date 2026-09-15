@@ -134,3 +134,5 @@ Shared Expo UI pass: reused existing ticket/browser authority; added shared pres
 Grid/congestion verification complete: 269 full-pipeline checks passed and local Web 0.23.0-dev built successfully. Not published. No measured credit usage available.
 2026-09-15 — In-world Expo redesign and explicit priority, reusing existing domain/browser/service logic. Targeted and live review complete, full gate follows. Actual account-wide usage unavailable; no estimate.
 In-world Expo release complete: 273 full checks passed, Web 0.24.0-dev deployed and public identity verified. No measured credit usage available.
+
+2026-09-15 — User-approved fresh grid starts, editable staff homes and employee arrival/departure flow. Reused existing furniture persistence, fee, routing, role state machines and day presentation. Full regression and live verification in progress. Actual account-wide credit usage unavailable; no estimate claimed.

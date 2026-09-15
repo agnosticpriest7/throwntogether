@@ -5,6 +5,15 @@ namespace ThrownTogether.Tests
     public sealed class RestaurantAccountTests
     {
         sealed class Memory:ISettingsStorage {public string json="";public bool fail;public string Read()=>json;public void Write(string value){if(fail)throw new Exception("Storage unavailable");json=value;}}
+        [Test] public void FreshGridAndLegacyDefaultsRemainDistinctAfterReloadAndReset()
+        {
+            var store=new Memory();var a=new RestaurantAccount(store);Assert.AreEqual(1,a.Data.layoutGridVersion);
+            a.SetFurniture(0,new[]{new FurniturePlacement{id="base:3",slot=7}});
+            store.json=store.json.Replace("\"layoutGridVersion\":1,","");a=new RestaurantAccount(store);
+            Assert.IsTrue(a.Writable);Assert.Zero(a.Data.layoutGridVersion);Assert.AreEqual(7,a.Data.furniture[0].slot);
+            a.SetFurniture(0,a.Data.furniture);a=new RestaurantAccount(store);Assert.Zero(a.Data.layoutGridVersion);
+            Assert.IsTrue(a.ResetCareer());Assert.AreEqual(1,a.Data.layoutGridVersion);Assert.IsEmpty(a.Data.staffHomes);
+        }
         [Test] public void RepeatPurchasesResaleAndTrainingPersistAtomically()
         {
             var store=new Memory();var a=new RestaurantAccount(store);int day=a.StartDay();a.Settle(day,2000,0);

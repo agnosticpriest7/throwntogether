@@ -17,6 +17,7 @@ namespace ThrownTogether
             if(layout==null || layout.stations==null || anchors==null || layout.stations.Length!=anchors.Length) return false;
             foreach(var anchor in anchors) if(anchor==null) return false;
             for(int i=0;i<anchors.Length;i++) anchors[i].position=layout.stations[i];
+            if(SessionOptions.ShiftOrders!=0 && GetComponent<RestaurantShift>()!=null)KitchenFurniture.SnapFreshQuickPlay(this,index);
             var motor=chef.GetComponent<CharacterController>(); bool enabled=motor.enabled; motor.enabled=false;
             chef.transform.position=layout.playerOneSpawn; motor.enabled=enabled;
             secondSpawn.position=layout.playerTwoSpawn; CurrentName=layout.displayName;
@@ -26,6 +27,8 @@ namespace ThrownTogether
         {
             if(!Apply(SessionOptions.Kitchen)) { SessionOptions.Kitchen=0; Apply(0); }
             var hud=GetComponent<RestaurantHud>();
+            // Grid-edge equipment extends farther than the former authored starts. Keep it inside the frame.
+            if(GetComponent<RestaurantShift>()!=null && hud?.gameplayCamera!=null && (SessionOptions.ShiftOrders!=0 || RestaurantAccounts.Current.Data.layoutGridVersion>0))hud.gameplayCamera.orthographicSize*=1.06f;
             if(hud!=null && hud.shift==null && SessionOptions.Training=="Garden salad") hud.order.recipe=tomatoSalad;
         }
     }

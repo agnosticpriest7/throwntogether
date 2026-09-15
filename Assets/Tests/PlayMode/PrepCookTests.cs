@@ -44,6 +44,7 @@ namespace ThrownTogether.Tests
             fries=DailyMenu.Catalog.First(r=>r.ingredient.visualKind==IngredientVisualKind.Potato && r.requiredState==FoodState.Cooked && r.additionalIngredients.Length==0);
             source=Object.FindObjectsByType<SourceStation>().First(s=>s.gameObject.scene==scene && s.Offers(fries.ingredient));
             Assert.IsNotNull(day.PrepCook);Assert.IsNotNull(day.Expo);Assert.IsFalse(day.AwaitingMenu);
+            for(int i=0;i<1000 && day.StaffEntering;i++)day.Advance(.1f);Assert.IsFalse(day.StaffEntering);
             foreach(var input in Object.FindObjectsByType<ChefInput>().Where(i=>i.gameObject.scene==scene))input.enabled=false;
         }
         [UnityTearDown] public IEnumerator Teardown()

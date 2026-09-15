@@ -35,6 +35,12 @@ namespace ThrownTogether
         public bool AdmissionsClosed=>Elapsed>=Settings.durationSeconds;
         public int CustomersRemaining=>guests.Count;
         public int CustomersArrived=>spawned;
+        readonly List<StaffMember> staff=new List<StaffMember>();
+        public IReadOnlyList<StaffMember> Staff=>staff;
+        public bool StaffEntering=>staff.Any(s=>s!=null && s.Arriving);
+        public bool StaffLeaving {get;private set;}
+        internal void RegisterStaff(StaffMember member)=>staff.Add(member);
+        public string StaffTransition=>StaffEntering?"Staff arriving — opening shortly":StaffLeaving?string.Join(" · ",staff.Where(s=>s!=null && !s.Gone).Select(s=>s.Status).Distinct()):"";
         public bool Paid {get;private set;}
         public int Served {get;private set;}
         public int BaseIncome {get;private set;}
@@ -49,9 +55,15 @@ namespace ThrownTogether
         {
             if(!AwaitingMenu || !DailyMenu.CanStart(RestaurantAccounts.Current))return false;
             ApplyPurchases();EnsureExpo();
+            if(!GetComponent<KitchenFurniture>().Validate(out var layoutProblem)){ExpoProblem=layoutProblem;return false;}
+            var homes=GetComponent<KitchenFurniture>().Homes;
+            if(!homes.Validate(out var homeProblem)){ExpoProblem=homeProblem;return false;}
+            foreach(var role in StaffHomes.Roles.Where(r=>RestaurantAccounts.Current.Owns(StaffHomes.PurchaseId(r))))
+                if(KitchenStaffRoute.ToPoint(StaffHomes.Entrance(this),homes.Home(role))==null){ExpoProblem="Move the "+role+" home to reachable floor in Arrange Kitchen.";return false;}
+            int number=RestaurantAccounts.Current.StartDay();if(number==0)return false;
+            CreateStaff();
             if(Settings.cookRole!=null && RestaurantAccounts.Current.Owns("cook") && HasInstalledExpo && Cook==null)
             {var worker=new GameObject("Hired cook");worker.transform.SetParent(transform);Cook=worker.AddComponent<KitchenCook>();Cook.Initialize(this);}
-            int number=RestaurantAccounts.Current.StartDay();if(number==0)return false;
             Menu=DailyMenu.Resolve(RestaurantAccounts.Current);DayNumber=number;AwaitingMenu=false;return true;
         }
         private void Start(){if(AwaitingMenu)GetComponent<RestaurantMenu>().OpenRestaurant();}
@@ -105,6 +117,10 @@ namespace ThrownTogether
                     foreach(var fryer in FindObjectsByType<ProcessingStation>(FindObjectsSortMode.None))
                         if(fryer.gameObject.scene==gameObject.scene && !fryer.requiresAttendance && fryer.appliance!=null && fryer.appliance.id.Contains("fryer"))fryer.processingSpeed=purchase.processingSpeed;
             GetComponent<KitchenFurniture>().ApplySaved();
+        }
+        void CreateStaff()
+        {
+            var account=RestaurantAccounts.Current;
             if(server==null && Settings.serverRole!=null && account.Owns(Settings.serverRole.id))
             {
                 var pass=FindObjectsByType<ServiceStation>(FindObjectsSortMode.None).First(s=>s.gameObject.scene==gameObject.scene);
@@ -159,6 +175,13 @@ namespace ThrownTogether
         }
         void Tick(float dt)
         {
+            if(StaffEntering){foreach(var member in staff)member.AllowWork(dt);return;}
+            if(StaffLeaving)
+            {
+                foreach(var member in staff)member.AdvanceDeparture(dt);
+                if(staff.All(s=>s.Gone)){Closed=true;RetryPayment();}
+                return;
+            }
             Elapsed+=dt;
             while(!AdmissionsClosed && spawned<TargetCustomers && Elapsed>=nextArrival){Spawn();nextArrival+=Settings.IntervalForDay(ServiceDayNumber);}
             int queueIndex=0;
@@ -211,7 +234,11 @@ namespace ThrownTogether
                 }
             }
             Expo?.Refresh();StageExpoPass();server?.Advance(dt);dishwasher?.Advance(dt);busser?.Advance(dt);PrepCook?.Advance(dt);Cook?.Advance(dt);
-            if(AdmissionsClosed && guests.Count==0){Closed=true;RetryPayment();}
+            if(AdmissionsClosed && guests.Count==0)
+            {
+                if(staff.Count==0){Closed=true;RetryPayment();}
+                else{StaffLeaving=true;foreach(var member in staff)member.BeginDeparture();}
+            }
         }
         public void RecordMeal(RecipeDefinition recipe,float waiting)
         {

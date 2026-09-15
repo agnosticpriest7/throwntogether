@@ -7,6 +7,7 @@ namespace ThrownTogether
         Vector3[] route=new Vector3[0];int waypoint;ChefAppearance appearance;float clock;
         StaffCongestion congestion;
         public bool Arrived=>waypoint>=route.Length;
+        public Vector3 Destination=>route.Length==0?transform.position:route[route.Length-1];
         public bool Moving {get;private set;}
         public void Initialize(GameObject prefab,int look,bool customer=false)
         {

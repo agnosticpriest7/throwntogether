@@ -14,6 +14,7 @@ namespace ThrownTogether
         int clearing;
         CounterStation clearingCounter;
         Carryable parkedInput;
+        StaffMember member;
         public string Status {get;private set;}="Waiting for fired orders";
         public CarrySlot Hands=>hands;
         public KitchenTicket CurrentTicket=>ticket;
@@ -24,6 +25,7 @@ namespace ThrownTogether
             transform.position=KitchenStaffRoute.Approach(pass.transform)??Vector3.zero;
             walker=gameObject.AddComponent<DiningWalker>();walker.Initialize(day.Settings.walkingVisual,1);
             var grip=new GameObject("Cook hands");grip.transform.SetParent(transform,false);grip.transform.localPosition=new Vector3(0,1.25f,.65f);hands=grip.AddComponent<CarrySlot>();
+            member=StaffMember.Create(day,"cook",walker,hands);
         }
         bool Fired=>ticket!=null && ticket.State==KitchenTicketState.Active && day.Expo?.TableFor(ticket)?.WaitingForMeal==true;
         bool Near(Interactable s)=>s!=null && Vector3.Distance(transform.position,s.transform.position)<=1.85f;
@@ -190,6 +192,8 @@ namespace ThrownTogether
         public void Advance(float seconds)
         {
             if(day==null || day.Closed || day.AwaitingMenu || !isActiveAndEnabled || seconds<=0)return;
+            if(!member.AllowWork(seconds))return;
+            if(phase==Phase.Idle && hands.Item==null)member.Idle(seconds);
             if(retry>0){retry-=seconds;return;}
             if(clearing>0){ClearAppliance(seconds);return;}
             if(phase==Phase.Idle){FindWork();return;}

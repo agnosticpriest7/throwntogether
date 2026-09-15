@@ -27,7 +27,7 @@ namespace ThrownTogether
         public string Page { get; private set; }="Main";
         private RestaurantHud hud;
         private InputActionMap controls;
-        private InputAction toggle, navigate, accept, back, rotateLayout, cycleFurniture;
+        private InputAction toggle, navigate, accept, back, rotateLayout, cycleFurniture,staffHomes;
         private float savedTimeScale=1, nextNavigation;
         private int blockThroughFrame=-1;
         private Action pending;
@@ -60,6 +60,7 @@ namespace ThrownTogether
             controls=new InputActionMap("Restaurant menu");
             rotateLayout=controls.AddAction("Rotate furniture",InputActionType.Button);rotateLayout.AddBinding("<Gamepad>/buttonWest");rotateLayout.AddBinding("<Keyboard>/r");
             cycleFurniture=controls.AddAction("Choose furniture",InputActionType.Button);cycleFurniture.AddBinding("<Gamepad>/rightShoulder");cycleFurniture.AddBinding("<Keyboard>/tab");
+            staffHomes=controls.AddAction("Staff homes",InputActionType.Button);staffHomes.AddBinding("<Gamepad>/leftShoulder");staffHomes.AddBinding("<Keyboard>/h");
             toggle=controls.AddAction("Menu",InputActionType.Button); toggle.AddBinding("<Gamepad>/buttonNorth"); toggle.AddBinding("<Keyboard>/escape");
             navigate=controls.AddAction("Navigate",InputActionType.Value); navigate.AddBinding("<Gamepad>/dpad"); navigate.AddBinding("<Gamepad>/leftStick");
             navigate.AddCompositeBinding("2DVector").With("Up","<Keyboard>/upArrow").With("Down","<Keyboard>/downArrow").With("Left","<Keyboard>/leftArrow").With("Right","<Keyboard>/rightArrow");
@@ -436,6 +437,7 @@ namespace ThrownTogether
             if(IsOpen && Page=="Kitchen layout")
             {
                 var furniture=GetComponent<KitchenFurniture>();
+                if(staffHomes.WasPressedThisFrame())furniture.ToggleHomes();
                 if(back.WasPressedThisFrame()){if(furniture.Back())SetPage("Restaurant");return;}
                 if(toggle.WasPressedThisFrame()){if(furniture.Save())SetPage("Restaurant");return;}
                 if(rotateLayout.WasPressedThisFrame())furniture.Rotate();

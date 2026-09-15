@@ -15,6 +15,7 @@ namespace ThrownTogether
         enum Work {Idle,Fetch,ToPrep,Prep,Deposit}
         Work phase;
         PrepBin restockBin;bool restockJob;int nextBin;
+        StaffMember member;
         public string Status {get;private set;}="Waiting for fired orders";
         public Carryable ReservedItem=>claim!=null?jobItem:null;
         public CarrySlot Hands=>hands;
@@ -28,6 +29,7 @@ namespace ThrownTogether
             transform.position=start.Value;
             walker=gameObject.AddComponent<DiningWalker>();walker.Initialize(day.Settings.walkingVisual,3);
             var grip=new GameObject("Prep cook hands");grip.transform.SetParent(transform,false);grip.transform.localPosition=new Vector3(0,1.25f,.65f);hands=grip.AddComponent<CarrySlot>();
+            member=StaffMember.Create(day,"prep-cook",walker,hands);
         }
         bool Near(Interactable target)=>target!=null && Vector3.Distance(transform.position,target.transform.position)<=1.85f;
         bool Go(Interactable target)
@@ -105,6 +107,8 @@ namespace ThrownTogether
         public void Advance(float seconds)
         {
             if(day==null || day.Closed || day.AwaitingMenu || walker==null || !isActiveAndEnabled || seconds<=0)return;
+            if(!member.AllowWork(seconds))return;
+            if(phase==Work.Idle && hands.Item==null)member.Idle(seconds);
             if(retry>0){retry-=seconds;return;}
             float speed=RestaurantAccounts.Current.StaffSpeed("prep-cook");
             if(phase==Work.Idle){FindWork();return;}

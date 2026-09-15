@@ -13,7 +13,7 @@ namespace ThrownTogether.Tests
 {
     public sealed class RestaurantExpansionTests
     {
-        sealed class Memory:ISettingsStorage{public string json="";public string Read()=>json;public void Write(string s)=>json=s;}
+        sealed class Memory:ISettingsStorage{public string json=JsonUtility.ToJson(new RestaurantSave{layoutGridVersion=0});public string Read()=>json;public void Write(string s)=>json=s;}
         Memory memory;Scene original,scene;GameObject[] suspended;RestaurantDay day;RestaurantHud hud;
         [UnitySetUp] public IEnumerator Setup()
         {

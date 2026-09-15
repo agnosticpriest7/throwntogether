@@ -13,7 +13,7 @@ namespace ThrownTogether.Tests
 {
     public sealed class KitchenFurnitureTests
     {
-        sealed class Memory:ISettingsStorage {public string json="";public bool fail;public string Read()=>json;public void Write(string s){if(fail)throw new System.IO.IOException();json=s;}}
+        sealed class Memory:ISettingsStorage {public string json=JsonUtility.ToJson(new RestaurantSave{layoutGridVersion=0});public bool fail;public string Read()=>json;public void Write(string s){if(fail)throw new System.IO.IOException();json=s;}}
         Scene original,scene;GameObject[] suspended;Memory memory;RestaurantHud hud;RestaurantDay day;ChefController chef;
         [UnitySetUp] public IEnumerator Setup()
         {

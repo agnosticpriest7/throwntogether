@@ -63,7 +63,8 @@ namespace ThrownTogether
                 Panel(new Rect(340,12,690,48));
                 GUI.Label(new Rect(350,15,670,42),"Day "+day.ServiceDayNumber+" | Bank $"+RestaurantAccounts.Current.Data.cash+" | Today $"+day.NetIncome+(day.AdmissionsClosed?" | Closing: "+day.CustomersRemaining+" leaving / finishing":" | Outside "+day.WaitingOutside+" ("+Mathf.CeilToInt(Mathf.Max(0,day.Settings.outsidePatience-day.OldestWait))+"s)")+" | Left "+day.LostCustomers,small);
                 if(day.Elapsed-day.LastWasteAt<2){Panel(new Rect(490,94,300,30));GUI.Label(new Rect(490,94,300,30),"Food discarded: $"+day.Settings.wasteCost+" waste",small);}
-                if(day.Elapsed-day.LastLostAt<3){Panel(new Rect(390,66,500,28));GUI.Label(new Rect(395,66,490,28),"Customer left unhappy — waited too long",small);}
+                if(!day.StaffEntering && !day.StaffLeaving && day.Elapsed-day.LastLostAt<3){Panel(new Rect(390,66,500,28));GUI.Label(new Rect(395,66,490,28),"Customer left unhappy — waited too long",small);}
+                if(!string.IsNullOrEmpty(day.StaffTransition)){Panel(new Rect(340,66,690,30));GUI.Label(new Rect(350,66,670,30),day.StaffTransition,small);}
             }
             if(GUI.Button(new Rect(1060,18,182,39),"Y / Esc: Menu")) menu.Open();
             if(shift==null) DrawOrderBubble(order,1);
