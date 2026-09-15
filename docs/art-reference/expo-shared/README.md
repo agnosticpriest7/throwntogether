@@ -1,0 +1,9 @@
+# Shared Expo UI review
+
+Presentation-only pass. One panel occupies 178 / 720 reference pixels (24.7% of screen height), with shared active cards, five scrolling waiting cards, cyan P1/gold P2 markers and details only for each selected order. Controls retain arrival/ticket-number navigation (left/right), up Fire, down Hold, A apply, B close. Navigation follows ticket number across the two groups; it does not spatially reorder the queue. Waiting scroll follows the last player to move/select; offscreen cursor indicators identify the other player's ticket.
+
+The current production system has two active slots, one Expo desk and a single serving pass, not three physical bays. Capacity is preserved. Active display slots stay fixed while another ticket is held/served; Hold moves that ticket back into Waiting and frees its display slot, matching existing capacity rules. No physical bay, staging, save, customer patience, staff, or delivery rules changed. No world labels pretending to represent physical bays were added.
+
+Actual gameplay-camera captures: solo.png and coop-ready-scroll.png. Final co-op review includes nine tickets, two active, seven waiting, independent cursors, a completed dish in a real counter slot and Ready/plated feedback. Extra seats beyond the authored room were synthetic seating fixtures; actual tables 1/2 stayed visible. Memory-only account used; real career saves untouched. Final details use side-by-side columns to prevent overlap. Component status is a read-only CookProduction projection, refreshed at most every 0.15 seconds.
+
+Remaining limits: physical TV/controller legibility untested; very long future recipe/component names may need wrapping; three physical bays require an explicit gameplay/staging pass. The closed-Expo passive overview is unchanged. Release test/build results recorded in DEVELOPMENT_NOTES.md.

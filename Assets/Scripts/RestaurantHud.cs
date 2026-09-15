@@ -77,6 +77,9 @@ namespace ThrownTogether
                 GUI.color=HudTint(new Color(1,.75f,.2f)); rect.width*=station.Progress; GUI.DrawTexture(rect,Texture2D.whiteTexture); GUI.color=HudTint(Color.white);
             }
             DrawSuccessCues();
+            var p1=chef.GetComponent<ChefInput>().ExpoBrowser;
+            var p2=coop?.PlayerTwo!=null?coop.PlayerTwo.GetComponent<ChefInput>().ExpoBrowser:null;
+            if(day?.Expo!=null && (p1.Station!=null || p2?.Station!=null))ExpoSharedPanel.Draw(day,p1,p2,presentation.ServiceOpacity);
             if(day?.Expo!=null && !ShowControlHelp && chef.GetComponent<ChefInput>().Expo==null && (coop?.PlayerTwo==null || coop.PlayerTwo.GetComponent<ChefInput>().Expo==null))ExpoOrderStrip.Draw(day,presentation.ServiceOpacity);
             if(day?.PrepCook!=null && !day.Closed && !ShowControlHelp && !menu.IsOpen && chef.GetComponent<ChefInput>().Expo==null && (coop?.PlayerTwo==null || coop.PlayerTwo.GetComponent<ChefInput>().Expo==null))
             {Panel(new Rect(18,628,325,58));GUI.Label(new Rect(25,630,311,54),"PREP COOK\n"+day.PrepCook.Status,small);}

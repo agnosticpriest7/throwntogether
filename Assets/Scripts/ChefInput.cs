@@ -26,6 +26,7 @@ namespace ThrownTogether
         readonly ExpoTicketBrowser expo=new ExpoTicketBrowser();
         private bool expoNavigationHeld;
         public ExpoStation Expo=>expo.Station;
+        public ExpoTicketBrowser ExpoBrowser=>expo;
         public KitchenTicket SelectedExpoTicket=>expo.Selected;
         public bool OpenExpo(ExpoStation station)
         {
@@ -104,7 +105,7 @@ namespace ThrownTogether
         private void OnGUI()
         {
             if(RestaurantMenu.GameplayBlocked)return;
-            if(expo.Station!=null){expo.Draw(FindFirstObjectByType<LocalCoopSession>()?.PlayerTwo==chef);return;}
+            if(expo.Station!=null)return; // The HUD draws one shared board for both chefs.
             if(Storage==null)return;
             var matrix=GUI.matrix;var color=GUI.color;GUI.matrix=Matrix4x4.Scale(new Vector3(Screen.width/1280f,Screen.height/720f,1));
             bool second=FindFirstObjectByType<LocalCoopSession>()?.PlayerTwo==chef;float x=second?666:18;
