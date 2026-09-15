@@ -16,6 +16,7 @@ namespace ThrownTogether
         Carryable parkedInput;
         StaffMember member;
         public string Status {get;private set;}="Waiting for fired orders";
+        public string DisplayStatus=>member?.DisplayStatus??Status;
         public CarrySlot Hands=>hands;
         public KitchenTicket CurrentTicket=>ticket;
         public static ProcessingRecipe HotStep(RecipeDefinition recipe)=>recipe==null || recipe.additionalIngredients.Length!=0?null:CookProduction.HotFor(recipe,recipe.ingredient,recipe.requiredState);
@@ -26,6 +27,7 @@ namespace ThrownTogether
             walker=gameObject.AddComponent<DiningWalker>();walker.Initialize(day.Settings.walkingVisual,1);
             var grip=new GameObject("Cook hands");grip.transform.SetParent(transform,false);grip.transform.localPosition=new Vector3(0,1.25f,.65f);hands=grip.AddComponent<CarrySlot>();
             member=StaffMember.Create(day,"cook",walker,hands);
+            member.ConfigureBreaks(()=>Status);
         }
         bool Fired=>ticket!=null && ticket.State==KitchenTicketState.Active && day.Expo?.TableFor(ticket)?.WaitingForMeal==true;
         bool Near(Interactable s)=>s!=null && Vector3.Distance(transform.position,s.transform.position)<=1.85f;
@@ -37,6 +39,7 @@ namespace ThrownTogether
         }
         void Wait(string reason){Status=reason;retry=.4f;}
         void Idle(){phase=Phase.Idle;ticket=null;component=null;job=null;selected=null;assemblyPlate=null;target=null;retry=.15f;Status="Waiting for fired orders";}
+        void FinishBreak(){Idle();if(member.BreakRequested)member.BeginBreak();}
         static Interactable Location(Carryable i)=>CookProduction.Location(i);
         bool Reachable(Interactable s)=>s!=null && s.isActiveAndEnabled && KitchenStaffRoute.ToStation(transform.position,s.transform)!=null;
         bool CanCollect(Carryable item)=>item!=null && Location(item)!=null && !(Location(item) is ProcessingStation p && p.Busy) && !(day.PrepCook!=null && day.PrepCook.ReservedItem==item) && Reachable(Location(item));
@@ -54,6 +57,16 @@ namespace ThrownTogether
             return c!=null && (c.OnPlate || c.Supply!=null && c.Supply!=selected);
         }
         CounterStation FreeCounter()=>Interactable.Active.Where(s=>s!=null && s.gameObject.scene==gameObject.scene && s.GetType()==typeof(CounterStation)).Cast<CounterStation>().Where(s=>s.slot.Item==null && Reachable(s)).OrderBy(s=>(s.transform.position-transform.position).sqrMagnitude).FirstOrDefault();
+        void BreakPark()
+        {
+            if(hands.Item==null){FinishBreak();return;}
+            job=hands.Item;
+            if(ticket!=null && ticket.Recipe.Matches(job.Payload) && pass.pickupSlot.Item==null && Reachable(pass))
+            {phase=Phase.Stage;Go(pass);Status="Finishing: taking completed meal to pass";return;}
+            phase=Phase.Park;var counter=FreeCounter();
+            if(counter!=null && Go(counter)){Status="Finishing: putting food on counter";return;}
+            target=null;Wait("Finishing: needs free counter — food retained");
+        }
         void FindWork()
         {
             if(day.Expo==null || !day.HasInstalledExpo){Wait("Requires an installed Expo desk");return;}
@@ -168,17 +181,20 @@ namespace ThrownTogether
             {
                 if(hands.Item!=parkedInput){clearing=0;Idle();return;}
                 if(!clearingCounter.slot.TryTake(parkedInput)){clearing=0;phase=Phase.Load;Go(appliance);return;}
+                if(member.BreakRequested){clearing=0;FinishBreak();return;}
                 clearing=2;Go(appliance);return;
             }
             if(clearing==2)
             {
                 if(clearingCounter==null || clearingCounter.slot.Item!=parkedInput){clearing=0;Idle();return;}
+                if(member.BreakRequested){clearing=0;FinishBreak();return;}
                 if(appliance.Busy){Wait("Waiting to clear finished food");return;}
                 if(appliance.slot.Item!=null && !Pickup(appliance.slot.Item)){Wait("Finished food unavailable");return;}
                 clearing=3;Go(clearingCounter);return;
             }
             if(clearingCounter.slot.Item==parkedInput)
             {
+                if(member.BreakRequested){clearing=0;job=hands.Item;BreakPark();return;}
                 var output=hands.Release();var input=clearingCounter.slot.Release();
                 if(output!=null)clearingCounter.slot.TryTake(output);
                 hands.TryTake(input);job=input;clearing=0;phase=Phase.Load;Go(appliance);Status="Resuming cooking";return;
@@ -193,6 +209,11 @@ namespace ThrownTogether
         {
             if(day==null || day.Closed || day.AwaitingMenu || !isActiveAndEnabled || seconds<=0)return;
             if(!member.AllowWork(seconds))return;
+            if(member.BreakRequested && clearing==0)
+            {
+                if(phase==Phase.Idle || phase==Phase.Fetch && hands.Item==null){FinishBreak();return;}
+                if(phase!=Phase.Cooking)BreakPark();
+            }
             if(phase==Phase.Idle && hands.Item==null)member.Idle(seconds);
             if(retry>0){retry-=seconds;return;}
             if(clearing>0){ClearAppliance(seconds);return;}
@@ -233,7 +254,7 @@ namespace ThrownTogether
             if(phase==Phase.Cooking)
             {
                 if(appliance.Busy)return;
-                if(!hands.TryTake(job)){Idle();return;}ToPlate();return;
+                if(!hands.TryTake(job)){Idle();return;}if(member.BreakRequested)BreakPark();else ToPlate();return;
             }
             if(phase==Phase.Plate)
             {
@@ -264,13 +285,13 @@ namespace ThrownTogether
             if(phase==Phase.Stage)
             {
                 if(!ticket.Recipe.Matches(job.Payload)){Park();return;}
-                if(!pass.pickupSlot.TryTake(job)){Wait("Serving counter full — holding dish");return;}
-                if(!day.Expo.TryStageFor(ticket,job))day.Expo.TryStage(job);pass.ShowSuccess();Idle();return;
+                if(!pass.pickupSlot.TryTake(job)){if(member.BreakRequested)BreakPark();else Wait("Serving counter full — holding dish");return;}
+                if(!day.Expo.TryStageFor(ticket,job))day.Expo.TryStage(job);pass.ShowSuccess();if(member.BreakRequested)FinishBreak();else Idle();return;
             }
             if(phase==Phase.Park)
             {
                 bool stored=target is PrepBin bin?bin.Store(job):target.GetType()==typeof(CounterStation) && ((CounterStation)target).slot.TryTake(job);
-                if(stored){Idle();return;}Park();
+                if(stored){if(member.BreakRequested)FinishBreak();else Idle();return;}if(member.BreakRequested)BreakPark();else Park();
             }
         }
     }

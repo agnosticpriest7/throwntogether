@@ -17,12 +17,21 @@ namespace ThrownTogether
         enum Phase {Idle,Approach,Escort}
         RestaurantDay day;DiningWalker walker;StaffMember member;HostGuestClaim claim;Phase phase;
         public string Status {get;private set;}="Waiting to greet customers";
+        public bool Available=>member!=null && member.AvailableForWork;
 
         public void Initialize(RestaurantDay owner)
         {
             day=owner;var go=new GameObject("Hired host");go.transform.SetParent(transform);go.transform.position=owner.GetComponent<KitchenFurniture>().Homes.Home("host");
             walker=go.AddComponent<DiningWalker>();walker.Initialize(day.Settings.walkingVisual,3);
             member=StaffMember.Create(day,"host",walker,null);
+            member.ConfigureBreaks(()=>Status,OnBreakChanged);
+        }
+
+        void OnBreakChanged(bool requested)
+        {
+            if(!requested)return;
+            if(phase==Phase.Approach){day.ReleaseHostClaim(claim);Reset();member.BeginBreak();}
+            else if(phase==Phase.Idle)member.BeginBreak();
         }
 
         void OnDestroy(){day?.ReleaseHostClaim(claim);}
@@ -30,6 +39,7 @@ namespace ThrownTogether
         public void Advance(float seconds)
         {
             if(day.Closed || !member.AllowWork(seconds))return;
+            if(member.BreakRequested && phase==Phase.Idle){member.BeginBreak();return;}
             if(claim!=null && !day.HostClaimValid(claim))Reset();
             if(phase==Phase.Idle)
             {
@@ -49,7 +59,7 @@ namespace ThrownTogether
                 if(!day.BeginHostEscort(claim,out var route)){Reset();return;}
                 walker.Go(route);phase=Phase.Escort;Status="Escorting customer to table";return;
             }
-            if(phase==Phase.Escort){day.CompleteHostEscort(claim);Reset();}
+            if(phase==Phase.Escort){day.CompleteHostEscort(claim);Reset();if(member.BreakRequested)member.BeginBreak();}
         }
 
         void Reset(){claim=null;phase=Phase.Idle;Status="Waiting to greet customers";}

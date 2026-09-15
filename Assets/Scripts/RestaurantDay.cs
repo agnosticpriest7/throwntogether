@@ -39,6 +39,7 @@ namespace ThrownTogether
         public IReadOnlyList<StaffMember> Staff=>staff;
         public bool StaffEntering=>staff.Any(s=>s!=null && s.Arriving);
         public bool StaffLeaving {get;private set;}
+        public bool CanManageBreaks=>!AwaitingMenu && !Closed && !StaffEntering && !StaffLeaving;
         internal void RegisterStaff(StaffMember member)=>staff.Add(member);
         public string StaffTransition=>StaffEntering?"Staff arriving — opening shortly":StaffLeaving?string.Join(" · ",staff.Where(s=>s!=null && !s.Gone).Select(s=>s.Status).Distinct()):"";
         public bool Paid {get;private set;}
@@ -78,7 +79,8 @@ namespace ThrownTogether
         public Vector3 QueuePosition(int index)=>new Vector3(Settings.entrance.x-1.2f-Mathf.Max(0,index)*.95f,0,Settings.sidewalkStart.z);
         public int WaitingOutside=>guests.Count(g=>g.phase==0);
         public float OldestWait=>guests.Where(g=>g.phase==0).Select(g=>g.waited).DefaultIfEmpty(0).Max();
-        public float OutsidePatienceRate=>host==null?1:.75f;
+        public bool HostAvailable=>host!=null && host.Available;
+        public float OutsidePatienceRate=>HostAvailable?.75f:1;
         public float OutsidePatienceRemaining
         {
             get
@@ -179,7 +181,7 @@ namespace ThrownTogether
         }
         internal HostGuestClaim TryClaimForHost(Vector3 hostPosition,out Vector3[] route)
         {
-            route=null;HostRouteBlocked=false;if(host==null || AdmissionsClosed)return null;
+            route=null;HostRouteBlocked=false;if(!HostAvailable || AdmissionsClosed)return null;
             var guest=guests.FirstOrDefault(g=>g.phase==0);
             if(guest==null || !guest.walker.Arrived || guest.hostClaim!=System.Guid.Empty)return null;
             var table=Tables.FirstOrDefault(t=>t.Clean);if(table==null)return null;
@@ -261,7 +263,7 @@ namespace ThrownTogether
                 if(guest.phase==0)
                 {
                     var table=Tables.FirstOrDefault(t=>t.Clean);
-                    if(host==null && table!=null && queueIndex==1 && guest.walker.Arrived)
+                    if(!HostAvailable && table!=null && queueIndex==1 && guest.walker.Arrived && guest.hostClaim==System.Guid.Empty)
                     {
                         guest.table=table;table.ReserveSeat();guest.phase=1;
                         guest.walker.Go(AdmissionRoute(guest,true));

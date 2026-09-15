@@ -75,7 +75,7 @@ namespace ThrownTogether
     // Shared ownership rules keep manual washing/clearing available alongside employees.
     public sealed class KitchenDishwasher : MonoBehaviour
     {
-        RestaurantDay day;WashingStation sink;SourceStation stock;DishReturnStation rack;DiningWalker walker;CarrySlot hands;Transform destination;float retry;
+        RestaurantDay day;WashingStation sink;SourceStation stock;DishReturnStation rack;DiningWalker walker;CarrySlot hands;Transform destination;float retry;bool washingOwned;
         StaffMember member;
         public void Initialize(RestaurantDay owner)
         {
@@ -88,6 +88,7 @@ namespace ThrownTogether
             var appearance=go.GetComponentInChildren<ChefAppearance>();if(appearance!=null){var look=ChefAppearanceData.Example(0);look.clothing=2;look.clothingColor=4;look.headwear=0;appearance.Apply(look);}
             var grip=new GameObject("Carried plate");grip.transform.SetParent(go.transform,false);grip.transform.localPosition=new Vector3(0,1.25f,.65f);hands=grip.AddComponent<CarrySlot>();destination=sink.transform;
             member=StaffMember.Create(day,"dishwasher",walker,hands);destination=null;
+            member.ConfigureBreaks(()=>hands.Item?.Payload.dirty==true?"Taking dirty plate to sink":hands.Item!=null?"Returning clean plate":washingOwned?"Washing current plate":"Waiting for dishes");
         }
         bool Travel(Transform target)
         {var route=KitchenStaffRoute.ToStation(walker.transform.position,target);if(route==null){retry=1;return false;}destination=target;walker.Go(route);return true;}
@@ -95,6 +96,27 @@ namespace ThrownTogether
         {
             if(day.Closed || walker==null || seconds<=0)return;
             if(!member.AllowWork(seconds))return;
+            if(member.BreakRequested)
+            {
+                float breakSpeed=RestaurantAccounts.Current.StaffSpeed(day.Settings.dishwasherRole.id);
+                if(hands.Item!=null)
+                {
+                    var stop=hands.Item.Payload.dirty?sink.transform:stock.transform;
+                    if(destination!=stop && !Travel(stop))return;
+                    walker.Advance(seconds,day.Settings.walkingSpeed*breakSpeed,true);if(!walker.Arrived)return;
+                    bool stored=hands.Item.Payload.dirty?sink.Enqueue(hands.Item):stock.ReturnCleanPlate(hands.Item);
+                    if(stored){washingOwned=false;sink.ReleaseWorker(this);destination=null;member.BeginBreak();}
+                    return;
+                }
+                if(washingOwned)
+                {
+                    if(destination!=sink.transform && !Travel(sink.transform))return;
+                    walker.Advance(seconds,day.Settings.walkingSpeed*breakSpeed,false);if(!walker.Arrived)return;
+                    if(sink.Busy){sink.WashBy(this,seconds*breakSpeed);return;}
+                    if(sink.TakeClean(hands)){washingOwned=false;Travel(stock.transform);}return;
+                }
+                sink.ReleaseWorker(this);destination=null;member.BeginBreak();return;
+            }
             if(hands.Item==null && sink.Count==0 && rack.Count==0){member.Idle(seconds);destination=null;return;}
             if(destination==null && !Travel(sink.transform))return;
             if(retry>0){retry-=seconds;return;}
@@ -114,8 +136,8 @@ namespace ThrownTogether
             walker.transform.LookAt(new Vector3(sink.transform.position.x,walker.transform.position.y,sink.transform.position.z));
             if(sink.Count>0)
             {
-                if(!sink.Busy){if(sink.TakeClean(hands))Travel(stock.transform);}
-                else sink.WashBy(this,seconds*speed);
+                if(!sink.Busy){if(sink.TakeClean(hands)){washingOwned=false;Travel(stock.transform);}}
+                else if(sink.WashBy(this,seconds*speed))washingOwned=true;
             }
             else if(rack.Count>0)Travel(rack.transform);
         }

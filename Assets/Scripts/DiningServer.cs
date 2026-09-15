@@ -8,6 +8,7 @@ namespace ThrownTogether
         RestaurantDay day;ServiceStation pass;DiningWalker walker;CarrySlot hands;DiningTable target;Destination destination;
         ExpoDeliveryClaim claim;
         StaffMember member;
+        Interactable breakTarget;
         Vector3 Home=>day.GetComponent<KitchenFurniture>().Homes.Home("server");
         Vector3 Pickup=>KitchenStaffRoute.Approach(pass.transform)??Home;
         void Travel(Destination next,Vector3 point){destination=next;var path=next==Destination.Pass?KitchenStaffRoute.ToStation(walker.transform.position,pass.transform):KitchenStaffRoute.ToPoint(walker.transform.position,point);if(path!=null)walker.Go(path);}
@@ -17,6 +18,22 @@ namespace ThrownTogether
             walker=go.AddComponent<DiningWalker>();walker.Initialize(day.Settings.walkingVisual,2);
             var grip=new GameObject("Carried plate");grip.transform.SetParent(go.transform,false);grip.transform.localPosition=new Vector3(0,1.25f,.65f);hands=grip.AddComponent<CarrySlot>();
             member=StaffMember.Create(day,"server",walker,hands);
+            member.ConfigureBreaks(()=>Status);
+        }
+        string Status=>hands.Item!=null?"Delivering or storing carried meal":destination==Destination.Pass?"Going to serving counter":destination==Destination.Table?"Delivering meal":"Waiting for meals";
+        void ReleaseDelivery()
+        {
+            if(day.Expo!=null)day.Expo.ReleaseClaim(claim);else if(target!=null)target.ReservedForServer=false;
+            claim=null;target=null;
+        }
+        void FinishBreak(){ReleaseDelivery();destination=Destination.Idle;breakTarget=null;member.BeginBreak();}
+        void StoreForBreak()
+        {
+            if(hands.Item==null){FinishBreak();return;}
+            if(pass.pickupSlot.Item==null && KitchenStaffRoute.ToStation(transform.position,pass.transform)!=null)breakTarget=pass;
+            else breakTarget=Interactable.Active.Where(s=>s!=null && s.gameObject.scene==gameObject.scene && s.GetType()==typeof(CounterStation)).Cast<CounterStation>().Where(c=>c.slot.Item==null && KitchenStaffRoute.ToStation(transform.position,c.transform)!=null).OrderBy(c=>(c.transform.position-transform.position).sqrMagnitude).FirstOrDefault();
+            if(breakTarget==null)return;
+            var route=KitchenStaffRoute.ToStation(transform.position,breakTarget.transform);if(route!=null)walker.Go(route);
         }
         bool HasWork()=>pass.pickupSlot.Item!=null && (day.Expo!=null?day.Expo.CanCollect(pass.pickupSlot.Item):day.Tables.Any(t=>!t.ReservedForServer && t.CanServe(pass.pickupSlot.Item.Payload)));
         private void OnDestroy(){day?.Expo?.ReleaseClaim(claim);}
@@ -24,14 +41,29 @@ namespace ThrownTogether
         {
             if(day.Closed)return;
             if(!member.AllowWork(seconds))return;
+            if(member.BreakRequested)
+            {
+                bool validDelivery=destination==Destination.Table && hands.Item!=null && target!=null && (day.Expo==null || claim!=null);
+                if(!validDelivery)
+                {
+                    ReleaseDelivery();
+                    if(hands.Item==null){FinishBreak();return;}
+                    if(breakTarget==null)StoreForBreak();
+                    walker.Advance(seconds,day.Settings.walkingSpeed*RestaurantAccounts.Current.StaffSpeed(day.Settings.serverRole.id),true);
+                    if(!walker.Arrived)return;
+                    bool stored=breakTarget==pass?pass.pickupSlot.TryTake(hands.Item):breakTarget is CounterStation counter && counter.slot.TryTake(hands.Item);
+                    if(stored)FinishBreak();else{breakTarget=null;StoreForBreak();}
+                    return;
+                }
+            }
             if(destination==Destination.Idle && !HasWork()){member.Idle(seconds);return;}
             if(destination==Destination.Idle && HasWork())Travel(Destination.Pass,Pickup);
             walker.Advance(seconds,day.Settings.walkingSpeed*RestaurantAccounts.Current.StaffSpeed(day.Settings.serverRole.id),hands.Item!=null);if(!walker.Arrived)return;
             if(destination==Destination.Table)
             {
                 if(hands.Item!=null && target!=null && (day.Expo==null || claim!=null))target.Deliver(hands.Item,claim);
-                if(day.Expo!=null)day.Expo.ReleaseClaim(claim);else if(target!=null)target.ReservedForServer=false;
-                claim=null;target=null;
+                ReleaseDelivery();
+                if(member.BreakRequested){FinishBreak();return;}
                 bool more=hands.Item!=null || HasWork();Travel(more?Destination.Pass:Destination.Idle,more?Pickup:Home);return;
             }
             if(destination==Destination.Idle)

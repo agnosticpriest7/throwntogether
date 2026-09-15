@@ -14,9 +14,10 @@ namespace ThrownTogether
         SourceStation source;Interactable destination;Carryable jobItem;float retry;
         enum Work {Idle,Fetch,ToPrep,Prep,Deposit}
         Work phase;
-        PrepBin restockBin;bool restockJob;int nextBin;
+        PrepBin restockBin;bool restockJob,breakDeposit;int nextBin;
         StaffMember member;
         public string Status {get;private set;}="Waiting for fired orders";
+        public string DisplayStatus=>member?.DisplayStatus??Status;
         public Carryable ReservedItem=>claim!=null?jobItem:null;
         public CarrySlot Hands=>hands;
         public PrepProduction Production=>production;
@@ -30,6 +31,7 @@ namespace ThrownTogether
             walker=gameObject.AddComponent<DiningWalker>();walker.Initialize(day.Settings.walkingVisual,3);
             var grip=new GameObject("Prep cook hands");grip.transform.SetParent(transform,false);grip.transform.localPosition=new Vector3(0,1.25f,.65f);hands=grip.AddComponent<CarrySlot>();
             member=StaffMember.Create(day,"prep-cook",walker,hands);
+            member.ConfigureBreaks(()=>Status);
         }
         bool Near(Interactable target)=>target!=null && Vector3.Distance(transform.position,target.transform.position)<=1.85f;
         bool Go(Interactable target)
@@ -46,7 +48,21 @@ namespace ThrownTogether
             if(heldClaim!=null)production.Ledger.Release(workerId,heldClaim.Id);
         }
         void Idle()
-        {station?.ReleaseStaff(this);Release();phase=Work.Idle;jobItem=null;destination=null;restockBin=null;restockJob=false;retry=.2f;}
+        {station?.ReleaseStaff(this);Release();phase=Work.Idle;jobItem=null;destination=null;restockBin=null;restockJob=false;breakDeposit=false;retry=.2f;}
+        CounterStation FreeCounter()=>Interactable.Active.Where(s=>s!=null && s.isActiveAndEnabled && s.gameObject.scene==gameObject.scene && s.GetType()==typeof(CounterStation)).Cast<CounterStation>().Where(c=>c.slot.Item==null && KitchenStaffRoute.ToStation(transform.position,c.transform)!=null).OrderBy(c=>(c.transform.position-transform.position).sqrMagnitude).FirstOrDefault();
+        void FinishBreak()
+        {
+            Idle();
+            if(member.BreakRequested)member.BeginBreak();
+        }
+        bool BreakStorageRoute()
+        {
+            breakDeposit=true;phase=Work.Deposit;
+            if(hands.Item?.Payload.state==FoodState.Cut && restockBin!=null && restockBin.CanStore(hands.Item.Payload) && Go(restockBin)){Status="Finishing: storing prepared food";return true;}
+            var counter=FreeCounter();
+            if(counter!=null && Go(counter)){Status="Finishing: putting food on counter";return true;}
+            destination=null;Wait("Finishing: needs free counter — food retained");return false;
+        }
         bool OutputExists(ItemPayload food)=>Outputs(food).Any();
         Interactable[] Outputs(ItemPayload food)
         {
@@ -108,6 +124,12 @@ namespace ThrownTogether
         {
             if(day==null || day.Closed || day.AwaitingMenu || walker==null || !isActiveAndEnabled || seconds<=0)return;
             if(!member.AllowWork(seconds))return;
+            if(member.BreakRequested)
+            {
+                if(phase==Work.Idle || phase==Work.Fetch && hands.Item==null){FinishBreak();return;}
+                if(phase==Work.ToPrep){BreakStorageRoute();}
+                else if(phase==Work.Deposit && !breakDeposit)BreakStorageRoute();
+            }
             if(phase==Work.Idle && hands.Item==null)member.Idle(seconds);
             if(retry>0){retry-=seconds;return;}
             float speed=RestaurantAccounts.Current.StaffSpeed("prep-cook");
@@ -152,15 +174,15 @@ namespace ThrownTogether
                 station.WorkBy(this,seconds*speed);
                 if(station.Busy)return;
                 if(!hands.TryTake(jobItem)){Idle();return;}
-                phase=Work.Deposit;Status="Storing "+ingredient.NameFor(FoodState.Cut);DepositRoute();return;
+                phase=Work.Deposit;Status="Storing "+ingredient.NameFor(FoodState.Cut);if(member.BreakRequested)BreakStorageRoute();else DepositRoute();return;
             }
             if(phase==Work.Deposit)
             {
                 if(hands.Item!=jobItem){Idle();return;}
-                if(restockJob && destination!=restockBin){DepositRoute();return;}
+                if(!breakDeposit && restockJob && destination!=restockBin){DepositRoute();return;}
                 bool stored=destination is PrepBin bin?bin.Store(jobItem):destination.GetType()==typeof(CounterStation) && ((CounterStation)destination).slot.TryTake(jobItem);
-                if(stored){destination.ShowSuccess();Idle();return;}
-                DepositRoute();
+                if(stored){destination.ShowSuccess();if(member.BreakRequested)FinishBreak();else Idle();return;}
+                if(member.BreakRequested)BreakStorageRoute();else DepositRoute();
             }
         }
         void OnDisable(){station?.ReleaseStaff(this);if(production!=null)Release();}

@@ -72,6 +72,17 @@ namespace ThrownTogether.Tests
             Assert.That(day.Tables[0].WaitingForMeal,Is.True,"No-host baseline still seats automatically");LogAssert.NoUnexpectedReceived();yield return null;
         }
 
+        [UnityTest] public IEnumerator HostBreakImmediatelyRestoresNormalPatienceAndAutomaticSeating()
+        {
+            HireHost();Assert.That(day.StartService(),Is.True);FinishArrival();foreach(var table in day.Tables)table.ReserveSeat();
+            day.Advance(day.Settings.firstArrival+14);Assert.That(day.WaitingOutside,Is.GreaterThan(0));Assert.That(day.OutsidePatienceRate,Is.EqualTo(.75f));
+            var member=day.Staff.Single(s=>s.Role=="host");float before=day.OldestWait;Assert.That(member.ToggleBreak(),Is.True);Assert.That(day.HostAvailable,Is.False);day.Advance(4);
+            Assert.That(day.OldestWait-before,Is.EqualTo(4).Within(.12f));day.Tables[0].CancelArrival();
+            for(int i=0;i<600&&!day.Tables[0].WaitingForMeal;i++)day.Advance(.1f);
+            Assert.That(day.Tables[0].WaitingForMeal,Is.True,"Customers should seat automatically while host is resting");
+            Assert.That(member.ToggleBreak(),Is.True);Assert.That(day.HostAvailable,Is.True);LogAssert.NoUnexpectedReceived();yield return null;
+        }
+
         [UnityTest] public IEnumerator ClosingReleasesHostReservationAndStaffStillLeaveLast()
         {
             HireHost();Assert.That(day.StartService(),Is.True);FinishArrival();

@@ -141,3 +141,5 @@ Staff/grid release complete: all 280 committed release checks passed; 0.25.0-dev
 2026-09-15 — HOST-001 implemented with GPT-5.6 Sol from the approved Astra brief. Reused customer lifecycle, employee management/training, staff homes, routing and persistence. Focused and full isolated tests plus memory-only Unity review completed; release follows. Actual account-wide credit usage is unavailable, so no estimate is recorded.
 
 HOST-001 release completed: all 285 checks passed and public Web 0.26.0-dev identity was verified. No measured account-wide credit usage is available.
+
+2026-09-15 — BREAKS-001 implemented from the approved Astra brief using the existing staff, role, menu, routing and customer systems. No broad scheduler or persistence rewrite was introduced. Canonical disposable live review completed; final committed release gate follows. Actual account-wide credit usage is unavailable, so no estimate is recorded.

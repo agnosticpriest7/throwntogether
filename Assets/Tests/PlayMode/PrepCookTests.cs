@@ -57,6 +57,15 @@ namespace ThrownTogether.Tests
         KitchenTicket Seat(int index=0)
         {var t=day.Tables[index];t.ReserveSeat();t.Seat(fries);return day.Expo.TicketFor(t);}
         void Tick(int frames=800){for(int i=0;i<frames;i++)day.PrepCook.Advance(.1f);}
+        [Test] public void RestockBreakFinishesOneStartedPortionThenResumesFillingBins()
+        {
+            var member=day.Staff.Single(s=>s.Role=="prep-cook");
+            for(int i=0;i<800 && !prep.Busy;i++)day.PrepCook.Advance(.1f);Assert.IsTrue(prep.Busy,day.PrepCook.Status);
+            Assert.IsTrue(member.ToggleBreak());for(int i=0;i<1200&&!member.OnBreak;i++)day.PrepCook.Advance(.1f);
+            Assert.IsTrue(member.OnBreak,member.DisplayStatus);int stored=day.GetComponent<KitchenFurniture>().PrepBins.Sum(p=>p.Value.Count);
+            Assert.AreEqual(1,stored,"Only the portion already being chopped may finish");Tick(200);Assert.AreEqual(stored,day.GetComponent<KitchenFurniture>().PrepBins.Sum(p=>p.Value.Count));
+            Assert.IsTrue(member.ToggleBreak());Tick(3000);foreach(var assigned in RestaurantAccounts.Current.PrepAssignment(0).bins)Assert.AreEqual(5,day.GetComponent<KitchenFurniture>().PrepBins.Single(p=>p.Key==assigned.bin).Value.Count);
+        }
         [Test] public void RestockFillsTwoAssignedBinsWithoutOrdersAndReplacesTakenFood()
         {
             var assignment=RestaurantAccounts.Current.PrepAssignment(0);var bins=day.GetComponent<KitchenFurniture>().PrepBins;

@@ -92,6 +92,21 @@ namespace ThrownTogether.Tests
             for(int i=0;i<1500&&!member.Gone;i++)member.AdvanceDeparture(.1f);
             Assert.IsTrue(member.Gone,member.Status);Assert.AreSame(food,counters[0].slot.Item);Assert.IsNull(hands.Item);
         }
+        [Test] public void EmployeeBreakMenuControlsEveryRoleAndDepartureOverridesRest()
+        {
+            Assert.IsTrue(furniture.TryPurchase(day.Settings.purchases.Single(p=>p.id=="expo-desk")),furniture.Message);
+            foreach(var role in StaffHomes.Roles)Assert.IsTrue(RestaurantAccounts.Current.Buy(StaffHomes.PurchaseId(role),0),role);
+            Assert.IsTrue(day.StartService());for(int i=0;i<1000&&day.StaffEntering;i++)day.Advance(.1f);Assert.IsFalse(day.StaffEntering);
+            var menu=day.GetComponent<RestaurantMenu>();menu.Close();menu.Open();int controls=System.Array.FindIndex(menu.VisibleOptions,s=>s=="Employee Controls");Assert.That(controls,Is.GreaterThanOrEqualTo(0));
+            menu.SelectRow(controls);menu.ActivateSelection();Assert.AreEqual("Employee Controls",menu.Page);Assert.AreEqual(7,menu.VisibleOptions.Length);
+            foreach(var member in day.Staff)Assert.IsTrue(member.ToggleBreak(),member.Role);
+            menu.Close();for(int i=0;i<400&&!day.Staff.All(s=>s.OnBreak);i++)day.Advance(.1f);
+            Assert.IsTrue(day.Staff.All(s=>s.OnBreak),string.Join(" / ",day.Staff.Select(s=>s.Role+": "+s.DisplayStatus)));
+            var prep=day.Staff.Single(s=>s.Role=="prep-cook");Assert.IsTrue(prep.ToggleBreak());Assert.IsTrue(prep.AvailableForWork);Assert.AreEqual("Working",prep.DisplayStatus=="On break"?"On break":"Working");
+            foreach(var member in day.Staff)member.BeginDeparture();
+            for(int i=0;i<1500&&!day.Staff.All(s=>s.Gone);i++)foreach(var member in day.Staff)member.AdvanceDeparture(.1f);
+            Assert.IsTrue(day.Staff.All(s=>s.Gone));
+        }
         [Test] public void ControllerCanChooseEveryHomePlaceAndSaveWithoutMovingEquipment()
         {
             var menu=day.GetComponent<RestaurantMenu>();Assert.IsTrue(menu.OpenKitchenLayout());var pad=InputSystem.AddDevice<Gamepad>();

@@ -141,6 +141,7 @@ namespace ThrownTogether
         public void NavigateBack()
         {
             if(Page=="Prep cook"){SetPage("Employees");return;}
+            if(Page=="Employee Controls"){SetPage("Main");return;}
             if(Page=="Restaurant")return;
             if(Page=="Confirm"){SetPage(confirmReturnPage);return;}
             if(Page=="Employees" || Page=="Shop" || Page=="Today's Menu" && !IsFrontEnd){SetPage("Restaurant");return;}
@@ -290,6 +291,19 @@ namespace ThrownTogether
                 Add(assignment.restock?"Refills each assigned bin to 5, independent of orders":"Fired orders only • uses bins or free counters",()=>{});rows[rows.Count-1].enabled=false;
                 Add("Back to Employees",()=>SetPage("Employees"));return;
             }
+            if(Page=="Employee Controls")
+            {
+                var day=hud.shift?.Day;
+                var members=day?.Staff.Where(s=>s!=null && !s.Gone).ToArray()??Array.Empty<StaffMember>();
+                if(members.Length==0){Add("No active employees",()=>{});rows[rows.Count-1].enabled=false;}
+                foreach(var staff in members)
+                {
+                    var employee=staff;
+                    Add(employee.DisplayName+" — "+employee.DisplayStatus+" — "+employee.BreakAction,()=>{message=employee.ToggleBreak()?employee.DisplayName+": "+employee.DisplayStatus:"Break controls are unavailable during staff arrival, departure or management.";});
+                    rows[rows.Count-1].enabled=day.CanManageBreaks;
+                }
+                Add("Back",NavigateBack);return;
+            }
             if(Page=="Shop") { BuildShopRows();return; }
             if(Page=="Restaurant")
             {
@@ -363,6 +377,7 @@ namespace ThrownTogether
             }
             Add("Play / Resume",Close);
             Add("Recipe book",OpenRecipeBook);
+            if(hud.shift?.Day?.Staff.Count>0)Add("Employee Controls",()=>SetPage("Employee Controls"));
             Add("Choose your chef",()=>{wardrobeBeforeLaunch=false;ShowWardrobe();});
             Add("Restart this mode",RequestRestart);
             Add("Kitchen, shift length and practice",()=>SetPage("Session"));
