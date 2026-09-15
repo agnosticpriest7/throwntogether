@@ -107,6 +107,14 @@ namespace ThrownTogether.Tests
             for(int i=0;i<1500&&!day.Staff.All(s=>s.Gone);i++)foreach(var member in day.Staff)member.AdvanceDeparture(.1f);
             Assert.IsTrue(day.Staff.All(s=>s.Gone));
         }
+        [Test] public void BusserBreakReturnsCarriedPlateBeforeResting()
+        {
+            Assert.IsTrue(RestaurantAccounts.Current.Buy("hire-busser",0));Assert.IsTrue(day.StartService());
+            for(int i=0;i<1000&&day.StaffEntering;i++)day.Advance(.1f);var member=day.Staff.Single();var hands=member.GetComponentInChildren<CarrySlot>();
+            var source=Object.FindObjectsByType<SourceStation>().First(s=>s.gameObject.scene==scene);var plate=Object.Instantiate(source.itemPrefab);var payload=ItemPayload.Plate();payload.MakeDirty();plate.Configure(payload);Assert.IsTrue(hands.TryTake(plate));
+            Assert.IsTrue(member.ToggleBreak());var busser=day.GetComponent<DiningBusser>();for(int i=0;i<1000&&!member.OnBreak;i++)busser.Advance(.1f);
+            Assert.IsTrue(member.OnBreak,member.DisplayStatus);Assert.IsNull(hands.Item);Assert.AreEqual(1,Object.FindObjectsByType<DishReturnStation>().Single(r=>r.gameObject.scene==scene).Count);
+        }
         [Test] public void ControllerCanChooseEveryHomePlaceAndSaveWithoutMovingEquipment()
         {
             var menu=day.GetComponent<RestaurantMenu>();Assert.IsTrue(menu.OpenKitchenLayout());var pad=InputSystem.AddDevice<Gamepad>();

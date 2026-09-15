@@ -212,7 +212,7 @@ namespace ThrownTogether
             if(member.BreakRequested && clearing==0)
             {
                 if(phase==Phase.Idle || phase==Phase.Fetch && hands.Item==null){FinishBreak();return;}
-                if(phase!=Phase.Cooking)BreakPark();
+                if(phase!=Phase.Cooking && phase!=Phase.Park && phase!=Phase.Stage)BreakPark();
             }
             if(phase==Phase.Idle && hands.Item==null)member.Idle(seconds);
             if(retry>0){retry-=seconds;return;}

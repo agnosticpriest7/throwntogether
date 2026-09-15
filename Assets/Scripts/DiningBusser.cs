@@ -28,7 +28,7 @@ namespace ThrownTogether
             {
                 target=null;
                 if(hands.Item==null){returning=false;member.BeginBreak();return;}
-                returning=true;Travel(DropOff);walker.Advance(seconds,day.Settings.walkingSpeed*RestaurantAccounts.Current.StaffSpeed(day.Settings.busserRole.id),true);
+                if(!returning){returning=true;Travel(DropOff);}walker.Advance(seconds,day.Settings.walkingSpeed*RestaurantAccounts.Current.StaffSpeed(day.Settings.busserRole.id),true);
                 if(walker.Arrived){rack.Return(hands.Item);returning=false;member.BeginBreak();}
                 return;
             }
