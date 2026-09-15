@@ -1,7 +1,7 @@
 {
-  "sourceCommit": "ea7e29d629813ee3efa4121c7b9adcc86a46b650",
-  "builtAtUtc": "2026-09-15T06:48:44.8933749Z",
-  "developmentVersion": "0.23.0-dev",
+  "developmentVersion": "0.24.0-dev",
+  "sourceCommit": "62c0aae40997692da3bc68807f7e409f5c3060ef",
+  "builtAtUtc": "2026-09-15T17:50:54.1380621Z",
   "scenes": [
     "Assets/Scenes/Boot.unity",
     "Assets/Scenes/MainMenu.unity",
