@@ -19,17 +19,20 @@ namespace ThrownTogether
         bool recovered;
         static long nextRevision;
         public long SelectionRevision {get;private set;}
+        public bool WaitingExpanded {get;private set;}
         public bool HoldAction {get;private set;}
         public void ChooseAction(bool hold){HoldAction=hold;SelectionRevision=++nextRevision;}
         string message="";
         float messageUntil;
         public void Open(ExpoStation station)
         {
+            WaitingExpanded=false;
             SelectionRevision=++nextRevision;
             Station=station;selected=Guid.Empty;index=0;scroll=0;recovered=false;HoldAction=false;message="Green: Make • Red: Hold. Matching food can still be served.";messageUntil=Time.unscaledTime+8;Sync();
         }
         public void Close()
         {
+            WaitingExpanded=false;
             Station=null;rows.Clear();selected=Guid.Empty;index=0;scroll=0;recovered=false;message="";messageUntil=0;
         }
         // True once after the selected order vanished and a neighbour was chosen, so the
@@ -81,6 +84,12 @@ namespace ThrownTogether
             SelectionRevision=++nextRevision;
             Sync();if(rows.Count==0)return;
             index=Mathf.Clamp(index+step,0,rows.Count-1);selected=rows[index].Id;Sync();
+            WaitingExpanded=Selected?.State==KitchenTicketState.Waiting;
+        }
+        public void BrowseWaiting()
+        {
+            Sync();int waiting=rows.FindIndex(t=>t.State==KitchenTicketState.Waiting);
+            if(waiting>=0)Navigate(waiting-index);
         }
         public bool Fire()
         {
@@ -94,7 +103,7 @@ namespace ThrownTogether
             if(ticket.State!=KitchenTicketState.Waiting){Note("Already making this order");return false;}
             if(expo.ActiveCount>=expo.Capacity){Note("Queue full — Hold or serve an order first.");return false;}
             if(!expo.TryFire(ticket)){Note("That order can no longer be fired");Sync();return false;}
-            selected=ticket.Id;Note("MAKE: "+Label(ticket));Sync();return true;
+            WaitingExpanded=false;selected=ticket.Id;Note("MAKE: "+Label(ticket));Sync();return true;
         }
         public bool Hold()
         {
@@ -102,7 +111,7 @@ namespace ThrownTogether
             var expo=Station!=null?Station.Expo:null;var ticket=Selected;
             if(expo==null || ticket==null){Note("No orders");return false;}
             if(!expo.TryHold(ticket)){Note(ticket.State==KitchenTicketState.Waiting?"Already on Hold":"That order can no longer be held");return false;}
-            Note("HOLD: "+Label(ticket));Sync();return true;
+            WaitingExpanded=false;Note("HOLD: "+Label(ticket));Sync();return true;
         }
         static string Label(KitchenTicket ticket)=>ticket.Recipe!=null ? ticket.Recipe.displayName:"Order";
     }

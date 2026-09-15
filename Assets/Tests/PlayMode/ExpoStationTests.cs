@@ -60,6 +60,20 @@ namespace ThrownTogether.Tests
             foreach(var root in suspended)if(root!=null)root.SetActive(true);
             RestaurantAccounts.ResetCache();SessionOptions.ShiftOrders=6;SessionOptions.Kitchen=0;
         }
+        [UnityTest] public IEnumerator WaitingDrawerStartsClosedAndCollapsesAfterApplyingWithoutChangingOtherCursor()
+        {
+            station=Install(Counter);SeatTwo();
+            var one=new ExpoTicketBrowser();var two=new ExpoTicketBrowser();one.Open(station);two.Open(station);
+            Assert.That(one.WaitingExpanded,Is.False);Assert.That(two.WaitingExpanded,Is.False);
+            var selected=one.Selected;one.Navigate(0);Assert.That(one.WaitingExpanded,Is.True);
+            two.BrowseWaiting();Assert.That(two.WaitingExpanded,Is.True);
+            Assert.That(one.Fire(),Is.True);Assert.That(one.WaitingExpanded,Is.False);
+            Assert.That(one.Selected,Is.SameAs(selected));Assert.That(two.Selected,Is.SameAs(selected));
+            Assert.That(two.WaitingExpanded,Is.True,"Applying P1 must not dismiss P2's drawer");
+            Assert.That(one.Hold(),Is.True);Assert.That(one.WaitingExpanded,Is.False);
+            one.BrowseWaiting();Assert.That(one.WaitingExpanded,Is.True);one.Close();Assert.That(one.WaitingExpanded,Is.False);
+            yield return null;
+        }
         ExpoStation Install(Vector3 at,bool initialize=true)
         {
             var go=new GameObject("Expo counter");SceneManager.MoveGameObjectToScene(go,scene);go.transform.position=at;
