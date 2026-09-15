@@ -147,3 +147,5 @@ HOST-001 release completed: all 285 checks passed and public Web 0.26.0-dev iden
 BREAKS-001 release completed: all 290 checks passed and public Web 0.27.0-dev identity was verified. Two failed candidates stopped before publication and produced narrow test/route corrections. No measured account-wide credit usage is available.
 
 2026-09-15 — Astra review reproduced four employee-break edge cases in disposable Unity play. Owner authorized a bounded repair. Added focused regressions and verified seven failures against the previous source before checking the fixes. No delegation or unrelated feature work; actual credit usage unavailable.
+
+0.27.1 repair deployed: 9/9 focused cases, live Unity checks, and all 299 final release checks passed. Public version/source identity verified. No measured credit usage available.
