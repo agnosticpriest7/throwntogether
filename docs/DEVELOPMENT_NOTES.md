@@ -663,3 +663,5 @@ Full local pipeline passed: 100 EditMode + 155 PlayMode + 14 Web checks (269 tot
 
 ## 0.24.0 — In-world Expo and table-ticket priority
 Replaced normal Expo panel presentation with customer-bubble selection, one operator, A toggle/X promote/B exit. Priority is separate from physical bay order and feeds existing next-work selection without preempting current work. See docs/EXPO_WORLD.md for architecture, limitations, changed files and live review. Full verification and deployment pending.
+
+0.24.0 release verification complete: 101 EditMode + 158 PlayMode + 14 Web checks passed (273 total), including priority contention and independent lower-priority work. Web artifact verified 10 files / 63,819,233 bytes, source 62c0aae40997692da3bc68807f7e409f5c3060ef. Deployed as gh-pages 9007ab98b4205d2560e9838f2ed590a18d2d3c5d; Pages reports built without error and public build-info matches 0.24.0-dev. Live Unity Console clear; real controller/TV review remains owner's task. Initial source push approval review was resolved by verifying the same public repository/default branch used by prior authorized TV deployments; the subsequent push and deployment succeeded.
