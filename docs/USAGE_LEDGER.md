@@ -136,3 +136,4 @@ Grid/congestion verification complete: 269 full-pipeline checks passed and local
 In-world Expo release complete: 273 full checks passed, Web 0.24.0-dev deployed and public identity verified. No measured credit usage available.
 
 2026-09-15 — User-approved fresh grid starts, editable staff homes and employee arrival/departure flow. Reused existing furniture persistence, fee, routing, role state machines and day presentation. Full regression and live verification in progress. Actual account-wide credit usage unavailable; no estimate claimed.
+Staff/grid release complete: all 280 committed release checks passed; 0.25.0-dev deployed and public source identity verified. No measured credit usage available.
