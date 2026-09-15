@@ -21,6 +21,7 @@ MonoBehaviour:
   wasteCost: 1
   serverIdle: {x: 10.2, y: 0, z: -5.1}
   busserIdle: {x: 11.5, y: 0, z: -5.1}
+  hostIdle: {x: 8.9, y: 0, z: -5.1}
   additionalCustomersPerDay: 2
   firstArrival: 1
   arrivalInterval: 24
@@ -49,5 +50,6 @@ MonoBehaviour:
   busserRole: {fileID: 11400000, guid: c021d0c21036a2d478bf65af2d94f96c, type: 2}
   prepCookRole: {fileID: 11400000, guid: ed9aabd8d96704a4f81208d3d1ac6815, type: 2}
   cookRole: {fileID: 11400000, guid: 17576b7fa86c4a6e8843ab376c135571, type: 2}
+  hostRole: {fileID: 11400000, guid: 997780284dd44865906888355bf3d49c, type: 2}
   sidewalkStart: {x: -14, y: 0, z: -7.1}
   sidewalkExit: {x: 17, y: 0, z: -7.1}

@@ -67,10 +67,10 @@ namespace ThrownTogether.Tests
         {
             Assert.IsTrue(furniture.TryPurchase(day.Settings.purchases.Single(p=>p.id=="expo-desk")),furniture.Message);
             foreach(var role in StaffHomes.Roles)Assert.IsTrue(RestaurantAccounts.Current.Buy(StaffHomes.PurchaseId(role),0),role);
-            Assert.IsEmpty(day.Staff,"Management must not spawn workers into a changing layout");Assert.IsTrue(day.StartService());Assert.AreEqual(5,day.Staff.Count);
+            Assert.IsEmpty(day.Staff,"Management must not spawn workers into a changing layout");Assert.IsTrue(day.StartService());Assert.AreEqual(6,day.Staff.Count);
             Assert.IsTrue(day.StaffEntering);day.Advance(1);Assert.Zero(day.Elapsed);Assert.Zero(day.CustomersArrived);
             for(int i=0;i<1000&&day.StaffEntering;i++)day.Advance(.1f);
-            Assert.IsFalse(day.StaffEntering);Assert.Zero(day.CustomersArrived);
+            Assert.IsFalse(day.StaffEntering);Assert.Zero(day.CustomersArrived);Assert.AreEqual(6,day.Staff.Count);
             foreach(var s in day.Staff)Assert.That(Vector3.Distance(s.transform.position,s.Home),Is.LessThan(.05f));
             day.Advance(day.Settings.durationSeconds);Assert.IsFalse(day.Closed);Assert.IsFalse(day.StaffLeaving,"Last guests still finishing/leaving");
             for(int i=0;i<4000&&!day.StaffLeaving;i++)day.Advance(.1f);
@@ -101,7 +101,7 @@ namespace ThrownTogether.Tests
                 InputSystem.settings.backgroundBehavior=InputSettings.BackgroundBehavior.IgnoreFocus;InputSystem.settings.editorInputBehaviorInPlayMode=InputSettings.EditorInputBehaviorInPlayMode.AllDeviceInputAlwaysGoesToGameView;
                 void Press(GamepadButton b){InputSystem.QueueStateEvent(pad,new GamepadState().WithButton(b));InputSystem.Update();menu.Tick(true);InputSystem.QueueStateEvent(pad,new GamepadState());InputSystem.Update();menu.Tick(true);}
                 var before=furniture.Find("base:3").position;Press(GamepadButton.LeftShoulder);Assert.IsTrue(furniture.HomeMode);
-                for(int i=1;i<=5;i++){Press(GamepadButton.RightShoulder);Assert.AreEqual(i%5,furniture.Homes.SelectedRole);}
+                for(int i=1;i<=6;i++){Press(GamepadButton.RightShoulder);Assert.AreEqual(i%6,furniture.Homes.SelectedRole);}
                 Press(GamepadButton.DpadUp);var selected=furniture.Homes.Cursor;Press(GamepadButton.South);Assert.AreEqual(selected,furniture.Homes.Home("server"));
                 Press(GamepadButton.North);Assert.IsFalse(furniture.Editing);Assert.AreEqual("Restaurant",menu.Page);Assert.AreEqual(before,furniture.Find("base:3").position);
                 Assert.AreEqual(selected,RestaurantAccounts.Current.Data.staffHomes.Single().position);

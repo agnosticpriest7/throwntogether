@@ -7,7 +7,7 @@ namespace ThrownTogether
     [Serializable] public sealed class StaffHomePlacement {public int kitchen;public string role;public Vector3 position;}
     public sealed class StaffHomes:MonoBehaviour
     {
-        public static readonly string[] Roles={"server","busser","dishwasher","prep-cook","cook"};
+        public static readonly string[] Roles={"server","host","busser","dishwasher","prep-cook","cook"};
         public static string PurchaseId(string role)=>role=="busser"?"hire-busser":role=="dishwasher"?"hire-dishwasher":role;
         readonly Dictionary<string,Vector3> draft=new Dictionary<string,Vector3>();
         readonly Dictionary<string,Vector3> defaults=new Dictionary<string,Vector3>();
@@ -31,6 +31,7 @@ namespace ThrownTogether
             if(draft.TryGetValue(role,out var p))return p;
             if(defaults.TryGetValue(role,out p))return p;
             if(role=="server")return day.Settings.serverIdle;
+            if(role=="host")return day.Settings.hostIdle;
             if(role=="busser")return day.Settings.busserIdle;
             var station=furniture.Find(role=="dishwasher"?"base:10":role=="prep-cook"?"base:3":"base:8");
             p=station!=null?KitchenStaffRoute.Approach(station)??Entrance(day):Entrance(day);defaults[role]=p;return p;
@@ -69,7 +70,7 @@ namespace ThrownTogether
             foreach(var role in Roles)
             {
                 var p=Screen(Home(role));GUI.color=new Color(.3f,.8f,1);GUI.DrawTexture(new Rect(p.x-3,p.y-3,6,6),Texture2D.whiteTexture);
-                float top=p.y-42-(role=="busser"?30:0);GUI.color=new Color(.08f,.3f,.5f,.9f);GUI.DrawTexture(new Rect(p.x-49,top,98,30),Texture2D.whiteTexture);
+                float top=p.y-42-(role=="busser"?30:0)+(role=="host"?30:0);GUI.color=new Color(.08f,.3f,.5f,.9f);GUI.DrawTexture(new Rect(p.x-49,top,98,30),Texture2D.whiteTexture);
                 GUI.color=Color.white;GUI.Label(new Rect(p.x-49,top,98,30),role,style);
             }
             var cursor=Screen(Cursor);GUI.color=Valid(Cursor,out _)?Color.yellow:new Color(1,.25f,.2f);GUI.DrawTexture(new Rect(cursor.x-7,cursor.y-7,14,14),Texture2D.whiteTexture);GUI.color=Color.white;

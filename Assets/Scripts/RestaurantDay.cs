@@ -77,11 +77,22 @@ namespace ThrownTogether
         public Vector3[] OutsidePositions=>guests.Where(g=>g.phase==0).Select(g=>g.walker.transform.position).ToArray();
         public Vector3 QueuePosition(int index)=>new Vector3(Settings.entrance.x-1.2f-Mathf.Max(0,index)*.95f,0,Settings.sidewalkStart.z);
         public int WaitingOutside=>guests.Count(g=>g.phase==0);
-        public float OldestWait=>guests.Where(g=>g.phase==0).Select(g=>Elapsed-g.arrived).DefaultIfEmpty(0).Max();
+        public float OldestWait=>guests.Where(g=>g.phase==0).Select(g=>g.waited).DefaultIfEmpty(0).Max();
+        public float OutsidePatienceRate=>host==null?1:.75f;
+        public float OutsidePatienceRemaining
+        {
+            get
+            {
+                if(WaitingOutside==0)return Settings.outsidePatience;
+                return Mathf.Max(0,Settings.outsidePatience-OldestWait)/OutsidePatienceRate;
+            }
+        }
+        public DiningHost Host=>host;
+        public bool HostRouteBlocked {get;private set;}
         public string Clock {get {int m=660+Mathf.FloorToInt(Mathf.Max(0,Elapsed/Settings.durationSeconds)*660);return ((m/60+11)%12+1)+":"+(m%60).ToString("00")+(m%1440<720?" AM":" PM");}}
         readonly List<Guest> guests=new List<Guest>();
-        sealed class Guest {public DiningWalker walker;public DiningTable table;public RecipeDefinition recipe;public float arrived;public int phase,look;}
-        RestaurantShift shift;int spawned;float nextArrival;DiningServer server;KitchenDishwasher dishwasher;DiningBusser busser;
+        sealed class Guest {public readonly System.Guid id=System.Guid.NewGuid();public DiningWalker walker;public DiningTable table;public RecipeDefinition recipe;public float arrived,waited;public System.Guid hostClaim;public int phase,look;}
+        RestaurantShift shift;int spawned;float nextArrival;DiningServer server;KitchenDishwasher dishwasher;DiningBusser busser;DiningHost host;
         readonly System.Random customerRandom=new System.Random();
         public void Begin(RestaurantShift owner,DayServiceDefinition settings)
         {
@@ -130,6 +141,8 @@ namespace ThrownTogether
             {dishwasher=gameObject.AddComponent<KitchenDishwasher>();dishwasher.Initialize(this);}
             if(busser==null && Settings.busserRole!=null && account.Owns(Settings.busserRole.id))
             {busser=gameObject.AddComponent<DiningBusser>();busser.Initialize(this);}
+            if(host==null && Settings.hostRole!=null && account.Owns(Settings.hostRole.id))
+            {host=gameObject.AddComponent<DiningHost>();host.Initialize(this);}
             if(PrepCook==null && Settings.prepCookRole!=null && account.Owns(Settings.prepCookRole.id))
             {var worker=new GameObject("Hired prep cook");worker.transform.SetParent(transform);PrepCook=worker.AddComponent<KitchenPrepCook>();PrepCook.Initialize(this);}
         }
@@ -158,6 +171,54 @@ namespace ThrownTogether
         {
             var visual=table.order.GetComponent<CustomerPresentation>()?.seatedVisual;
             var p=visual!=null?visual.transform.position:table.order.customerVisual.position;p.y=0;return p;
+        }
+        Vector3[] AdmissionRoute(Guest guest,bool toChair)
+        {
+            var approach=TableApproach(guest.table);var destination=toChair?Chair(guest.table):approach;
+            return new[]{new Vector3(Settings.entrance.x,0,Settings.sidewalkStart.z),Settings.entrance,new Vector3(Settings.entrance.x,0,-5),new Vector3(approach.x,0,-5),new Vector3(approach.x,0,destination.z),destination};
+        }
+        internal HostGuestClaim TryClaimForHost(Vector3 hostPosition,out Vector3[] route)
+        {
+            route=null;HostRouteBlocked=false;if(host==null || AdmissionsClosed)return null;
+            var guest=guests.FirstOrDefault(g=>g.phase==0);
+            if(guest==null || !guest.walker.Arrived || guest.hostClaim!=System.Guid.Empty)return null;
+            var table=Tables.FirstOrDefault(t=>t.Clean);if(table==null)return null;
+            var inside=StaffHomes.Entrance(this);var first=KitchenStaffRoute.ToPoint(hostPosition,inside);
+            if(first==null){HostRouteBlocked=true;return null;}
+            route=first.Concat(new[]{Settings.entrance,new Vector3(Settings.entrance.x,0,Settings.sidewalkStart.z),guest.walker.transform.position}).ToArray();
+            var claim=new HostGuestClaim(System.Guid.NewGuid(),guest.id,table);guest.hostClaim=claim.Id;guest.table=table;table.ReserveSeat();return claim;
+        }
+        internal bool HostClaimValid(HostGuestClaim claim)
+        {
+            if(claim==null)return false;var guest=guests.FirstOrDefault(g=>g.id==claim.GuestId);
+            return guest!=null && guest.hostClaim==claim.Id && guest.table==claim.Table && (guest.phase==0 || guest.phase==1);
+        }
+        internal bool BeginHostEscort(HostGuestClaim claim,out Vector3[] route)
+        {
+            route=null;var guest=claim==null?null:guests.FirstOrDefault(g=>g.id==claim.GuestId);
+            if(guest==null || guest.phase!=0 || guest.hostClaim!=claim.Id || guest.table!=claim.Table || AdmissionsClosed || guest.waited>=Settings.outsidePatience)
+            {ReleaseHostClaim(claim);return false;}
+            guest.phase=1;route=AdmissionRoute(guest,false);guest.walker.Go(AdmissionRoute(guest,true));return true;
+        }
+        internal void CompleteHostEscort(HostGuestClaim claim)
+        {
+            var guest=claim==null?null:guests.FirstOrDefault(g=>g.id==claim.GuestId);
+            if(guest!=null && guest.hostClaim==claim.Id)guest.hostClaim=System.Guid.Empty;
+        }
+        internal void ReleaseHostClaim(HostGuestClaim claim)
+        {
+            var guest=claim==null?null:guests.FirstOrDefault(g=>g.id==claim.GuestId);
+            if(guest==null || guest.hostClaim!=claim.Id)return;
+            guest.hostClaim=System.Guid.Empty;
+            if(guest.phase==0 && guest.table==claim.Table){if(claim.Table!=null)claim.Table.CancelArrival();guest.table=null;}
+        }
+        void TurnAway(Guest guest,string label)
+        {
+            if(guest.hostClaim!=System.Guid.Empty)
+            {
+                var claim=new HostGuestClaim(guest.hostClaim,guest.id,guest.table);ReleaseHostClaim(claim);
+            }
+            guest.phase=5;guest.walker.name=label;guest.walker.Go(new Vector3(guest.walker.transform.position.x,0,Settings.sidewalkExit.z-.65f),Settings.sidewalkExit+Vector3.back*.65f);
         }
         void Spawn()
         {
@@ -190,31 +251,31 @@ namespace ThrownTogether
                 if(!AdmissionsClosed && (guest.phase==0 || guest.phase==4))
                 {
                     guest.walker.Go(QueuePosition(queueIndex++));
-                    if(guest.phase==0)guest.walker.Advance(dt,Settings.walkingSpeed);
+                    if(guest.phase==0){guest.waited+=dt*OutsidePatienceRate;guest.walker.Advance(dt,Settings.walkingSpeed);}
                 }
                 // Guests already admitted may finish; unseated arrivals go home at closing.
                 if(AdmissionsClosed && (guest.phase==0 || guest.phase==4))
                 {
-                    guest.phase=5;guest.walker.Go(new Vector3(guest.walker.transform.position.x,0,Settings.sidewalkExit.z),Settings.sidewalkExit);
+                    TurnAway(guest,"Customer leaving — restaurant closed");
                 }
                 if(guest.phase==0)
                 {
                     var table=Tables.FirstOrDefault(t=>t.Clean);
-                    if(table!=null && queueIndex==1 && guest.walker.Arrived)
+                    if(host==null && table!=null && queueIndex==1 && guest.walker.Arrived)
                     {
                         guest.table=table;table.ReserveSeat();guest.phase=1;
-                        guest.walker.Go(new Vector3(Settings.entrance.x,0,Settings.sidewalkStart.z),Settings.entrance,new Vector3(Settings.entrance.x,0,-5),new Vector3(TableApproach(table).x,0,-5),new Vector3(TableApproach(table).x,0,Chair(table).z),Chair(table));
+                        guest.walker.Go(AdmissionRoute(guest,true));
                     }
-                    else if(Elapsed-guest.arrived>=Settings.outsidePatience)
-                    {LostCustomers++;LastLostAt=Elapsed;guest.phase=5;guest.walker.name="Customer left â€” waited too long";guest.walker.Go(new Vector3(guest.walker.transform.position.x,0,Settings.sidewalkExit.z-.65f),Settings.sidewalkExit+Vector3.back*.65f);}
+                    else if(guest.waited>=Settings.outsidePatience)
+                    {LostCustomers++;LastLostAt=Elapsed;TurnAway(guest,"Customer left — waited too long");}
                 }
                 if(guest.phase==1 || guest.phase==3 || guest.phase==4 || guest.phase==5 || guest.phase==6)
                 {
                     guest.walker.Advance(dt,Settings.walkingSpeed);
                     if(guest.walker.Arrived)
                     {
-                        if(guest.phase==1){guest.phase=2;guest.walker.gameObject.SetActive(false);guest.table.Seat(guest.recipe,guest.look);}
-                        else if(guest.phase==4){guest.phase=0;guest.arrived=Elapsed;}
+                        if(guest.phase==1){guest.phase=2;guest.hostClaim=System.Guid.Empty;guest.walker.gameObject.SetActive(false);guest.table.Seat(guest.recipe,guest.look);}
+                        else if(guest.phase==4){guest.phase=0;guest.arrived=Elapsed;guest.waited=0;}
                         else if(guest.phase==6)
                         {
                             // Release the seat at the aisle, not at the front door. Detach ownership
@@ -233,7 +294,7 @@ namespace ThrownTogether
                     guest.walker.Go(new Vector3(TableApproach(guest.table).x,0,guest.walker.transform.position.z));
                 }
             }
-            Expo?.Refresh();StageExpoPass();server?.Advance(dt);dishwasher?.Advance(dt);busser?.Advance(dt);PrepCook?.Advance(dt);Cook?.Advance(dt);
+            Expo?.Refresh();StageExpoPass();host?.Advance(dt);server?.Advance(dt);dishwasher?.Advance(dt);busser?.Advance(dt);PrepCook?.Advance(dt);Cook?.Advance(dt);
             if(AdmissionsClosed && guests.Count==0)
             {
                 if(staff.Count==0){Closed=true;RetryPayment();}

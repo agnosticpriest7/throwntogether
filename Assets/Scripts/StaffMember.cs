@@ -25,12 +25,12 @@ namespace ThrownTogether
         public bool AllowWork(float seconds)
         {
             if(phase==Phase.Arriving){walker.Advance(seconds,Speed);if(walker.Arrived){phase=Phase.Working;Status="";}return false;}
-            if(phase==Phase.Working && day.StaffEntering)walker.Advance(seconds,0,hands.Item!=null);
+            if(phase==Phase.Working && day.StaffEntering)walker.Advance(seconds,0,hands?.Item!=null);
             return phase==Phase.Working;
         }
         public void Idle(float seconds)
         {
-            if(phase!=Phase.Working || hands.Item!=null)return;
+            if(phase!=Phase.Working || hands?.Item!=null)return;
             if(Vector3.Distance(transform.position,Home)>.15f && (walker.Arrived || Vector3.Distance(walker.Destination,Home)>.1f)){var path=KitchenStaffRoute.ToPoint(transform.position,Home);if(path!=null)walker.Go(path);}
             walker.Advance(seconds,Speed);
         }
@@ -44,7 +44,7 @@ namespace ThrownTogether
             if(phase==Phase.Gone)return;
             if(phase==Phase.Stowing)
             {
-                if(hands.Item!=null)
+                if(hands?.Item!=null)
                 {
                     if(output==null || output.slot.Item!=null)
                     {
@@ -55,11 +55,16 @@ namespace ThrownTogether
                     walker.Advance(seconds,Speed,true);if(!walker.Arrived)return;
                     if(!output.slot.TryTake(hands.Item)){output=null;return;}
                 }
+                if(transform.position.z<=day.Settings.entrance.z+.2f)
+                {
+                    walker.Go(new Vector3(transform.position.x,0,day.Settings.sidewalkExit.z),day.Settings.sidewalkExit);phase=Phase.Leaving;Status="Leaving";
+                    walker.Advance(seconds,Speed,false);return;
+                }
                 var route=KitchenStaffRoute.ToPoint(transform.position,StaffHomes.Entrance(day));
                 if(route==null){Status="Exit route blocked: "+Role;return;}
                 walker.Go(route.Concat(new[]{day.Settings.entrance,new Vector3(day.Settings.entrance.x,0,day.Settings.sidewalkExit.z),day.Settings.sidewalkExit}).ToArray());phase=Phase.Leaving;Status="Leaving";
             }
-            walker.Advance(seconds,Speed,hands.Item!=null);
+            walker.Advance(seconds,Speed,hands?.Item!=null);
             if(walker.Arrived){phase=Phase.Gone;Status="Off duty";gameObject.SetActive(false);}
         }
     }

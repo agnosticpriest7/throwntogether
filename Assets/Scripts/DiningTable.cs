@@ -17,6 +17,12 @@ namespace ThrownTogether
         public bool Clean => !Occupied && order.tableSlot.Item==null;
         public bool LastInteractionServed {get;private set;}
         public void ReserveSeat(){Occupied=true;Arriving=true;Leaving=false;}
+        public void CancelArrival()
+        {
+            if(!Arriving)return;
+            Occupied=false;Arriving=false;Leaving=false;ReservedForServer=false;SetGuestVisible(false);
+            if(order.tableSlot.Item==null)order.ResetOrder(null);
+        }
         public void Seat(RecipeDefinition recipe,int look=0)
         {
             Arriving=false;order.ResetOrder(recipe);SeatedAt=day.Elapsed;

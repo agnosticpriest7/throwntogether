@@ -246,7 +246,7 @@ namespace ThrownTogether
             if(Page=="Employees")
             {
                 var config=Resources.Load<DayServiceDefinition>("ServiceDay");var account=RestaurantAccounts.Current;
-                foreach(var role in new[]{config.serverRole,config.dishwasherRole,config.busserRole,config.prepCookRole,config.cookRole})
+                foreach(var role in new[]{config.serverRole,config.hostRole,config.dishwasherRole,config.busserRole,config.prepCookRole,config.cookRole})
                 {
                     var employee=role;if(employee==null)continue;
                     bool hired=account.Owns(employee.id);int level=account.TrainingLevel(employee.id);
