@@ -36,7 +36,7 @@ namespace ThrownTogether
         }
         public static Order[] Snapshot(RestaurantDay day,Carryable excluded=null)
         {
-            var orders=(day.Expo?.OpenTickets??new KitchenTicket[0]).Select(t=>new Order{Ticket=t,Components=Portions(t.Recipe).Select(p=>new Component{Ingredient=p.ingredient,State=p.state,Hot=HotFor(t.Recipe,p.ingredient,p.state)}).ToArray()}).ToArray();
+            var orders=(day.Expo?.OpenTickets??new KitchenTicket[0]).OrderBy(t=>t.Priority>0?t.Priority:int.MaxValue).Select(t=>new Order{Ticket=t,Components=Portions(t.Recipe).Select(p=>new Component{Ingredient=p.ingredient,State=p.state,Hot=HotFor(t.Recipe,p.ingredient,p.state)}).ToArray()}).ToArray();
             var food=Object.FindObjectsByType<Carryable>(FindObjectsSortMode.InstanceID).Where(i=>i!=excluded && i.gameObject.scene==day.gameObject.scene && i.Owner!=null && i.Payload!=null && !i.Payload.dirty && i.Owner.GetComponentInParent<DiningTable>()==null).ToArray();
             var used=new HashSet<Carryable>();
             bool Available(Carryable i,Order o)=>!used.Contains(i) && (day.Expo.BoundTicket(i)==null || day.Expo.BoundTicket(i)==o.Ticket);

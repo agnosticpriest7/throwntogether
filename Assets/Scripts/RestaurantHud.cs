@@ -79,8 +79,7 @@ namespace ThrownTogether
             DrawSuccessCues();
             var p1=chef.GetComponent<ChefInput>().ExpoBrowser;
             var p2=coop?.PlayerTwo!=null?coop.PlayerTwo.GetComponent<ChefInput>().ExpoBrowser:null;
-            if(day?.Expo!=null && (p1.Station!=null || p2?.Station!=null))ExpoSharedPanel.Draw(day,p1,p2,presentation.ServiceOpacity);
-            if(day?.Expo!=null && !ShowControlHelp && chef.GetComponent<ChefInput>().Expo==null && (coop?.PlayerTwo==null || coop.PlayerTwo.GetComponent<ChefInput>().Expo==null))ExpoOrderStrip.Draw(day,presentation.ServiceOpacity);
+            if(day?.Expo!=null)ExpoWorldPresentation.Hint(day,presentation.ServiceOpacity);
             if(day?.PrepCook!=null && !day.Closed && !ShowControlHelp && !menu.IsOpen && chef.GetComponent<ChefInput>().Expo==null && (coop?.PlayerTwo==null || coop.PlayerTwo.GetComponent<ChefInput>().Expo==null))
             {Panel(new Rect(18,628,325,58));GUI.Label(new Rect(25,630,311,54),"PREP COOK\n"+day.PrepCook.Status,small);}
             if(day?.Cook!=null && !day.Closed && !ShowControlHelp && !menu.IsOpen && chef.GetComponent<ChefInput>().Expo==null && (coop?.PlayerTwo==null || coop.PlayerTwo.GetComponent<ChefInput>().Expo==null))
@@ -177,6 +176,8 @@ namespace ThrownTogether
             var rect=OrderBubbleLayout.ForSeat(new Vector2(point.x*1280,(1-point.y)*720),scale);
             FoodIcon.DrawOrder(new Rect(rect.x,rect.y,rect.width,68.75f*scale),ticket.recipe,presentation.ServiceOpacity,scale);
             var table=ticket.manualService && ticket.tableSlot!=null ? ticket.tableSlot.GetComponentInParent<DiningTable>():null;
+            var expo=table?.day?.Expo;var kitchenTicket=expo?.TicketFor(table);
+            if(kitchenTicket!=null)ExpoWorldPresentation.Bubble(rect,kitchenTicket,expo.Operator?.SelectedExpoTicket==kitchenTicket,presentation.ServiceOpacity);
             if(table!=null && table.WaitingForMeal)
             {
                 var bar=new Rect(rect.x+3*scale,rect.y+73.75f*scale,rect.width-6*scale,7*scale);

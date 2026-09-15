@@ -31,6 +31,15 @@ namespace ThrownTogether
         public IReadOnlyList<KitchenTicket> OpenTickets=>board.Tickets.Where(Live).ToArray();
         public IReadOnlyList<KitchenTicket> WaitingTickets=>board.WaitingTickets;
         public IReadOnlyList<KitchenTicket> ActiveTickets=>board.ActiveTickets;
+        public IReadOnlyList<KitchenTicket> PrioritizedTickets=>board.PrioritizedTickets;
+        public int PriorityFor(DiningTable table)=>TicketFor(table)?.Priority??0;
+        ChefInput operatorInput;
+        public ChefInput Operator=>operatorInput!=null && operatorInput.isActiveAndEnabled && operatorInput.InputFocused && operatorInput.Expo?.Expo==this ? operatorInput:null;
+        public bool TryOperate(ChefInput input)
+        {if(input==null || Operator!=null && Operator!=input)return false;operatorInput=input;return true;}
+        public void ReleaseOperator(ChefInput input){if(operatorInput==input)operatorInput=null;}
+        public bool TryPromote(KitchenTicket ticket)
+        {Refresh();return !day.Closed && !day.AwaitingMenu && TableFor(ticket)?.WaitingForMeal==true && board.TryPromote(ticket);}
         public KitchenTicket TicketFor(DiningTable table)=>table!=null && current.TryGetValue(table,out var ticket)?ticket:null;
         public DiningTable TableFor(KitchenTicket ticket)=>ticket!=null && seats.TryGetValue(ticket,out var table) && table!=null && TicketFor(table)==ticket?table:null;
         public float PatienceRemaining(KitchenTicket ticket)=>TableFor(ticket)?.PatienceRemaining??0;

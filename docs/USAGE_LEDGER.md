@@ -132,3 +132,4 @@ Shared Expo UI pass: reused existing ticket/browser authority; added shared pres
 
 2026-09-15 — Approved full kitchen placement grid and gentle congestion. Preserved original save coordinates, route/ownership validation and staff architecture. Targeted regression and live MCP review completed; full local build gate follows. Account-wide usage unavailable; no credit estimate claimed.
 Grid/congestion verification complete: 269 full-pipeline checks passed and local Web 0.23.0-dev built successfully. Not published. No measured credit usage available.
+2026-09-15 — In-world Expo redesign and explicit priority, reusing existing domain/browser/service logic. Targeted and live review complete, full gate follows. Actual account-wide usage unavailable; no estimate.

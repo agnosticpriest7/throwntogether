@@ -189,6 +189,25 @@ namespace ThrownTogether.Tests
             var slot=shared.Owner;slot.Release();Object.DestroyImmediate(shared.gameObject);slot.TryTake(plate);snapshot=CookProduction.Snapshot(day);
             Assert.AreSame(plate,snapshot.Single(o=>o.Ticket==first).Plate);Assert.IsNull(snapshot.Single(o=>o.Ticket==second).Plate);Assert.IsNull(snapshot.Single(o=>o.Ticket==second).Components.Single().Supply);
         }
+        [Test] public void PromotedTableWinsSharedPortionWithoutSplittingCompoundPriority()
+        {
+            StartCook();var first=Seat(ChickenFries);var second=Seat(Fries,1);
+            day.Expo.TryFire(first);day.Expo.TryFire(second);Assert.IsTrue(day.Expo.TryPromote(second));
+            var shared=Portion(Fries.ingredient,FoodState.Cooked);var plans=CookProduction.Snapshot(day);
+            Assert.AreSame(shared,plans.Single(o=>o.Ticket==second).Components.Single().Supply);
+            Assert.IsNull(plans.Single(o=>o.Ticket==first).Components.Single(c=>c.Ingredient==Fries.ingredient).Supply);
+            Assert.AreEqual(2,day.Expo.PriorityFor(day.Tables[0]));
+            Assert.That(plans.Single(o=>o.Ticket==first).Components.Length,Is.GreaterThan(1));
+        }
+        [Test] public void MissingHighPriorityInputDoesNotBlockIndependentLowerPriorityWork()
+        {
+            StartCook();var high=Seat(Fries);var chicken=DailyMenu.Catalog.First(r=>r.additionalIngredients.Length==0 && r.ingredient.visualKind==IngredientVisualKind.Chicken);
+            var lower=Seat(chicken,1);day.Expo.TryFire(high);day.Expo.TryFire(lower);
+            Tick();Assert.IsNotNull(pass.pickupSlot.Item,day.Cook.Status);
+            Assert.IsTrue(chicken.Matches(pass.pickupSlot.Item.Payload));
+            Assert.AreSame(lower,day.Expo.BoundTicket(pass.pickupSlot.Item));
+            Assert.AreEqual(KitchenTicketState.Active,high.State,"Missing cut potato must not serialize all production");
+        }
         [Test] public void PlayerCookingCompoundComponentIsReusedWithoutDuplicate()
         {
             StartCook();var potato=Portion(Fries.ingredient,FoodState.Cut);chef.Hands.TryTake(potato);

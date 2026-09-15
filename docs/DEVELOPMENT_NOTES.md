@@ -660,3 +660,6 @@ Remaining UX: green grid markers show candidate positions; a placement can still
 
 Full local pipeline passed: 100 EditMode + 155 PlayMode + 14 Web checks (269 total). Web 0.23.0-dev built from ea7e29d629813ee3efa4121c7b9adcc86a46b650; manifest verified 10 files / 63,807,072 bytes in Builds/Web. No deployment performed. The final direct employee/customer test passed in the full suite. Canonical Console was clear before the isolated build.
 2026-09-15: Owner requested TV deployment. Published the unchanged, manifest-verified 0.23.0-dev artifact (ea7e29d) as gh-pages 0679f8cc57af77c79b46ab1e3ea968adf6852c2f. Pages reports built without error; public build-info matches the tested source/version. Source main pushed; only documentation changed after the tested source. Physical TV/controller validation remains with owner.
+
+## 0.24.0 — In-world Expo and table-ticket priority
+Replaced normal Expo panel presentation with customer-bubble selection, one operator, A toggle/X promote/B exit. Priority is separate from physical bay order and feeds existing next-work selection without preempting current work. See docs/EXPO_WORLD.md for architecture, limitations, changed files and live review. Full verification and deployment pending.

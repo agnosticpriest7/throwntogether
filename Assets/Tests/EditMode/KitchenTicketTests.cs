@@ -105,6 +105,25 @@ namespace ThrownTogether.Tests
             Assert.That(board.TryServe(staged),Is.True);
             Assert.That(staged.State,Is.EqualTo(KitchenTicketState.Served));Assert.That(board.ActiveCount,Is.Zero);
         }
+        [Test] public void PriorityPromotesAndRenumbersWithoutMovingPhysicalBayOrder()
+        {
+            var board=new KitchenTicketBoard(3);var recipe=Dish("compound");
+            var a=board.Create(recipe,0);var b=board.Create(recipe,0);var c=board.Create(recipe,0);
+            Assert.That(board.TryPromote(a),Is.False);
+            board.TryFire(a,1);board.TryFire(b,1);board.TryFire(c,1);
+            CollectionAssert.AreEqual(new[]{1,2,3},new[]{a.Priority,b.Priority,c.Priority});
+            Assert.That(board.TryPromote(c),Is.True);Assert.That(board.TryPromote(c),Is.True);
+            CollectionAssert.AreEqual(new[]{c,a,b},board.PrioritizedTickets);
+            CollectionAssert.AreEqual(new[]{a,b,c},board.ActiveTickets,"Priority must not change bay assignment");
+            Assert.That(board.TryPromote(c),Is.False);
+            board.TryHold(a);Assert.That(a.Priority,Is.Zero);Assert.That(b.Priority,Is.EqualTo(2));
+            board.TryFire(a,2);Assert.That(a.Priority,Is.EqualTo(3));
+            board.TryMarkReady(c);Assert.That(c.Priority,Is.EqualTo(1));
+            board.TryServe(c);Assert.That(c.Priority,Is.Zero);Assert.That(b.Priority,Is.EqualTo(1));
+            board.TryCancel(b);Assert.That(a.Priority,Is.EqualTo(1));
+            var other=new KitchenTicketBoard();Assert.That(other.TryPromote(a),Is.False);
+            Assert.That(other.PrioritizedTickets,Is.Empty);
+        }
         [Test] public void HoldFreesKitchenCapacityWithoutReorderingTicketsOrRevivingTerminalOrders()
         {
             var board=new KitchenTicketBoard(1);var recipe=Dish("fries");

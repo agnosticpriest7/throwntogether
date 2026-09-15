@@ -111,7 +111,7 @@ namespace ThrownTogether.Tests
             for(int i=0;i<count;i++)
             {
                 var root=new GameObject("Test seat "+(i+1));SceneManager.MoveGameObjectToScene(root,scene);
-                root.transform.position=new Vector3(-60-i*3,0,-60);
+                root.transform.position=new Vector3(-60+i*3,0,-60);
                 var slot=new GameObject("Plate slot");slot.transform.SetParent(root.transform,false);
                 var order=root.AddComponent<CustomerOrder>();order.tableSlot=slot.AddComponent<CarrySlot>();
                 var table=root.AddComponent<DiningTable>();table.day=day;table.order=order;table.stationName="Test seat "+(i+1);
@@ -183,8 +183,8 @@ namespace ThrownTogether.Tests
                     Assert.That(input.Expo,Is.SameAs(station),"Firing keeps the browser open");
                     Assert.That(input.SelectedExpoTicket,Is.SameAs(ticket),"Selection stays on the order just fired");
                     Press(pad,input,GamepadButton.South);
-                    Assert.That(ticket.State,Is.EqualTo(KitchenTicketState.Active),"A fired order is inspectable, never refired or cancelled");
-                    Assert.That(expo.ActiveCount,Is.EqualTo(1));
+                    Assert.That(ticket.State,Is.EqualTo(KitchenTicketState.Waiting),"A toggles a fired order back to Hold");
+                    Assert.That(expo.ActiveCount,Is.EqualTo(0));
                 }
                 finally{input.BindDevices((InputDevice[])null);InputSystem.RemoveDevice(pad);}
             }
@@ -215,7 +215,7 @@ namespace ThrownTogether.Tests
             }
             yield return null;LogAssert.NoUnexpectedReceived();
         }
-        [UnityTest] public IEnumerator TwoChefsBrowseIndependentlyAndOneTicketFiresOnce()
+        [UnityTest] public IEnumerator OneOperatorLeavesOtherChefFreeAndReleasesOnExit()
         {
             station=Install(Counter);SeatTwo();var expo=station.Expo;
             using(new DeviceScope())
@@ -224,37 +224,22 @@ namespace ThrownTogether.Tests
                 try
                 {
                     hud.coop.BindPlayerOne(one);Assert.That(hud.coop.Join(two),Is.True);
-                    var second=hud.coop.PlayerTwo;Assert.That(second,Is.Not.Null);
-                    var inputOne=Ready(chef,station);var inputTwo=Ready(second,station);
-                    inputOne.BindDevices(one);inputTwo.BindDevices(two);
-                    Assert.That(chef.Use(),Is.True);
-                    Assert.That(inputOne.Expo,Is.SameAs(station));
-                    Assert.That(inputTwo.Expo,Is.Null,"Using the station opens only the acting chef's browser");
-                    Assert.That(inputTwo.OpenExpo(station),Is.True);
-                    var shared=inputOne.SelectedExpoTicket;
-                    Assert.That(inputTwo.SelectedExpoTicket,Is.SameAs(shared));
-                    Press(two,inputTwo,GamepadButton.DpadRight);
-                    var theirs=inputTwo.SelectedExpoTicket;
-                    Assert.That(theirs,Is.Not.SameAs(shared),"P2 moved their own cursor");
-                    Assert.That(inputOne.SelectedExpoTicket,Is.SameAs(shared),"P1's cursor is untouched");
-                    Assert.That(inputTwo.FireSelectedExpoTicket(),Is.True,"Either chef may fire");
-                    Assert.That(theirs.State,Is.EqualTo(KitchenTicketState.Active));
-                    SelectRow(two,inputTwo,shared);
-                    int before=expo.ActiveCount;
-                    Assert.That(inputOne.FireSelectedExpoTicket(),Is.True);
-                    Assert.That(inputTwo.FireSelectedExpoTicket(),Is.False,"A second confirm cannot fire the same order twice");
-                    Assert.That(shared.State,Is.EqualTo(KitchenTicketState.Active));
-                    Assert.That(expo.ActiveCount,Is.EqualTo(before+1),"One ticket produced exactly one Fire transition");
+                    var second=hud.coop.PlayerTwo;var a=Ready(chef,station);var b=Ready(second,station);
+                    a.BindDevices(one);b.BindDevices(two);
+                    Assert.That(a.OpenExpo(station),Is.True);Assert.That(b.OpenExpo(station),Is.False);
+                    Assert.That(expo.Operator,Is.SameAs(a));
+                    var start=second.transform.position;InputSystem.QueueStateEvent(two,new GamepadState{leftStick=Vector2.left});InputSystem.Update();b.Tick(.1f);
+                    Assert.That(Vector3.Distance(start,second.transform.position),Is.GreaterThan(.05f));
+                    Assert.That(a.Expo,Is.SameAs(station));
+                    Press(one,a,GamepadButton.East);Assert.That(a.Expo,Is.Null);Assert.That(expo.Operator,Is.Null);
+                    Ready(second,station);Assert.That(b.OpenExpo(station),Is.True);
+                    b.SetInputFocus(false);Assert.That(expo.Operator,Is.Null);
+                    Assert.That(a.OpenExpo(station),Is.True);a.enabled=false;Assert.That(expo.Operator,Is.Null);
                 }
-                finally
-                {
-                    if(hud.coop.PlayerTwo!=null){var carried=hud.coop.PlayerTwo.Hands.Release();if(carried!=null)Object.Destroy(carried.gameObject);hud.coop.LeavePlayerTwo();}
-                    InputSystem.RemoveDevice(one);InputSystem.RemoveDevice(two);
-                }
+                finally{hud.coop.LeavePlayerTwo();InputSystem.RemoveDevice(one);InputSystem.RemoveDevice(two);}
             }
             yield return null;LogAssert.NoUnexpectedReceived();
-        }
-        [UnityTest] public IEnumerator SelectionSurvivesReorderingAndCannotRedirectAHeldConfirm()
+        }        [UnityTest] public IEnumerator SelectionSurvivesReorderingAndCannotRedirectAHeldConfirm()
         {
             station=Install(Counter);SeatTwo();var expo=station.Expo;
             var input=Ready(chef,station);
@@ -265,7 +250,7 @@ namespace ThrownTogether.Tests
                 {
                     Assert.That(input.OpenExpo(station),Is.True);
                     var first=input.SelectedExpoTicket;
-                    Press(pad,input,GamepadButton.DpadRight);
+                    input.ExpoBrowser.Navigate(1); // Select the second identity; spatial navigation has its own fixture.
                     var chosen=input.SelectedExpoTicket;Assert.That(chosen,Is.Not.SameAs(first));
                     Press(pad,input,GamepadButton.South);
                     Assert.That(chosen.State,Is.EqualTo(KitchenTicketState.Active));
@@ -521,17 +506,43 @@ namespace ThrownTogether.Tests
                     var chosen=input.SelectedExpoTicket;Assert.That(chosen,Is.SameAs(order[1]));
                     Press(pad,input,GamepadButton.South);Assert.That(chosen.State,Is.EqualTo(KitchenTicketState.Active));
                     Assert.That(input.ExpoSelectedRow,Is.EqualTo(1));CollectionAssert.AreEqual(order,ExpoOrderStrip.Visible(expo));
-                    Press(pad,input,GamepadButton.DpadDown);Assert.That(input.ExpoHoldAction,Is.True);
                     Press(pad,input,GamepadButton.South);Assert.That(chosen.State,Is.EqualTo(KitchenTicketState.Waiting));
                     Assert.That(expo.ActiveCount,Is.Zero);Assert.That(input.ExpoSelectedRow,Is.EqualTo(1));
                     CollectionAssert.AreEqual(order,ExpoOrderStrip.Visible(expo));
-                    Press(pad,input,GamepadButton.South);Assert.That(chosen.State,Is.EqualTo(KitchenTicketState.Waiting),"Repeated Hold is not a toggle");
-                    Press(pad,input,GamepadButton.DpadUp);Assert.That(input.ExpoHoldAction,Is.False);
-                    Press(pad,input,GamepadButton.South);Assert.That(chosen.State,Is.EqualTo(KitchenTicketState.Active));
-                    expo.TryFire(order[0]);Assert.That(input.ExpoSelectedRow,Is.EqualTo(1),"Another chef's fire leaves this cursor and order fixed");
+                    Press(pad,input,GamepadButton.South);Assert.That(chosen.State,Is.EqualTo(KitchenTicketState.Active));                    expo.TryFire(order[0]);Assert.That(input.ExpoSelectedRow,Is.EqualTo(1),"Another chef's fire leaves this cursor and order fixed");
                     CollectionAssert.AreEqual(order,ExpoOrderStrip.Visible(expo));
                     input.SetInputFocus(false);Assert.That(input.HoldSelectedExpoTicket(),Is.False);input.SetInputFocus(true);
                     Assert.That(chosen.State,Is.EqualTo(KitchenTicketState.Active));
+                }
+                finally{input.BindDevices((InputDevice[])null);InputSystem.RemoveDevice(pad);}
+            }
+            yield return null;LogAssert.NoUnexpectedReceived();
+        }
+        [UnityTest] public IEnumerator SpatialSelectionPriorityAndPatienceUseTableTicketWithoutMovingBays()
+        {
+            station=Install(Counter);var seats=ExtraSeats(3);var expo=station.Expo;
+            seats[0].transform.position=new Vector3(7,0,2);seats[1].transform.position=new Vector3(10,0,2);seats[2].transform.position=new Vector3(7,0,-2);
+            var input=Ready(chef,station);var a=expo.TicketFor(seats[0]);var b=expo.TicketFor(seats[1]);
+            using(new DeviceScope())
+            {
+                var pad=InputSystem.AddDevice<Gamepad>();input.BindDevices(pad);
+                try
+                {
+                    Assert.That(input.OpenExpo(station),Is.True);Press(pad,input,GamepadButton.South);
+                    Assert.That(a.Priority,Is.EqualTo(1));Press(pad,input,GamepadButton.DpadRight);
+                    Assert.That(input.SelectedExpoTicket,Is.SameAs(b));Press(pad,input,GamepadButton.South);
+                    Assert.That(b.Priority,Is.EqualTo(2));var bays=expo.ActiveTickets.ToArray();
+                    Press(pad,input,GamepadButton.West);Assert.That(b.Priority,Is.EqualTo(1));Assert.That(expo.PriorityFor(seats[0]),Is.EqualTo(2));
+                    CollectionAssert.AreEqual(bays,expo.ActiveTickets);
+                    Press(pad,input,GamepadButton.DpadLeft);Assert.That(input.SelectedExpoTicket,Is.SameAs(a));
+                    Press(pad,input,GamepadButton.DpadDown);Assert.That(input.SelectedExpoTicket,Is.SameAs(expo.TicketFor(seats[2])));
+                    Press(pad,input,GamepadButton.South);Assert.That(input.ExpoBrowser.Message,Is.EqualTo("EXPO FULL"));
+                    float held=seats[2].PatienceRemaining,fired=seats[0].PatienceRemaining;day.Advance(1);
+                    Assert.That(seats[2].PatienceRemaining,Is.LessThan(held));Assert.That(seats[0].PatienceRemaining,Is.LessThan(fired));
+                    Press(pad,input,GamepadButton.DpadUp);Press(pad,input,GamepadButton.South);Assert.That(a.Priority,Is.Zero);
+                    Press(pad,input,GamepadButton.South);Assert.That(a.Priority,Is.EqualTo(2));
+                    Assert.That(CookProduction.Snapshot(day).First().Ticket,Is.SameAs(b));
+                    Press(pad,input,GamepadButton.East);Assert.That(input.Expo,Is.Null);
                 }
                 finally{input.BindDevices((InputDevice[])null);InputSystem.RemoveDevice(pad);}
             }

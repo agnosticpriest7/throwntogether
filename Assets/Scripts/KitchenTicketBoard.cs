@@ -17,6 +17,16 @@ namespace ThrownTogether
         // so a ticket from an earlier service can never mutate this board.
         readonly Dictionary<Guid,KitchenTicket> owned=new Dictionary<Guid,KitchenTicket>();
         long nextFireSequence=1;
+        readonly List<KitchenTicket> priority=new List<KitchenTicket>();
+        public IReadOnlyList<KitchenTicket> PrioritizedTickets=>Snapshot(priority);
+        void Renumber(){for(int i=0;i<priority.Count;i++)priority[i].Priority=i+1;}
+        void RemovePriority(KitchenTicket ticket){priority.Remove(ticket);ticket.Priority=0;Renumber();}
+        public bool TryPromote(KitchenTicket ticket)
+        {
+            if(!Owns(ticket) || !Holding(ticket.State))return false;
+            int i=priority.IndexOf(ticket);if(i<=0)return false;
+            priority[i]=priority[i-1];priority[i-1]=ticket;Renumber();return true;
+        }
         public KitchenTicketBoard(int capacity=DefaultCapacity)
         {
             if(capacity<1)throw new ArgumentOutOfRangeException(nameof(capacity),"A board needs at least one active slot.");
@@ -60,25 +70,25 @@ namespace ThrownTogether
             if(ActiveCount>=Capacity)return false;
             // The sequence is consumed only here, so a rejected fire never leaves a gap
             // and never reorders the tickets that did succeed.
-            ticket.Fire(firedAt,nextFireSequence++);return true;
+            ticket.Fire(firedAt,nextFireSequence++);priority.Add(ticket);Renumber();return true;
         }
         public bool TryMarkReady(KitchenTicket ticket)=>Move(ticket,KitchenTicketState.Active,KitchenTicketState.Ready);
         public bool TryInvalidateReady(KitchenTicket ticket)=>Move(ticket,KitchenTicketState.Ready,KitchenTicketState.Active);
         public bool TryHold(KitchenTicket ticket)
         {
             if(!Owns(ticket) || !Holding(ticket.State))return false;
-            ticket.MoveTo(KitchenTicketState.Waiting);return true;
+            ticket.MoveTo(KitchenTicketState.Waiting);RemovePriority(ticket);return true;
         }
         // Fire/Hold is a kitchen instruction, never a restriction on delivery.
         public bool TryServe(KitchenTicket ticket)
         {
             if(!Owns(ticket) || Terminal(ticket.State))return false;
-            ticket.MoveTo(KitchenTicketState.Served);return true;
+            ticket.MoveTo(KitchenTicketState.Served);RemovePriority(ticket);return true;
         }
         public bool TryCancel(KitchenTicket ticket)
         {
             if(!Owns(ticket) || Terminal(ticket.State))return false;
-            ticket.MoveTo(KitchenTicketState.Cancelled);return true;
+            ticket.MoveTo(KitchenTicketState.Cancelled);RemovePriority(ticket);return true;
         }
         bool Move(KitchenTicket ticket,KitchenTicketState from,KitchenTicketState to)
         {

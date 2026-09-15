@@ -91,6 +91,28 @@ namespace ThrownTogether
             Sync();int waiting=rows.FindIndex(t=>t.State==KitchenTicketState.Waiting);
             if(waiting>=0)Navigate(waiting-index);
         }
+        public void NavigateSpatial(Vector2 direction,Camera camera)
+        {
+            Sync();if(rows.Count<2 || camera==null || direction.sqrMagnitude<.1f)return;
+            Vector2 Point(KitchenTicket t){var table=Station.Expo.TableFor(t);var anchor=table?.order?.customerVisual;var p=camera.WorldToViewportPoint((anchor!=null?anchor.position:table.transform.position)+Vector3.up*1.7f);return new Vector2(p.x*camera.aspect,p.y);}
+            var origin=Point(rows[index]);float best=float.MaxValue;int chosen=index;
+            for(int i=0;i<rows.Count;i++)
+            {
+                var delta=Point(rows[i])-origin;float along=Vector2.Dot(delta,direction.normalized);if(along<.0001f)continue;
+                float side=Mathf.Abs(delta.x*direction.normalized.y-delta.y*direction.normalized.x);
+                float score=delta.magnitude+side*2;if(score<best){best=score;chosen=i;}
+            }
+            Navigate(chosen-index);
+        }
+        public bool Toggle(){Sync();return Selected?.State==KitchenTicketState.Waiting?Fire():Hold();}
+        public bool Promote()
+        {
+            Sync();if(ConsumeRecovered()){Note("Selection changed — confirm again");return false;}
+            var ticket=Selected;if(ticket==null)return false;
+            if(ticket.Priority==0){Note("Fire order first");return false;}
+            if(!Station.Expo.TryPromote(ticket)){Note("Already priority 1");return false;}
+            Note("Priority "+ticket.Priority);return true;
+        }
         public bool Fire()
         {
             Sync();
@@ -101,7 +123,7 @@ namespace ThrownTogether
             var expo=Station!=null ? Station.Expo:null;var ticket=Selected;
             if(expo==null || ticket==null){Note("No waiting orders");return false;}
             if(ticket.State!=KitchenTicketState.Waiting){Note("Already making this order");return false;}
-            if(expo.ActiveCount>=expo.Capacity){Note("Queue full — Hold or serve an order first.");return false;}
+            if(expo.ActiveCount>=expo.Capacity){Note("EXPO FULL");return false;}
             if(!expo.TryFire(ticket)){Note("That order can no longer be fired");Sync();return false;}
             WaitingExpanded=false;selected=ticket.Id;Note("MAKE: "+Label(ticket));Sync();return true;
         }

@@ -9,7 +9,7 @@ namespace ThrownTogether
     public sealed class ChefInput : MonoBehaviour
     {
         private InputActionMap controls;
-        private InputAction move, use, restart, cancelStorage, storageNavigate;
+        private InputAction move, use, restart, cancelStorage, storageNavigate, expoPriority;
         public SourceStation Storage {get;private set;}
         public int StorageIndex {get;private set;}
         private bool storageNavigationHeld;
@@ -17,7 +17,7 @@ namespace ThrownTogether
         public void OpenStorage(SourceStation source)
         {
             if(source==null || chef.Hands.Item!=null)return;
-            expo.Close();
+            CloseExpo();
             Storage=source;StorageIndex=storageChoices.TryGetValue(source,out int index)?Mathf.Clamp(index,0,source.Ingredients.Length-1):0;
             storageNavigationHeld=true;RequireActionRelease();chef.CancelWork();
         }
@@ -33,6 +33,7 @@ namespace ThrownTogether
             if(station==null || !station.isActiveAndEnabled || station.gameObject.scene!=gameObject.scene)return false;
             if(!isActiveAndEnabled || !InputFocused || RestaurantMenu.GameplayBlocked)return false;
             if(station.Expo==null || !InReach(station))return false;
+            if(!station.Expo.TryOperate(this))return false;
             // Held food is preserved: unlike storage, Expo does not need empty hands.
             Storage=null;expo.Open(station);
             expoNavigationHeld=true;RequireActionRelease();chef.CancelWork();return true;
@@ -43,13 +44,18 @@ namespace ThrownTogether
         public bool FireSelectedExpoTicket()
         {
             if(ReferenceEquals(expo.Station,null) || !isActiveAndEnabled || !InputFocused)return false;
-            if(RestaurantMenu.GameplayBlocked || !expo.Usable(chef))return false;
+            if(RestaurantMenu.GameplayBlocked || !expo.Usable(chef) || expo.Station.Expo.Operator!=this)return false;
             return expo.Fire();
         }
         public bool HoldSelectedExpoTicket()
         {
-            if(ReferenceEquals(expo.Station,null) || !isActiveAndEnabled || !InputFocused || RestaurantMenu.GameplayBlocked || !expo.Usable(chef))return false;
+            if(ReferenceEquals(expo.Station,null) || !isActiveAndEnabled || !InputFocused || RestaurantMenu.GameplayBlocked || !expo.Usable(chef) || expo.Station.Expo.Operator!=this)return false;
             return expo.Hold();
+        }
+        public bool PromoteSelectedExpoTicket()
+        {
+            if(ReferenceEquals(expo.Station,null) || !isActiveAndEnabled || !InputFocused || RestaurantMenu.GameplayBlocked || !expo.Usable(chef) || expo.Station.Expo.Operator!=this)return false;
+            return expo.Promote();
         }
         public bool ExpoHoldAction=>expo.HoldAction;
         public int ExpoRowCount=>expo.RowCount;
@@ -58,28 +64,29 @@ namespace ThrownTogether
         public static int ExpoVisibleRows=>ExpoTicketBrowser.VisibleRows;
         // ReferenceEquals so a destroyed station is still cleaned up rather than skipped
         // by Unity's null-like comparison.
-        public void CloseExpo(){if(ReferenceEquals(expo.Station,null))return;expo.Close();expoNavigationHeld=false;RequireActionRelease();}
+        public void CloseExpo(){if(ReferenceEquals(expo.Station,null))return;if(expo.Station!=null)expo.Station.Day?.Expo?.ReleaseOperator(this);expo.Close();expoNavigationHeld=false;RequireActionRelease();}
         bool InReach(Component target)
         {
             var delta=chef.transform.position-target.transform.position;delta.y=0;return delta.magnitude<=chef.reach;
         }
         private void TickExpo(Vector2 axis)
         {
-            if(!expo.Usable(chef) || cancelStorage.WasPressedThisFrame()){CloseExpo();return;}
+            if(!expo.Usable(chef) || expo.Station.Expo.Operator!=this || cancelStorage.WasPressedThisFrame()){CloseExpo();return;}
             // Re-read the board first: a diner who left since the last frame must be
             // noticed here, not after the confirm has already been evaluated.
             expo.Refresh();
             if(axis.magnitude<.35f)expoNavigationHeld=false;
             else if(!expoNavigationHeld)
             {
-                if(Mathf.Abs(axis.x)>Mathf.Abs(axis.y))expo.Navigate(axis.x>0?1:-1);
-                else expo.ChooseAction(axis.y<0);
+                var camera=expo.Station.Day.GetComponent<RestaurantHud>().gameplayCamera;
+                expo.NavigateSpatial(Mathf.Abs(axis.x)>Mathf.Abs(axis.y)?new Vector2(Mathf.Sign(axis.x),0):new Vector2(0,Mathf.Sign(axis.y)),camera);
                 expoNavigationHeld=true;
             }
             // A vanished selection must not let the held press fire a different diner.
             if(expo.ConsumeRecovered())AwaitUseRelease=true;
             if(AwaitUseRelease){if(!use.IsPressed())AwaitUseRelease=false;}
-            else if(use.WasPressedThisFrame()){if(expo.HoldAction)HoldSelectedExpoTicket();else FireSelectedExpoTicket();}
+            else if(use.WasPressedThisFrame()){if(expo.Selected?.State==KitchenTicketState.Waiting)FireSelectedExpoTicket();else HoldSelectedExpoTicket();}
+            else if(expoPriority.WasPressedThisFrame())PromoteSelectedExpoTicket();
         }
         public bool ChooseIngredient(int index)
         {
@@ -158,6 +165,7 @@ namespace ThrownTogether
             storageNavigate=controls.AddAction("Ingredient navigation",InputActionType.Value);storageNavigate.AddBinding("<Gamepad>/dpad");
             cancelStorage=controls.AddAction("Close ingredient selector",InputActionType.Button);cancelStorage.AddBinding("<Gamepad>/buttonEast");cancelStorage.AddBinding("<Keyboard>/q");
             restart=CreateRestartAction(controls,BrowserOwnsMenu);
+            expoPriority=controls.AddAction("Expo priority",InputActionType.Button);expoPriority.AddBinding("<Gamepad>/buttonWest");expoPriority.AddBinding("<Keyboard>/x");
             controls.actionTriggered += context => {
                 if (!context.performed) return;
                 LastActiveDevice=context.control.device;

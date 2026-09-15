@@ -15,6 +15,8 @@ namespace ThrownTogether
         // board can still explain how a terminal ticket was ordered.
         public float? FiredAt {get;private set;}
         public long FireSequence {get;private set;}
+        // Table-ticket production rank; zero means not fired. Independent of bay order.
+        public int Priority {get;internal set;}
         internal KitchenTicket(RecipeDefinition recipe,float createdAt)
         {Id=Guid.NewGuid();Recipe=recipe;CreatedAt=createdAt;State=KitchenTicketState.Waiting;}
         internal void Fire(float firedAt,long sequence)
