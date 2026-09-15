@@ -1,3 +1,13 @@
+# 0.22.2 — Shared Expo UI (local review build)
+
+One HUD-owned shared panel replaces per-player Expo drawing. Active display slots retain their positions; waiting orders use five horizontal cards with a shared scrolling window. Per-chef browsers still own selection, action and release guards. Cyan P1/gold P2 markers share cards; full recipe/table, state/patience and component status appear only for selected tickets, in two detail columns when both browsers are open. Panel height is 178/720 (24.7%). Controls remain left/right in ticket-number order, up Fire, down Hold, A apply, B close. Inventory details reuse CookProduction at a maximum of 6.7 refreshes/second.
+
+Inspection found two active queue slots and one Expo desk, not three physical bays. Preserved capacity and all order/staging/server/manual-serving authority; UI slots are explicitly presentation-only. No physical bay or world-space label was invented. Waiting scroll follows the last active cursor with offscreen indicators for the other. Long future recipe/component names may require wrapping; physical controller/TV readability remains unverified. Closed-Expo passive overview unchanged.
+
+Canonical Unity MCP gameplay-camera review: solo, two independent selections, nine tickets, scroll to last waiting order, Ready dish on a real counter and correct plated/needed details. Memory-only storage protected career saves; restored RestaurantShift. Console error query empty. Captures and explanation: docs/art-reference/expo-shared/.
+
+Full local build gate passed: 98 EditMode + 149 PlayMode + 14 Web checks (261 total). New EditMode cases cover stable slots through Hold/refire/Ready, waiting scroll/departure clamping, stable ticket numbers and no queue mutation. Existing controller/co-op/recovery/serving tests passed unchanged. Web build 0.22.2-dev from 9e4bf2586c84d867b8b4cb07cb42ebad35cf7964: 10 verified files, 63,794,850 bytes in Builds/Web. Not deployed; live site remains 0.22.1-dev.
+
 # 0.22.1 — Cook appliance recovery and horizontal Expo
 
 Player-added food no longer leaves the cook permanently holding the next ingredient at an occupied appliance. The cook prefers another free compatible appliance; otherwise, after cooking finishes, it parks its input on an ordinary free counter, collects the obstructing output, exchanges it for the input, and resumes. All food remains in physical slots. With no free counter it retains food and reports the missing space, then recovers when one counter becomes available. Two regressions cover the reported chicken/mushroom case and the full-counter variant.

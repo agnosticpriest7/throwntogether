@@ -127,3 +127,5 @@ Approved scope: optional kitchen/dining expansion plus visible outside queue. Re
 Release gate complete: 256 checks passed and Web 0.22.0-dev deployed/verified live. Source b8c4480; Pages 198cd9a. No follow-on features begun.
 
 2026-09-14 — Cook appliance interference recovery, stationary queue poses, horizontal Expo. 39 targeted PlayMode checks then full release gate: 95 EditMode, 149 PlayMode, 14 Web checks passed. Canonical MCP recovered after a Windows permission prompt; disposable live solo/co-op visual review completed, no real career storage used. Web 0.22.1-dev / 20454a6 deployed and public identity verified. Account-wide token/credit use unavailable; no estimate claimed. Full-floor placement remains a proposal. No Claude assignment or further scope started.
+
+Shared Expo UI pass: reused existing ticket/browser authority; added shared presentation and three EditMode regressions. Live MCP visual review and full 261-check/local Web build passed. No deployment. Actual account-wide credit usage unavailable; no estimate claimed.
