@@ -113,8 +113,8 @@ namespace ThrownTogether.Tests
         // Navigate to a stable ticket without depending on the caller's cursor position.
         static void SelectRow(Gamepad pad,ChefInput input,KitchenTicket target)
         {
-            for(int i=0;i<12 && input.SelectedExpoTicket!=target;i++)Press(pad,input,GamepadButton.DpadUp);
-            for(int i=0;i<12 && input.SelectedExpoTicket!=target;i++)Press(pad,input,GamepadButton.DpadDown);
+            for(int i=0;i<12 && input.SelectedExpoTicket!=target;i++)Press(pad,input,GamepadButton.DpadLeft);
+            for(int i=0;i<12 && input.SelectedExpoTicket!=target;i++)Press(pad,input,GamepadButton.DpadRight);
             Assert.That(input.SelectedExpoTicket,Is.SameAs(target),"Navigation should reach the intended order");
         }
 
@@ -186,11 +186,11 @@ namespace ThrownTogether.Tests
                 try
                 {
                     Assert.That(input.OpenExpo(station),Is.True);var first=input.SelectedExpoTicket;
-                    Press(pad,input,GamepadButton.DpadDown);var second=input.SelectedExpoTicket;
+                    Press(pad,input,GamepadButton.DpadRight);var second=input.SelectedExpoTicket;
                     Assert.That(second,Is.Not.SameAs(first));
-                    Send(pad,input,new GamepadState());Send(pad,input,new GamepadState{leftStick=Vector2.up});
+                    Send(pad,input,new GamepadState());Send(pad,input,new GamepadState{leftStick=Vector2.left});
                     Assert.That(input.SelectedExpoTicket,Is.SameAs(first));
-                    Send(pad,input,new GamepadState{leftStick=Vector2.right});Assert.That(input.SelectedExpoTicket,Is.SameAs(first));
+                    Send(pad,input,new GamepadState{leftStick=Vector2.down});Assert.That(input.SelectedExpoTicket,Is.SameAs(first));
                     Assert.That(input.FireSelectedExpoTicket(),Is.True);Assert.That(expo.TryFire(second),Is.True);
                     var third=expo.TicketFor(seats[2]);SelectRow(pad,input,third);
                     Assert.That(input.FireSelectedExpoTicket(),Is.False);Assert.That(third.State,Is.EqualTo(KitchenTicketState.Waiting));
@@ -219,7 +219,7 @@ namespace ThrownTogether.Tests
                     Assert.That(inputTwo.OpenExpo(station),Is.True);
                     var shared=inputOne.SelectedExpoTicket;
                     Assert.That(inputTwo.SelectedExpoTicket,Is.SameAs(shared));
-                    Press(two,inputTwo,GamepadButton.DpadDown);
+                    Press(two,inputTwo,GamepadButton.DpadRight);
                     var theirs=inputTwo.SelectedExpoTicket;
                     Assert.That(theirs,Is.Not.SameAs(shared),"P2 moved their own cursor");
                     Assert.That(inputOne.SelectedExpoTicket,Is.SameAs(shared),"P1's cursor is untouched");
@@ -251,7 +251,7 @@ namespace ThrownTogether.Tests
                 {
                     Assert.That(input.OpenExpo(station),Is.True);
                     var first=input.SelectedExpoTicket;
-                    Press(pad,input,GamepadButton.DpadDown);
+                    Press(pad,input,GamepadButton.DpadRight);
                     var chosen=input.SelectedExpoTicket;Assert.That(chosen,Is.Not.SameAs(first));
                     Press(pad,input,GamepadButton.South);
                     Assert.That(chosen.State,Is.EqualTo(KitchenTicketState.Active));
@@ -463,21 +463,21 @@ namespace ThrownTogether.Tests
                         Assert.That(input.ExpoSelectedRow,Is.LessThan(input.ExpoVisibleTop+window),because);
                         Assert.That(input.ExpoVisibleTop,Is.InRange(0,Mathf.Max(0,input.ExpoRowCount-window)));
                     }
-                    for(int i=0;i<6;i++)Press(pad,input,GamepadButton.DpadDown);
+                    for(int i=0;i<6;i++)Press(pad,input,GamepadButton.DpadRight);
                     Assert.That(input.ExpoSelectedRow,Is.EqualTo(6),"Navigation reaches the last row");
                     Assert.That(input.ExpoVisibleTop,Is.EqualTo(7-window),"The window scrolled to keep the last row visible");
                     Visible("after scrolling to the end");
-                    for(int i=0;i<6;i++)Press(pad,input,GamepadButton.DpadUp);
+                    for(int i=0;i<6;i++)Press(pad,input,GamepadButton.DpadLeft);
                     Assert.That(input.ExpoSelectedRow,Is.Zero,"Navigation reaches the first row");
                     Assert.That(input.ExpoVisibleTop,Is.Zero);Visible("after scrolling back to the start");
-                    for(int i=0;i<3;i++)Press(pad,input,GamepadButton.DpadDown);
+                    for(int i=0;i<3;i++)Press(pad,input,GamepadButton.DpadRight);
                     var moved=input.SelectedExpoTicket;Assert.That(input.ExpoSelectedRow,Is.EqualTo(3));
                     Press(pad,input,GamepadButton.South);
                     Assert.That(moved.State,Is.EqualTo(KitchenTicketState.Active));
                     Assert.That(input.SelectedExpoTicket,Is.SameAs(moved));
                     Assert.That(input.ExpoSelectedRow,Is.EqualTo(3),"Fire changes status, never row position");
                     Visible("after firing without reordering");
-                    for(int i=0;i<3;i++)Press(pad,input,GamepadButton.DpadDown);
+                    for(int i=0;i<3;i++)Press(pad,input,GamepadButton.DpadRight);
                     var doomed=expo.TableFor(input.SelectedExpoTicket);Assert.That(doomed,Is.Not.Null);
                     doomed.BeginDeparture();
                     Send(pad,input,new GamepadState());
@@ -485,7 +485,7 @@ namespace ThrownTogether.Tests
                     Assert.That(input.ExpoSelectedRow,Is.EqualTo(5),"Deletion at the end clamps the cursor");
                     Assert.That(input.ExpoVisibleTop,Is.EqualTo(6-window),"Scrolling clamps with the shorter list");
                     Visible("after deleting near the end");
-                    for(int i=0;i<8;i++)Press(pad,input,GamepadButton.DpadUp);
+                    for(int i=0;i<8;i++)Press(pad,input,GamepadButton.DpadLeft);
                     Assert.That(input.ExpoSelectedRow,Is.Zero);Assert.That(input.ExpoVisibleTop,Is.Zero);
                     Visible("after returning to the top of the shorter list");
                 }
@@ -503,16 +503,16 @@ namespace ThrownTogether.Tests
                 var pad=InputSystem.AddDevice<Gamepad>();input.BindDevices(pad);
                 try
                 {
-                    input.OpenExpo(station);Press(pad,input,GamepadButton.DpadDown);
+                    input.OpenExpo(station);Press(pad,input,GamepadButton.DpadRight);
                     var chosen=input.SelectedExpoTicket;Assert.That(chosen,Is.SameAs(order[1]));
                     Press(pad,input,GamepadButton.South);Assert.That(chosen.State,Is.EqualTo(KitchenTicketState.Active));
                     Assert.That(input.ExpoSelectedRow,Is.EqualTo(1));CollectionAssert.AreEqual(order,ExpoOrderStrip.Visible(expo));
-                    Press(pad,input,GamepadButton.DpadRight);Assert.That(input.ExpoHoldAction,Is.True);
+                    Press(pad,input,GamepadButton.DpadDown);Assert.That(input.ExpoHoldAction,Is.True);
                     Press(pad,input,GamepadButton.South);Assert.That(chosen.State,Is.EqualTo(KitchenTicketState.Waiting));
                     Assert.That(expo.ActiveCount,Is.Zero);Assert.That(input.ExpoSelectedRow,Is.EqualTo(1));
                     CollectionAssert.AreEqual(order,ExpoOrderStrip.Visible(expo));
                     Press(pad,input,GamepadButton.South);Assert.That(chosen.State,Is.EqualTo(KitchenTicketState.Waiting),"Repeated Hold is not a toggle");
-                    Press(pad,input,GamepadButton.DpadLeft);Assert.That(input.ExpoHoldAction,Is.False);
+                    Press(pad,input,GamepadButton.DpadUp);Assert.That(input.ExpoHoldAction,Is.False);
                     Press(pad,input,GamepadButton.South);Assert.That(chosen.State,Is.EqualTo(KitchenTicketState.Active));
                     expo.TryFire(order[0]);Assert.That(input.ExpoSelectedRow,Is.EqualTo(1),"Another chef's fire leaves this cursor and order fixed");
                     CollectionAssert.AreEqual(order,ExpoOrderStrip.Visible(expo));

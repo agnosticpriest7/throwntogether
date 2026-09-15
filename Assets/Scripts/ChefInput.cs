@@ -71,8 +71,8 @@ namespace ThrownTogether
             if(axis.magnitude<.35f)expoNavigationHeld=false;
             else if(!expoNavigationHeld)
             {
-                if(Mathf.Abs(axis.x)>Mathf.Abs(axis.y))expo.ChooseAction(axis.x>0);
-                else expo.Navigate(axis.y>0?-1:1);
+                if(Mathf.Abs(axis.x)>Mathf.Abs(axis.y))expo.Navigate(axis.x>0?1:-1);
+                else expo.ChooseAction(axis.y<0);
                 expoNavigationHeld=true;
             }
             // A vanished selection must not let the held press fire a different diner.

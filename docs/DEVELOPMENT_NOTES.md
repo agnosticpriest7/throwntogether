@@ -1,3 +1,13 @@
+# 0.22.1 — Cook appliance recovery and horizontal Expo
+
+Player-added food no longer leaves the cook permanently holding the next ingredient at an occupied appliance. The cook prefers another free compatible appliance; otherwise, after cooking finishes, it parks its input on an ordinary free counter, collects the obstructing output, exchanges it for the input, and resumes. All food remains in physical slots. With no free counter it retains food and reports the missing space, then recovers when one counter becomes available. Two regressions cover the reported chicken/mushroom case and the full-counter variant.
+
+Outside walkers now derive their walking pose from actual displacement, preventing stationary queue members from walking in place when their destination is refreshed.
+
+Expo uses a bottom horizontal strip of five visible order cards with scrolling, stable selection, dish pictures, table/state and patience. Left/right chooses orders; up chooses Make, down chooses Hold; A applies and B closes. When both chefs open Expo, independent panels share the bottom width. Fire/Hold serving semantics and ticket order are unchanged. Full-floor placement is a separate proposed change and is not included.
+
+Verification: 39 targeted PlayMode cases passed in an isolated current-source snapshot. Canonical Unity MCP reconnected and confirmed the expected Assets path. Live solo and two-player Expo captured with seven synthetic tickets registered through the seating API; screenshots in docs/art-reference/cook-expo-2026-09-14/. Review used memory-only account storage and restored RestaurantShift without saving. Console error query empty. One review-command compilation typo (array Count instead of Length) was corrected; no product compiler error. Full release gate recorded below when complete. TV/controller readability still requires owner validation.
+
 # Vertical Slice #1 — first service
 
 The authored `Assets/Scenes/RestaurantDevelopment.unity` scene is the Web entry in `build-config.json`. Bootstrap remains unchanged. Greybox only: one chef, one seated customer and one Fries order.

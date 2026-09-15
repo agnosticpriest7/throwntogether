@@ -6,6 +6,7 @@ namespace ThrownTogether
     {
         Vector3[] route=new Vector3[0];int waypoint;ChefAppearance appearance;float clock;
         public bool Arrived=>waypoint>=route.Length;
+        public bool Moving {get;private set;}
         public void Initialize(GameObject prefab,int look,bool customer=false)
         {
             var visual=Instantiate(prefab,transform);appearance=visual.GetComponent<ChefAppearance>()??visual.GetComponentInChildren<ChefAppearance>();
@@ -15,7 +16,8 @@ namespace ThrownTogether
         public void Go(params Vector3[] points){route=points;waypoint=0;}
         public void Advance(float seconds,float speed,bool carrying=false)
         {
-            float distance=Mathf.Max(0,seconds)*speed;bool moving=!Arrived;
+            Vector3 before=transform.position;
+            float distance=Mathf.Max(0,seconds)*speed;
             while(!Arrived && distance>0)
             {
                 Vector3 delta=route[waypoint]-transform.position;float length=delta.magnitude;
@@ -23,7 +25,8 @@ namespace ThrownTogether
                 if(length<=distance){transform.position=route[waypoint++];distance-=length;}
                 else{transform.position+=delta.normalized*distance;distance=0;}
             }
-            clock+=seconds;appearance?.Pose(carrying?1:0,moving?Mathf.Sin(clock*8)*18:0,seconds);
+            Moving=(transform.position-before).sqrMagnitude>.000001f;
+            clock+=seconds;appearance?.Pose(carrying?1:0,Moving?Mathf.Sin(clock*8)*18:0,seconds);
         }
     }
 }

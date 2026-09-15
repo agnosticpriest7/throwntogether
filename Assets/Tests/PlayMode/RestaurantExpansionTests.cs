@@ -87,6 +87,7 @@ namespace ThrownTogether.Tests
                 foreach(var table in day.Tables)table.ReserveSeat();day.Advance(24);
                 var line=day.OutsidePositions;Assert.That(line.Length,Is.GreaterThanOrEqualTo(8));
                 for(int i=0;i<line.Length;i++)Assert.That(Vector3.Distance(line[i],day.QueuePosition(i)),Is.LessThan(.03f));
+                foreach(var walker in day.GetComponentsInChildren<DiningWalker>().Where(w=>w.gameObject.activeSelf))Assert.That(walker.Moving,Is.False,"Stationary queue must use its idle pose");
                 day.Tables[0].Depart();day.Advance(.1f);Assert.That(day.Tables[0].Arriving,Is.True);
                 day.Advance(1);Assert.That(day.WaitingOutside,Is.EqualTo(line.Length-1));
                 Assert.That(Vector3.Distance(day.OutsidePositions[0],day.QueuePosition(0)),Is.LessThan(.03f));

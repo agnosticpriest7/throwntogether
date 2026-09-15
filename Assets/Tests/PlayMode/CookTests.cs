@@ -121,6 +121,31 @@ namespace ThrownTogether.Tests
             }
         }
         RecipeDefinition ChickenFries=>DailyMenu.Catalog.Single(r=>r.id=="chicken-fries" || r.displayName=="Chicken & Fries");
+        [TestCase(false)] [TestCase(true)] public void PlayerExtraChickenOnGrillIsClearedAndMushroomMealFinishes(bool fillCounters)
+        {
+            StartCook();var recipe=DailyMenu.Catalog.Single(r=>r.displayName=="Chicken Mushroom Plate");
+            StockParts(recipe);var ticket=Seat(recipe);day.Expo.TryFire(ticket);
+            var mushroom=recipe.additionalIngredients.Single().ingredient;
+            for(int i=0;i<1800 && !(day.Cook.Hands.Item!=null && day.Cook.Hands.Item.Payload.ingredient==mushroom);i++)Tick(1);
+            Assert.IsNotNull(day.Cook.Hands.Item);Assert.AreEqual(mushroom,day.Cook.Hands.Item.Payload.ingredient);
+            var partial=CookProduction.Snapshot(day).Single(o=>o.Ticket==ticket).Plate;Assert.IsNotNull(partial);
+            var extra=Portion(recipe.ingredient,FoodState.Raw);chef.Hands.TryTake(extra);
+            var grill=Object.FindObjectsByType<ProcessingStation>().Single(p=>p.gameObject.scene==scene && p.ProcessFor(extra.Payload)?.output==FoodState.Grilled);
+            KitchenTestAccess.Approach(chef,grill);Assert.IsTrue(chef.Use());
+            if(fillCounters)
+            {
+                var occupied=new System.Collections.Generic.List<Carryable>();
+                foreach(var counter in Object.FindObjectsByType<CounterStation>().Where(c=>c.gameObject.scene==scene && c.GetType()==typeof(CounterStation) && c.slot.Item==null))
+                {var filler=Object.Instantiate(plates.itemPrefab);filler.Configure(ItemPayload.Plate());counter.slot.TryTake(filler);occupied.Add(filler);}
+                Tick(800);Assert.AreSame(extra,grill.slot.Item);Assert.AreEqual(mushroom,day.Cook.Hands.Item.Payload.ingredient);
+                StringAssert.Contains("free counter",day.Cook.Status);
+                Assert.IsTrue(chef.Hands.TryTake(occupied[0]));
+            }
+            Tick(3000);
+            Assert.AreSame(partial,pass.pickupSlot.Item,day.Cook.Status);Assert.IsTrue(recipe.Matches(partial.Payload));
+            Assert.IsNotNull(extra);Assert.IsNotNull(extra.Owner);Assert.AreEqual(FoodState.Grilled,extra.Payload.state);
+            Assert.AreNotSame(grill.slot,extra.Owner,"Extra food must be preserved on a counter");Assert.AreEqual(4,plates.CleanPlatesRemaining);
+        }
         void ReturnServedPlate(int index=0)
         {
             var plate=day.Tables[index].order.tableSlot.Release();plate.Configure(ItemPayload.Plate());Assert.IsTrue(plates.ReturnCleanPlate(plate));day.Tables[index].Depart();Tick(5);

@@ -23,7 +23,7 @@ namespace ThrownTogether
         float messageUntil;
         public void Open(ExpoStation station)
         {
-            Station=station;selected=Guid.Empty;index=0;scroll=0;recovered=false;HoldAction=false;message="Fire / Hold guides the kitchen. Matching food can always be served.";messageUntil=Time.unscaledTime+8;Sync();
+            Station=station;selected=Guid.Empty;index=0;scroll=0;recovered=false;HoldAction=false;message="Green: Make • Red: Hold. Matching food can still be served.";messageUntil=Time.unscaledTime+8;Sync();
         }
         public void Close()
         {
@@ -88,7 +88,7 @@ namespace ThrownTogether
             var expo=Station!=null ? Station.Expo:null;var ticket=Selected;
             if(expo==null || ticket==null){Note("No waiting orders");return false;}
             if(ticket.State!=KitchenTicketState.Waiting){Note("Already making this order");return false;}
-            if(expo.ActiveCount>=expo.Capacity){Note("Kitchen queue full — Hold or serve an order to free a slot");return false;}
+            if(expo.ActiveCount>=expo.Capacity){Note("Queue full — Hold or serve an order first.");return false;}
             if(!expo.TryFire(ticket)){Note("That order can no longer be fired");Sync();return false;}
             selected=ticket.Id;Note("MAKE: "+Label(ticket));Sync();return true;
         }
@@ -113,55 +113,35 @@ namespace ThrownTogether
             state==KitchenTicketState.Ready ? "READY":"MAKE";
         public void Draw(bool second,float opacity=1)
         {
-            var expo=Station!=null ? Station.Expo:null;if(expo==null)return;
-            Sync();
-            var matrix=GUI.matrix;var color=GUI.color;var background=GUI.backgroundColor;bool enabled=GUI.enabled;int depth=GUI.depth;GUI.depth=-100;
+            var expo=Station!=null?Station.Expo:null;if(expo==null)return;Sync();
+            var hud=Station.Day.GetComponent<RestaurantHud>();
+            bool split=hud.chef.GetComponent<ChefInput>().Expo!=null && hud.coop?.PlayerTwo!=null && hud.coop.PlayerTwo.GetComponent<ChefInput>().Expo!=null;
+            var matrix=GUI.matrix;var color=GUI.color;int depth=GUI.depth;GUI.depth=-100;
             GUI.matrix=Matrix4x4.Scale(new Vector3(Screen.width/1280f,Screen.height/720f,1));
-            float x=second?666:18;
-            int visible=Mathf.Clamp(rows.Count,1,VisibleRows);float height=122+visible*42;float top=694-height;
-            var text=new GUIStyle(GUI.skin.label){fontSize=18,alignment=TextAnchor.MiddleLeft,wordWrap=false};
-            text.normal.textColor=Color.white;
-            var centred=new GUIStyle(text){alignment=TextAnchor.MiddleCenter};
-            var small=new GUIStyle(text){fontSize=15};
-            GUI.color=new Color(.035f,.055f,.07f,.96f*opacity);GUI.DrawTexture(new Rect(x,top,596,height),Texture2D.whiteTexture);
-            GUI.color=new Color(1,1,1,opacity);
-            GUI.Label(new Rect(x+12,top+4,380,26),(second?"P2 — ":"P1 — ")+"EXPO ORDERS",centred);
-            bool full=expo.ActiveCount>=expo.Capacity;
-            GUI.Label(new Rect(x+396,top+4,188,26),"Active "+expo.ActiveCount+" / "+expo.Capacity+(full?"  FULL":""),centred);
-            string note=Message;
-            GUI.Label(new Rect(x+12,top+28,572,22),note.Length>0 ? note:rows.Count==0 ? "No waiting orders":"Up / down: choose an order",small);
-            if(rows.Count==0)
+            float x=split&&second?650:18,width=split?612:1244,top=560,height=134;
+            var text=new GUIStyle(GUI.skin.label){fontSize=16,alignment=TextAnchor.MiddleCenter,wordWrap=false};text.normal.textColor=Color.white;
+            var small=new GUIStyle(text){fontSize=14};var left=new GUIStyle(text){alignment=TextAnchor.MiddleLeft};
+            GUI.color=new Color(.035f,.055f,.07f,.96f*opacity);GUI.DrawTexture(new Rect(x,top,width,height),Texture2D.whiteTexture);GUI.color=new Color(1,1,1,opacity);
+            GUI.Label(new Rect(x+8,top,width-16,24),(second?"P2":"P1")+" EXPO  |  Active "+expo.ActiveCount+" / "+expo.Capacity+"  |  "+(rows.Count==0?"No orders":"Order "+(index+1)+" / "+rows.Count)+(scroll>0?"  ◀":"")+(scroll+VisibleRows<rows.Count?"  ▶":""),text);
+            float card=(width-16)/VisibleRows;
+            for(int column=0;column<VisibleRows;column++)
             {
-                GUI.Label(new Rect(x+12,top+56,572,42),"No orders yet.\nSeated customers appear here as soon as they order.",centred);
+                int i=scroll+column;if(i>=rows.Count)break;var ticket=rows[i];bool chosen=i==index;
+                var rect=new Rect(x+8+column*card,top+26,card-5,68);
+                GUI.color=chosen?new Color(1,.86f,.3f,opacity):new Color(.2f,.25f,.28f,opacity);GUI.DrawTexture(rect,Texture2D.whiteTexture);
+                var tint=ExpoOrderStrip.Tint(ticket);GUI.color=new Color(tint.r,tint.g,tint.b,opacity);GUI.DrawTexture(new Rect(rect.x+3,rect.y+3,rect.width-6,rect.height-6),Texture2D.whiteTexture);GUI.color=new Color(1,1,1,opacity);
+                float icon=split?42:56;if(ticket.Recipe!=null)FoodIcon.DrawOrder(new Rect(rect.x+5,rect.y+5,icon,icon),ticket.Recipe,opacity);
+                float infoX=rect.x+icon+7,infoW=rect.width-icon-12;
+                GUI.Label(new Rect(infoX,rect.y+4,infoW,23),Seat(ticket),small);
+                GUI.Label(new Rect(infoX,rect.y+26,infoW,23),StateLabel(ticket.State),small);
+                float patience=Mathf.Clamp01(expo.PatienceRemaining(ticket));var bar=new Rect(infoX,rect.y+53,infoW,7);
+                GUI.color=new Color(.12f,.16f,.17f,opacity);GUI.DrawTexture(bar,Texture2D.whiteTexture);bar.width*=patience;
+                GUI.color=Color.Lerp(new Color(.9f,.22f,.12f,opacity),new Color(.22f,.7f,.36f,opacity),patience);GUI.DrawTexture(bar,Texture2D.whiteTexture);GUI.color=new Color(1,1,1,opacity);
             }
-            for(int row=0;row<VisibleRows;row++)
-            {
-                int i=scroll+row;if(i>=rows.Count)break;
-                var ticket=rows[i];bool chosen=i==index;
-                float y=top+54+row*42;
-                var tint=ExpoOrderStrip.Tint(ticket);GUI.color=new Color(tint.r,tint.g,tint.b,opacity);
-                GUI.DrawTexture(new Rect(x+10,y,576,38),Texture2D.whiteTexture);
-                GUI.color=new Color(1,1,1,opacity);
-                if(chosen){GUI.color=new Color(.2f,.8f,.6f,opacity);GUI.DrawTexture(new Rect(x+10,y,4,38),Texture2D.whiteTexture);GUI.color=new Color(1,1,1,opacity);}
-                if(ticket.Recipe!=null)FoodIcon.DrawOrder(new Rect(x+20,y+3,32,32),ticket.Recipe,opacity);
-                GUI.Label(new Rect(x+58,y,232,38),(chosen?"> ":"")+Label(ticket),text);
-                GUI.Label(new Rect(x+292,y,96,38),Seat(ticket),small);
-                GUI.Label(new Rect(x+388,y,86,38),StateLabel(ticket.State),small);
-                float patience=Mathf.Clamp01(expo.PatienceRemaining(ticket));
-                var bar=new Rect(x+478,y+14,84,9);
-                GUI.color=new Color(.12f,.16f,.17f,opacity);GUI.DrawTexture(bar,Texture2D.whiteTexture);
-                bar.width*=patience;
-                GUI.color=Color.Lerp(new Color(.9f,.22f,.12f,opacity),new Color(.22f,.7f,.36f,opacity),patience);
-                GUI.DrawTexture(bar,Texture2D.whiteTexture);GUI.color=new Color(1,1,1,opacity);
-                GUI.Label(new Rect(x+478,y-6,84,38),Mathf.RoundToInt(patience*100)+"%",small);
-            }
-            GUI.Label(new Rect(x+12,626,172,28),rows.Count==0?"No orders":"Order "+(index+1)+" of "+rows.Count,small);
-            // Explicit idempotent commands: repeated A cannot toggle a coworker's change.
-            GUI.Label(new Rect(x+196,626,188,28),(!HoldAction?"> ":"")+"FIRE / MAKE",centred);
-            GUI.Label(new Rect(x+392,626,188,28),(HoldAction?"> ":"")+"HOLD",centred);
-            GUI.DrawTexture(new Rect(x+(HoldAction?392:196),654,188,3),Texture2D.whiteTexture);
-            GUI.Label(new Rect(x+12,662,572,24),"Up/down: order • Left/right: action • A: apply • B: close",small);
-            GUI.matrix=matrix;GUI.color=color;GUI.backgroundColor=background;GUI.enabled=enabled;GUI.depth=depth;
+            string selectedLabel=Selected==null?"Waiting for seated customers":Label(Selected);
+            GUI.Label(new Rect(x+8,top+96,width-16,19),Message.Length>0?Message:selectedLabel+"  |  "+(HoldAction?"HOLD selected":"FIRE / MAKE selected"),small);
+            GUI.Label(new Rect(x+8,top+115,width-16,19),"← / →: order   ↑: Make   ↓: Hold   A: apply   B: close",small);
+            GUI.matrix=matrix;GUI.color=color;GUI.depth=depth;
         }
     }
 }

@@ -11,6 +11,9 @@ namespace ThrownTogether
         RestaurantDay day;DiningWalker walker;CarrySlot hands;ServiceStation pass;
         KitchenTicket ticket;CookProduction.Component component;ProcessingStation appliance;
         Carryable selected,job,assemblyPlate;Interactable target;Phase phase;float retry;
+        int clearing;
+        CounterStation clearingCounter;
+        Carryable parkedInput;
         public string Status {get;private set;}="Waiting for fired orders";
         public CarrySlot Hands=>hands;
         public KitchenTicket CurrentTicket=>ticket;
@@ -76,6 +79,7 @@ namespace ThrownTogether
                     if(c.Hot==null){reason="Needs "+c.Ingredient.NameFor(c.State);continue;}
                     var compatible=FindObjectsByType<ProcessingStation>(FindObjectsSortMode.None).Where(p=>p.gameObject.scene==gameObject.scene && p.isActiveAndEnabled && !p.requiresAttendance && p.ProcessFor(new ItemPayload{ingredient=c.Ingredient,state=c.Hot.input})==c.Hot).ToArray();
                     var free=compatible.FirstOrDefault(p=>!p.Busy && p.slot.Item==null && Reachable(p));
+                    if(free==null && FreeCounter()!=null)free=compatible.FirstOrDefault(p=>!p.Busy && p.slot.Item!=null && Reachable(p));
                     if(free==null){reason=compatible.Length==0?"Needs appliance for "+c.Ingredient.NameFor(c.State):"Appliance busy or path blocked";continue;}
                     var input=FindObjectsByType<Carryable>(FindObjectsSortMode.InstanceID).FirstOrDefault(i=>i.gameObject.scene==gameObject.scene && !allocated.Contains(i) && CookProduction.Plain(i,c.Ingredient,c.Hot.input) && CanCollect(i));
                     Interactable pickup=input!=null?Location(input):c.Hot.input==FoodState.Raw?FindObjectsByType<SourceStation>(FindObjectsSortMode.None).FirstOrDefault(s=>s.gameObject.scene==gameObject.scene && s.Offers(c.Ingredient) && c.Ingredient.Unlocked && Reachable(s)):null;
@@ -144,10 +148,50 @@ namespace ThrownTogether
             if(!Go(stock))Wait("Plate stack path blocked — food retained");
             else Status="Plating "+component.Ingredient.NameFor(component.State);
         }
+        bool BeginClearing()
+        {
+            if(appliance==null || appliance.Busy || appliance.slot.Item==null || hands.Item!=job)return false;
+            clearingCounter=FreeCounter();if(clearingCounter==null)return false;
+            parkedInput=job;clearing=1;Go(clearingCounter);Status="Making room on appliance";return true;
+        }
+        void ClearAppliance(float seconds)
+        {
+            // Only real, nearby slot transfers. The buffer is shared with players, so
+            // every leg revalidates it before exchanging anything.
+            if(target==null || !target.isActiveAndEnabled)
+            {clearing=0;if(hands.Item!=null){job=hands.Item;component=null;Park();}else Idle();return;}
+            if(!walker.Arrived){if(!KitchenStaffRoute.Clear(transform.position)){Wait("Clearing route blocked — food retained");return;}walker.Advance(seconds,day.Settings.walkingSpeed*RestaurantAccounts.Current.StaffSpeed("cook"),hands.Item!=null);return;}
+            if(!Near(target)){if(!Go(target))Wait("Clearing route blocked — food retained");return;}
+            if(clearing==1)
+            {
+                if(hands.Item!=parkedInput){clearing=0;Idle();return;}
+                if(!clearingCounter.slot.TryTake(parkedInput)){clearing=0;phase=Phase.Load;Go(appliance);return;}
+                clearing=2;Go(appliance);return;
+            }
+            if(clearing==2)
+            {
+                if(clearingCounter==null || clearingCounter.slot.Item!=parkedInput){clearing=0;Idle();return;}
+                if(appliance.Busy){Wait("Waiting to clear finished food");return;}
+                if(appliance.slot.Item!=null && !Pickup(appliance.slot.Item)){Wait("Finished food unavailable");return;}
+                clearing=3;Go(clearingCounter);return;
+            }
+            if(clearingCounter.slot.Item==parkedInput)
+            {
+                var output=hands.Release();var input=clearingCounter.slot.Release();
+                if(output!=null)clearingCounter.slot.TryTake(output);
+                hands.TryTake(input);job=input;clearing=0;phase=Phase.Load;Go(appliance);Status="Resuming cooking";return;
+            }
+            // A player took/replaced the waiting input. Preserve the output and re-plan.
+            clearing=0;
+            if(hands.Item==null){Idle();return;}
+            if(clearingCounter.slot.Item==null && clearingCounter.slot.TryTake(hands.Item)){Idle();return;}
+            job=hands.Item;component=null;Park();
+        }
         public void Advance(float seconds)
         {
             if(day==null || day.Closed || day.AwaitingMenu || !isActiveAndEnabled || seconds<=0)return;
             if(retry>0){retry-=seconds;return;}
+            if(clearing>0){ClearAppliance(seconds);return;}
             if(phase==Phase.Idle){FindWork();return;}
             if(phase==Phase.Fetch && !Fired){Idle();return;}
             if(phase==Phase.Load && !Fired && hands.Item!=null){Park();return;}
@@ -177,7 +221,8 @@ namespace ThrownTogether
                 if(!appliance.StartHotBy(this,hands))
                 {
                     var other=FindObjectsByType<ProcessingStation>(FindObjectsSortMode.None).FirstOrDefault(p=>p!=appliance && p.gameObject.scene==gameObject.scene && !p.requiresAttendance && !p.Busy && p.slot.Item==null && p.ProcessFor(job.Payload)==component.Hot && Reachable(p));
-                    if(other!=null){appliance=other;Go(other);Status="Using another available appliance";}else Wait("Appliance occupied — food retained");return;
+                    if(other!=null){appliance=other;Go(other);Status="Using another available appliance";}
+                    else if(!BeginClearing())Wait(appliance.Busy?"Appliance cooking — food retained":"Needs free counter to clear appliance — food retained");return;
                 }
                 phase=Phase.Cooking;Status="Cooking "+component.Ingredient.NameFor(component.State);return;
             }
