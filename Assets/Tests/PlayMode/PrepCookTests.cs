@@ -76,6 +76,29 @@ namespace ThrownTogether.Tests
             Assert.IsTrue(first.Take(player.Hands));Tick(1000);Assert.AreEqual(5,first.Count);Assert.IsNotNull(player.Hands.Item,"Restocking must count bin stock, not player-held stock");
             Assert.IsEmpty(day.Expo.OpenTickets);Assert.IsEmpty(day.PrepCook.Production.Ledger.Claims);
         }
+        [TestCase(false)] [TestCase(true)]
+        public void RestockBreakRetriesFreedCounterForRawOrPreparedFood(bool finishChop)
+        {
+            var worker=day.PrepCook;var member=day.Staff.Single(s=>s.Role=="prep-cook");
+            for(int i=0;i<800&&worker.Hands.Item==null;i++)worker.Advance(.1f);
+            var food=worker.Hands.Item;Assert.IsNotNull(food);
+            var counters=Object.FindObjectsByType<CounterStation>().Where(c=>c.gameObject.scene==scene&&c.GetType()==typeof(CounterStation)).ToArray();
+            foreach(var counter in counters){var block=Object.Instantiate(source.itemPrefab);block.Configure(ItemPayload.Plate());Assert.IsTrue(counter.slot.TryTake(block));}
+            if(finishChop)
+            {
+                var assigned=RestaurantAccounts.Current.PrepAssignment(0).bins.Single(b=>b.ingredient==food.Payload.ingredient.id);
+                var full=day.GetComponent<KitchenFurniture>().PrepBins.Single(b=>b.Key==assigned.bin).Value;
+                for(int i=0;i<5;i++){var portion=Object.Instantiate(source.itemPrefab);portion.Configure(new ItemPayload{ingredient=food.Payload.ingredient,state=FoodState.Cut});Assert.IsTrue(full.Store(portion));}
+                for(int i=0;i<800&&(worker.Hands.Item!=food||food.Payload.state!=FoodState.Cut);i++)worker.Advance(.1f);
+                Assert.AreSame(food,worker.Hands.Item);Assert.AreEqual(FoodState.Cut,food.Payload.state);
+            }
+            Assert.IsTrue(member.ToggleBreak());Tick(30);Assert.AreSame(food,worker.Hands.Item);Assert.IsFalse(member.OnBreak);
+            var freed=counters.First(c=>KitchenStaffRoute.ToStation(worker.transform.position,c.transform)!=null);
+            Object.DestroyImmediate(freed.slot.Release().gameObject);
+            for(int i=0;i<1200&&!member.OnBreak;i++)worker.Advance(.1f);
+            Assert.IsTrue(member.OnBreak,member.DisplayStatus);Assert.AreSame(food,freed.slot.Item);Assert.IsNull(worker.Hands.Item);
+            Assert.AreEqual(finishChop?FoodState.Cut:FoodState.Raw,food.Payload.state);Assert.IsEmpty(worker.Production.Ledger.Claims);
+        }
         [Test] public void RestockRetainsFoodWhenPlayerFillsItsBinAndResumesAfterSpaceClears()
         {
             for(int i=0;i<500 && day.PrepCook.Hands.Item==null;i++)day.PrepCook.Advance(.1f);
@@ -89,6 +112,17 @@ namespace ThrownTogether.Tests
         }
         Carryable ManualPortion(FoodState state)
         {var item=Object.Instantiate(source.itemPrefab);item.Configure(new ItemPayload{ingredient=fries.ingredient,state=state});return item;}
+        [Test] public void DepartingPrepReleasesChoppingAttendanceAndClaim()
+        {
+            Assert.IsTrue(day.Expo.TryFire(Seat()));
+            for(int i=0;i<1000&&!prep.Busy;i++)day.PrepCook.Advance(.1f);
+            Assert.IsTrue(prep.Busy);Assert.IsTrue(prep.Working);Assert.IsNotEmpty(day.PrepCook.Production.Ledger.Claims);
+            var food=prep.slot.Item;var member=day.Staff.Single(s=>s.Role=="prep-cook");member.BeginDeparture();
+            Assert.IsFalse(prep.Working);Assert.AreSame(food,prep.slot.Item);Assert.IsEmpty(day.PrepCook.Production.Ledger.Claims);
+            var chef=Object.FindObjectsByType<ChefController>().First(c=>c.gameObject.scene==scene);
+            chef.transform.position=KitchenStaffRoute.Approach(prep.transform).Value;
+            Assert.IsTrue(prep.Interact(chef));prep.Advance(10);Assert.IsFalse(prep.Busy);Assert.AreSame(food,prep.slot.Item);Assert.AreEqual(FoodState.Cut,food.Payload.state);
+        }
         [Test] public void FiredOrderGetsPhysicalPrepAndHoldPreservesTheCollectedFood()
         {
             var ticket=Seat();Tick(100);Assert.Zero(bin.Count);Assert.IsNull(day.PrepCook.Hands.Item);

@@ -18,3 +18,5 @@ While a host is taking a break, approaching home or resting, normal FIFO automat
 At closing, final staff departure overrides all breaks. Staff still preserve held items through the existing departure stow flow, then leave after the last admitted customer. Starting the next service creates fresh working staff; break state is deliberately not saved.
 
 TV/controller review should confirm the six-row page remains readable at couch distance, A toggles the intended employee, B returns to pause, host fallback seating is understandable, and crowded layouts still leave usable routes to configured staff homes.
+
+0.27.1 recovery fixes: pending prep breaks retry newly freed counters for both raw and prepared food. Hosts outside use the existing authored entrance crossing to return home or resume greeting; blocked home routes report their actual blocker. Dishwasher ownership follows the specific plate rather than the sink's Busy flag, so manual collection cannot make a break process the next queued plate. Final departure explicitly releases dishwasher attendance and prep attendance/claims while preserving physical contents for players.

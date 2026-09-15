@@ -185,7 +185,7 @@ namespace ThrownTogether
             var guest=guests.FirstOrDefault(g=>g.phase==0);
             if(guest==null || !guest.walker.Arrived || guest.hostClaim!=System.Guid.Empty)return null;
             var table=Tables.FirstOrDefault(t=>t.Clean);if(table==null)return null;
-            var inside=StaffHomes.Entrance(this);var first=KitchenStaffRoute.ToPoint(hostPosition,inside);
+            var inside=StaffHomes.Entrance(this);var first=KitchenStaffRoute.ToInterior(this,hostPosition,inside);
             if(first==null){HostRouteBlocked=true;return null;}
             route=first.Concat(new[]{Settings.entrance,new Vector3(Settings.entrance.x,0,Settings.sidewalkStart.z),guest.walker.transform.position}).ToArray();
             var claim=new HostGuestClaim(System.Guid.NewGuid(),guest.id,table);guest.hostClaim=claim.Id;guest.table=table;table.ReserveSeat();return claim;

@@ -105,5 +105,31 @@ namespace ThrownTogether.Tests
             member.BeginDeparture();for(int i=0;i<500&&!member.Gone;i++)member.AdvanceDeparture(.1f);
             Assert.That(member.Gone,Is.True,member.Status);LogAssert.NoUnexpectedReceived();yield return null;
         }
+        [TestCase(false)] [TestCase(true)]
+        public void HostBreakDuringOutsideApproachReturnsOrResumesFromActualPosition(bool resumeOutside)
+        {
+            HireHost();Assert.IsTrue(day.StartService());FinishArrival();var member=day.Staff.Single(s=>s.Role=="host");
+            for(int i=0;i<1200;i++){day.Advance(.05f);if(day.Host.Status=="Greeting next customer"&&member.transform.position.z< -5.6f)break;}
+            Assert.AreEqual("Greeting next customer",day.Host.Status);Assert.Less(member.transform.position.z,-5.6f);
+            var before=member.transform.position;Assert.IsTrue(member.ToggleBreak());Assert.AreEqual(before,member.transform.position);
+            Assert.IsFalse(day.HostAvailable);Assert.IsFalse(day.Tables.Any(t=>t.Arriving),"Unstarted reservation must be released");
+            if(resumeOutside)
+            {
+                Assert.IsTrue(member.ToggleBreak());Assert.AreEqual(before,member.transform.position);Assert.IsTrue(day.HostAvailable);
+                for(int i=0;i<1200&&!day.Tables.Any(t=>t.WaitingForMeal);i++)day.Advance(.05f);
+                Assert.IsTrue(day.Tables.Any(t=>t.WaitingForMeal),day.Host.Status);Assert.IsFalse(day.HostRouteBlocked);
+            }
+            else
+            {
+                for(int i=0;i<1200&&!member.OnBreak;i++)
+                {
+                    var previous=member.transform.position;day.Advance(.05f);
+                    Assert.LessOrEqual(Vector3.Distance(previous,member.transform.position),day.Settings.walkingSpeed*.05f+.001f,"No teleport on break-home route");
+                }
+                Assert.IsTrue(member.OnBreak,member.DisplayStatus);Assert.Less(Vector3.Distance(member.Home,member.transform.position),.05f);
+                for(int i=0;i<600&&!day.Tables.Any(t=>t.WaitingForMeal);i++)day.Advance(.05f);
+                Assert.IsTrue(day.Tables.Any(t=>t.WaitingForMeal),"Automatic seating still proceeds");
+            }
+        }
     }
 }

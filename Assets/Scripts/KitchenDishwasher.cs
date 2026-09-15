@@ -36,6 +36,22 @@ namespace ThrownTogether
             if(route==null || !Segment(route[route.Length-1],exact))return null;
             return route.Concat(new[]{exact}).ToArray();
         }
+        // The indoor grid ends at the doorway. Bridge sidewalk travel using the
+        // same entrance waypoints as staff arrival rather than searching outside it.
+        public static Vector3[] ToInterior(RestaurantDay day,Vector3 from,Vector3 target)
+        {
+            if(from.z>=-5.2f)return ToPoint(from,target);
+            var inside=StaffHomes.Entrance(day);
+            var route=ToPoint(inside,target);if(route==null)return null;
+            var door=day.Settings.entrance;
+            var approach=new Vector3(door.x,0,from.z);
+            // The authored arrival/exit crosses the low front-boundary collider
+            // at this doorway. Do not apply indoor-grid collision rejection there.
+            if(from.z>door.z)
+                return Mathf.Abs(from.x-door.x)<=.3f?new[]{inside}.Concat(route).ToArray():null;
+            if(!Segment(from,approach))return null;
+            return new[]{approach,door,inside}.Concat(route).ToArray();
+        }
         static Vector3[] Search(Vector3 from,System.Func<Vector3,bool> reached)
         {
             var start=Cell(from);var queue=new Queue<Vector2Int>();var parents=new Dictionary<Vector2Int,Vector2Int>();
@@ -75,7 +91,7 @@ namespace ThrownTogether
     // Shared ownership rules keep manual washing/clearing available alongside employees.
     public sealed class KitchenDishwasher : MonoBehaviour
     {
-        RestaurantDay day;WashingStation sink;SourceStation stock;DishReturnStation rack;DiningWalker walker;CarrySlot hands;Transform destination;float retry;bool washingOwned;
+        RestaurantDay day;WashingStation sink;SourceStation stock;DishReturnStation rack;DiningWalker walker;CarrySlot hands;Transform destination;float retry;Carryable washingPlate;
         StaffMember member;
         public void Initialize(RestaurantDay owner)
         {
@@ -88,7 +104,7 @@ namespace ThrownTogether
             var appearance=go.GetComponentInChildren<ChefAppearance>();if(appearance!=null){var look=ChefAppearanceData.Example(0);look.clothing=2;look.clothingColor=4;look.headwear=0;appearance.Apply(look);}
             var grip=new GameObject("Carried plate");grip.transform.SetParent(go.transform,false);grip.transform.localPosition=new Vector3(0,1.25f,.65f);hands=grip.AddComponent<CarrySlot>();destination=sink.transform;
             member=StaffMember.Create(day,"dishwasher",walker,hands);destination=null;
-            member.ConfigureBreaks(()=>hands.Item?.Payload.dirty==true?"Taking dirty plate to sink":hands.Item!=null?"Returning clean plate":washingOwned?"Washing current plate":"Waiting for dishes");
+            member.ConfigureBreaks(()=>hands.Item?.Payload.dirty==true?"Taking dirty plate to sink":hands.Item!=null?"Returning clean plate":washingPlate!=null?"Washing current plate":"Waiting for dishes",departing:ReleaseWashing);
         }
         bool Travel(Transform target)
         {var route=KitchenStaffRoute.ToStation(walker.transform.position,target);if(route==null){retry=1;return false;}destination=target;walker.Go(route);return true;}
@@ -96,6 +112,9 @@ namespace ThrownTogether
         {
             if(day.Closed || walker==null || seconds<=0)return;
             if(!member.AllowWork(seconds))return;
+            // Manual collection can promote a different queued plate between ticks.
+            // A break may finish only the particular plate we actually worked.
+            if(washingPlate!=null && washingPlate!=sink.slot.Item)ReleaseWashing();
             if(member.BreakRequested)
             {
                 float breakSpeed=RestaurantAccounts.Current.StaffSpeed(day.Settings.dishwasherRole.id);
@@ -105,17 +124,17 @@ namespace ThrownTogether
                     if(destination!=stop && !Travel(stop))return;
                     walker.Advance(seconds,day.Settings.walkingSpeed*breakSpeed,true);if(!walker.Arrived)return;
                     bool stored=hands.Item.Payload.dirty?sink.Enqueue(hands.Item):stock.ReturnCleanPlate(hands.Item);
-                    if(stored){washingOwned=false;sink.ReleaseWorker(this);destination=null;member.BeginBreak();}
+                    if(stored){ReleaseWashing();member.BeginBreak();}
                     return;
                 }
-                if(washingOwned)
+                if(washingPlate!=null)
                 {
                     if(destination!=sink.transform && !Travel(sink.transform))return;
                     walker.Advance(seconds,day.Settings.walkingSpeed*breakSpeed,false);if(!walker.Arrived)return;
                     if(sink.Busy){sink.WashBy(this,seconds*breakSpeed);return;}
-                    if(sink.TakeClean(hands)){washingOwned=false;Travel(stock.transform);}return;
+                    if(sink.TakeClean(hands)){ReleaseWashing();Travel(stock.transform);}return;
                 }
-                sink.ReleaseWorker(this);destination=null;member.BeginBreak();return;
+                ReleaseWashing();member.BeginBreak();return;
             }
             if(hands.Item==null && sink.Count==0 && rack.Count==0){member.Idle(seconds);destination=null;return;}
             if(destination==null && !Travel(sink.transform))return;
@@ -136,11 +155,12 @@ namespace ThrownTogether
             walker.transform.LookAt(new Vector3(sink.transform.position.x,walker.transform.position.y,sink.transform.position.z));
             if(sink.Count>0)
             {
-                if(!sink.Busy){if(sink.TakeClean(hands)){washingOwned=false;Travel(stock.transform);}}
-                else if(sink.WashBy(this,seconds*speed))washingOwned=true;
+                if(!sink.Busy){if(sink.TakeClean(hands)){ReleaseWashing();Travel(stock.transform);}}
+                else if(sink.WashBy(this,seconds*speed))washingPlate=sink.slot.Item;
             }
             else if(rack.Count>0)Travel(rack.transform);
         }
-        void OnDisable(){if(sink!=null)sink.ReleaseWorker(this);}
+        void ReleaseWashing(){if(sink!=null)sink.ReleaseWorker(this);washingPlate=null;destination=null;retry=0;}
+        void OnDisable(){ReleaseWashing();}
     }
 }

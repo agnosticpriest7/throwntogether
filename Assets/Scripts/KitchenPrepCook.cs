@@ -31,7 +31,7 @@ namespace ThrownTogether
             walker=gameObject.AddComponent<DiningWalker>();walker.Initialize(day.Settings.walkingVisual,3);
             var grip=new GameObject("Prep cook hands");grip.transform.SetParent(transform,false);grip.transform.localPosition=new Vector3(0,1.25f,.65f);hands=grip.AddComponent<CarrySlot>();
             member=StaffMember.Create(day,"prep-cook",walker,hands);
-            member.ConfigureBreaks(()=>Status);
+            member.ConfigureBreaks(()=>Status,departing:Idle);
         }
         bool Near(Interactable target)=>target!=null && Vector3.Distance(transform.position,target.transform.position)<=1.85f;
         bool Go(Interactable target)
@@ -143,6 +143,7 @@ namespace ThrownTogether
             if(destination==null || !destination.isActiveAndEnabled)
             {
                 if(hands.Item==null){Idle();return;}
+                if(member.BreakRequested){BreakStorageRoute();return;}
                 if(hands.Item.Payload.state==FoodState.Cut){phase=Work.Deposit;DepositRoute();return;}
                 Wait("Assigned station unavailable — food retained");return;
             }

@@ -8,7 +8,8 @@ namespace ThrownTogether
     {
         enum Phase {Arriving,Working,GoingToBreak,Resting,Stowing,Leaving,Gone}
         Phase phase;RestaurantDay day;DiningWalker walker;CarrySlot hands;CounterStation output;
-        Func<string> workingStatus;Action<bool> breakChanged;bool breakRequested;
+        Func<string> workingStatus;Action<bool> breakChanged;Action departing;bool breakRequested;
+        string breakBlocker;
         public string Role {get;private set;}
         public string DisplayName=>Role=="prep-cook"?"Prep cook":Role=="dishwasher"?"Dishwasher":Role=="busser"?"Busser":Role=="server"?"Server":Role=="host"?"Host":"Cook";
         public Vector3 Home=>day.GetComponent<KitchenFurniture>().Homes.Home(Role);
@@ -18,7 +19,7 @@ namespace ThrownTogether
         public bool OnBreak=>phase==Phase.Resting;
         public bool GoingToBreak=>phase==Phase.GoingToBreak;
         public bool AvailableForWork=>phase==Phase.Working && !breakRequested;
-        public string DisplayStatus=>phase==Phase.Resting?"On break":phase==Phase.GoingToBreak?"Going to break":breakRequested?"Finishing: "+CleanStatus(workingStatus?.Invoke()):phase==Phase.Working?CleanStatus(workingStatus?.Invoke()):Status;
+        public string DisplayStatus=>phase==Phase.Resting?"On break":phase==Phase.GoingToBreak?"Going to break":breakRequested?"Finishing: "+CleanStatus(breakBlocker??workingStatus?.Invoke()):phase==Phase.Working?CleanStatus(workingStatus?.Invoke()):Status;
         public string BreakAction=>breakRequested?"Resume":"Take break";
         public string Status {get;private set;}="Arriving";
         public static StaffMember Create(RestaurantDay day,string role,DiningWalker walker,CarrySlot hands)
@@ -35,21 +36,23 @@ namespace ThrownTogether
             if(string.IsNullOrWhiteSpace(value))return "current task";
             return value.StartsWith("Finishing: ",StringComparison.OrdinalIgnoreCase)?value.Substring(11):value;
         }
-        public void ConfigureBreaks(Func<string> status,Action<bool> changed=null){workingStatus=status;breakChanged=changed;}
+        public void ConfigureBreaks(Func<string> status,Action<bool> changed=null,Action departing=null){workingStatus=status;breakChanged=changed;this.departing=departing;}
         public bool ToggleBreak()
         {
             if(day==null || !day.CanManageBreaks || phase==Phase.Arriving || phase==Phase.Stowing || phase==Phase.Leaving || phase==Phase.Gone)return false;
             breakRequested=!breakRequested;
+            breakBlocker=null;
             if(!breakRequested && (phase==Phase.GoingToBreak || phase==Phase.Resting)){phase=Phase.Working;Status="";walker.Go(transform.position);}
             breakChanged?.Invoke(breakRequested);return true;
         }
         public bool BeginBreak(string blocked="")
         {
             if(!breakRequested || phase!=Phase.Working)return phase==Phase.GoingToBreak || phase==Phase.Resting;
+            breakBlocker=null;
             if(hands?.Item!=null){Status=string.IsNullOrEmpty(blocked)?"Finishing current task":blocked;return false;}
             if(Vector3.Distance(transform.position,Home)<=.15f){phase=Phase.Resting;Status="On break";walker.Go(transform.position);return true;}
-            var route=KitchenStaffRoute.ToPoint(transform.position,Home);
-            if(route==null){Status=string.IsNullOrEmpty(blocked)?"Break route blocked":blocked;return false;}
+            var route=KitchenStaffRoute.ToInterior(day,transform.position,Home);
+            if(route==null){breakBlocker=Status=string.IsNullOrEmpty(blocked)?"Break route blocked":blocked;return false;}
             walker.Go(route);phase=Phase.GoingToBreak;Status="Going to break";return true;
         }
         float Speed=>day.Settings.walkingSpeed*RestaurantAccounts.Current.StaffSpeed(StaffHomes.PurchaseId(Role));
@@ -69,13 +72,14 @@ namespace ThrownTogether
         public void Idle(float seconds)
         {
             if(phase!=Phase.Working || hands?.Item!=null)return;
-            if(Vector3.Distance(transform.position,Home)>.15f && (walker.Arrived || Vector3.Distance(walker.Destination,Home)>.1f)){var path=KitchenStaffRoute.ToPoint(transform.position,Home);if(path!=null)walker.Go(path);}
+            if(Vector3.Distance(transform.position,Home)>.15f && (walker.Arrived || Vector3.Distance(walker.Destination,Home)>.1f)){var path=KitchenStaffRoute.ToInterior(day,transform.position,Home);if(path!=null)walker.Go(path);}
             walker.Advance(seconds,Speed);
         }
         public void BeginDeparture()
         {
             if(phase==Phase.Gone || phase==Phase.Leaving || phase==Phase.Stowing)return;
             breakRequested=false;breakChanged?.Invoke(false);
+            breakBlocker=null;departing?.Invoke();
             phase=Phase.Stowing;Status="Putting food away";output=null;
         }
         public void AdvanceDeparture(float seconds)

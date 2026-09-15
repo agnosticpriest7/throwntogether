@@ -132,5 +132,53 @@ namespace ThrownTogether.Tests
             }
             finally{InputSystem.RemoveDevice(pad);InputSystem.settings.backgroundBehavior=background;InputSystem.settings.editorInputBehaviorInPlayMode=editor;}
         }
+        KitchenDishwasher StartWasher(out StaffMember member,out WashingStation sink,out SourceStation stock)
+        {
+            Assert.IsTrue(RestaurantAccounts.Current.Buy("hire-dishwasher",0));Assert.IsTrue(day.StartService());
+            for(int i=0;i<1000&&day.StaffEntering;i++)day.Advance(.1f);
+            Assert.IsFalse(day.StaffEntering);member=day.Staff.Single();
+            sink=Object.FindObjectsByType<WashingStation>().Single(s=>s.gameObject.scene==scene);
+            stock=Object.FindObjectsByType<SourceStation>().Single(s=>s.gameObject.scene==scene&&s.plates);
+            return day.GetComponent<KitchenDishwasher>();
+        }
+        Carryable DirtyFromStock(SourceStation stock,WashingStation sink)
+        {
+            var plate=stock.TakeCleanPlate();Assert.IsNotNull(plate);plate.Payload.MakeDirty();plate.RefreshVisual();Assert.IsTrue(sink.Enqueue(plate));return plate;
+        }
+        [TestCase(false)] [TestCase(true)]
+        public void WasherBreakDoesNotFollowPlayerCollectedPlateIntoNextJob(bool queued)
+        {
+            var washer=StartWasher(out var member,out var sink,out var stock);
+            var first=DirtyFromStock(stock,sink);var second=queued?DirtyFromStock(stock,sink):null;
+            for(int i=0;i<1000&&sink.Busy;i++)washer.Advance(.1f);
+            Assert.IsFalse(sink.Busy);Assert.AreSame(first,sink.slot.Item);
+            var chef=Object.FindObjectsByType<ChefController>().First(c=>c.gameObject.scene==scene);
+            Assert.IsTrue(sink.TakeClean(chef.Hands));Assert.IsTrue(member.ToggleBreak());
+            for(int i=0;i<1200&&!member.OnBreak;i++)washer.Advance(.1f);
+            Assert.IsTrue(member.OnBreak,member.DisplayStatus);Assert.AreSame(first,chef.Hands.Item);
+            Assert.AreEqual(queued?1:0,sink.Count);if(queued){Assert.IsTrue(second.Payload.dirty);Assert.AreSame(second,sink.slot.Item);Assert.Zero(sink.Progress);Assert.IsFalse(sink.Working);}
+        }
+        [Test] public void WasherBreakFinishesExactlyOneOwnedPlate()
+        {
+            var washer=StartWasher(out var member,out var sink,out var stock);
+            var first=DirtyFromStock(stock,sink);var second=DirtyFromStock(stock,sink);
+            for(int i=0;i<1000&&sink.Progress<=0;i++)washer.Advance(.1f);
+            Assert.Greater(sink.Progress,0);Assert.IsTrue(member.ToggleBreak());
+            for(int i=0;i<1200&&!member.OnBreak;i++)washer.Advance(.1f);
+            Assert.IsTrue(member.OnBreak,member.DisplayStatus);Assert.AreEqual(4,stock.CleanPlatesRemaining);
+            Assert.AreSame(second,sink.slot.Item);Assert.IsTrue(second.Payload.dirty);Assert.Zero(sink.Progress);Assert.IsFalse(sink.Working);
+        }
+        [Test] public void DepartingWasherReleasesSinkForPlayerWithoutLosingPlate()
+        {
+            var washer=StartWasher(out var member,out var sink,out var stock);var plate=DirtyFromStock(stock,sink);
+            for(int i=0;i<1000&&sink.Progress<=0;i++)washer.Advance(.1f);
+            Assert.Greater(sink.Progress,0);float before=sink.Progress;member.BeginDeparture();
+            Assert.IsFalse(sink.Working);Assert.AreSame(plate,sink.slot.Item);Assert.AreEqual(before,sink.Progress);
+            for(int i=0;i<1000&&!member.Gone;i++)member.AdvanceDeparture(.1f);Assert.IsTrue(member.Gone,member.Status);
+            var chef=Object.FindObjectsByType<ChefController>().First(c=>c.gameObject.scene==scene);
+            chef.transform.position=KitchenStaffRoute.Approach(sink.transform).Value;
+            Assert.IsTrue(sink.Interact(chef),"Departed employee must not lock manual washing");sink.Advance(sink.duration+1);
+            Assert.IsFalse(sink.Busy);Assert.AreSame(plate,sink.slot.Item);Assert.IsFalse(plate.Payload.dirty);
+        }
     }
 }
