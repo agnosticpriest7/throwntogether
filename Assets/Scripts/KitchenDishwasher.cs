@@ -39,7 +39,7 @@ namespace ThrownTogether
                 }
                 foreach(var d in directions)
                 {
-                    var next=cell+d;if(parents.ContainsKey(next)||next.x < -22 || next.x>32 || next.y < -13 || next.y>20)continue;
+                    var next=cell+d;if(parents.ContainsKey(next)||next.x < (RestaurantAccounts.Current.Owns(RestaurantExpansion.KitchenId)?-31:-22) || next.x>(RestaurantAccounts.Current.Owns(RestaurantExpansion.DiningId)?43:32) || next.y < -13 || next.y>20)continue;
                     var q=Point(next);if(!Segment(p,q))continue;parents[next]=cell;queue.Enqueue(next);
                 }
             }

@@ -45,7 +45,7 @@ namespace ThrownTogether.Tests
         void UnlockAll()
         {
             var a=RestaurantAccounts.Current;int id=a.StartDay();Assert.That(a.Settle(id,1500,0),Is.True);
-            foreach(var offer in day.Settings.purchases)Assert.That(a.Buy(offer.id,offer.cost),Is.True);
+            foreach(var offer in day.Settings.purchases.Where(p=>p.kind!=RestaurantPurchaseKind.RoomExpansion))Assert.That(a.Buy(offer.id,offer.cost),Is.True);
             Assert.That(a.SetMenu(DailyMenu.Catalog.Select(r=>r.id).ToArray()),Is.True);
         }
         [UnityTest] public IEnumerator FirstMenuPurchaseNextMenuOrdersAndVarietySettlementAreOneFlow()

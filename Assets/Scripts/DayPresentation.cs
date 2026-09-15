@@ -13,6 +13,7 @@ namespace ThrownTogether
         public Phase Current { get; private set; }
         public bool Transitioning => Current==Phase.Closing || Current==Phase.Opening || Current==Phase.LeavingManagement;
         public float NightAmount { get; private set; }
+        public float ServiceCameraSize=>normalSize;
         public float ServiceOpacity => Current==Phase.Closing ? 1-NightAmount : Current==Phase.Opening ? 1-NightAmount : 1;
         public float MenuOpacity => Current==Phase.LeavingManagement ? 1-Ease(elapsed/.35f) : Current==Phase.Night ? Ease(elapsed/.35f) : 1;
         public bool NightMenu => Current==Phase.Night || Current==Phase.LeavingManagement;
@@ -80,6 +81,7 @@ namespace ThrownTogether
             loadNextDay=load; elapsed=0; Current=Phase.LeavingManagement; return true;
         }
         private static float Ease(float t) { t=Mathf.Clamp01(t); return t*t*(3-2*t); }
+        public void SetServiceCameraSize(float size){normalSize=size;Apply(NightAmount);}
         private void Apply(float night)
         {
             NightAmount=night;

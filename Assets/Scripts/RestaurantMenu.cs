@@ -419,7 +419,9 @@ namespace ThrownTogether
         {
             var account=RestaurantAccounts.Current;
             if(hud.shift?.Day!=null && !hud.shift.Day.Closed && !hud.shift.Day.AwaitingMenu){message="Purchases open after the 10 PM close.";return;}
-            message=account.Buy(id,cost)?"Purchased — available next day. "+System.Array.FindAll(DailyMenu.Catalog,r=>r.Unlocked(account)).Length+" recipes now unlocked.":!string.IsNullOrEmpty(account.Problem)?account.Problem:"Already owned, insufficient cash, or today's earnings are not yet saved.";
+            bool bought=account.Buy(id,cost);
+            if(bought && (id==RestaurantExpansion.KitchenId || id==RestaurantExpansion.DiningId)){hud.shift.Day.RefreshExpansion();message="Expansion open — arrange your new space now.";return;}
+            message=bought?"Purchased — available next day. "+System.Array.FindAll(DailyMenu.Catalog,r=>r.Unlocked(account)).Length+" recipes now unlocked.":!string.IsNullOrEmpty(account.Problem)?account.Problem:"Already owned, insufficient cash, or today's earnings are not yet saved.";
         }
         private void Confirm(string text,Action action) { if(!IsOpen) Open(); pending=action; confirmation=text;confirmReturnPage=Page; SetPage("Confirm"); }
         public void ActivateSelection() { if(StartupSequence.BlocksMenu)return; if(GetComponent<DayPresentation>()?.Transitioning==true)return; if(!rows[Mathf.Clamp(Selection,0,rows.Count-1)].enabled) return; rows[Mathf.Clamp(Selection,0,rows.Count-1)].select(); hud.audioFeedback?.Click(); if(IsOpen) BuildRows(); }

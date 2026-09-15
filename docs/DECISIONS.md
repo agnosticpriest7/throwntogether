@@ -67,3 +67,5 @@ Owner approved direct stock-to-hand plating, a multi-plate sink, seated customer
 2026-09-14 — Owner approved cook next, gated by a built Expo desk, plus Career Resume/Reset and all pre-round management before service. Initial tuning: Expo , Cook ; existing training prices. Preserve legacy desks at no charge. Cook works green tickets; prep restocking remains independent. Single-component hot dishes first; compound assembly deferred.
 
 2026-09-14 — Approved next cook batch: full existing menu assembly, player/worker component coordination and clearer blocker messages. Reuse normal counters, finite plates and timed appliances. Prep remains a separate role. No breaks or balance changes in this batch.
+
+2026-09-14 — Owner approved restaurant expansion next and reported outside customers not lining up. Add separate optional kitchen/dining footprint purchases without relocating existing equipment; append stable kitchen bays and retain existing dining-table upgrade. Initial prices $500/$600, capacity +7 bays/+2 tables. Restore a physical sidewalk FIFO queue; preserve existing service/closing rules and all player controls.

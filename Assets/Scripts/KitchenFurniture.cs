@@ -18,6 +18,8 @@ namespace ThrownTogether
             new Vector3(-2.75f,0,2.5f),new Vector3(-2.75f,0,.55f),new Vector3(-2.75f,0,-1.4f),
             new Vector3(2.45f,0,1),new Vector3(2.45f,0,-1),new Vector3(2.45f,0,3.4f)
         };
+        public static readonly Vector3[] ExpandedSlots=Slots.Concat(new[]{new Vector3(-11,0,5.8f),new Vector3(-9.1f,0,5.8f),new Vector3(-11,0,3.2f),new Vector3(-11,0,.65f),new Vector3(-11,0,-1.9f),new Vector3(-11,0,-4.4f),new Vector3(-9.1f,0,-4.4f)}).ToArray();
+        public Vector3[] Bays=>GetComponent<RestaurantExpansion>()?.KitchenOpen==true?ExpandedSlots:Slots;
         sealed class Piece { public string id; public Transform root; public Vector3 before; public Quaternion rotation; public int slot=-1,turns; }
         readonly List<Piece> pieces=new List<Piece>();
         KitchenLayout layout; RestaurantDay day;
@@ -41,10 +43,10 @@ namespace ThrownTogether
             if(pieces.Any(p=>p.id==id))return;
             var piece=new Piece{id=id,root=root,before=root.position,rotation=root.rotation,slot=-1};
             int[] anchors={0,1,3,4,5,6,7,8,10,11}, bays={5,4,7,2,14,12,13,18,8,19};
-            int preferred=id=="expo" || root.GetComponent<ExpoStation>()!=null ? Slots.Length-1 : -1;
+            int preferred=id=="expo" || root.GetComponent<ExpoStation>()!=null ? 20 : -1;
             for(int i=0;i<anchors.Length;i++)if(id=="base:"+anchors[i] && (SessionOptions.Kitchen==0 || anchors[i]==8 || anchors[i]==11))preferred=bays[i];
-            bool SpawnSafe(int i)=>new[]{layout.choices[SessionOptions.Kitchen].playerOneSpawn,layout.choices[SessionOptions.Kitchen].playerTwoSpawn}.All(p=>Mathf.Abs(p.x-Slots[i].x)>1.3f || Mathf.Abs(p.z-Slots[i].z)>1.3f);
-            if(preferred<0 || At(preferred)!=null || !SpawnSafe(preferred))preferred=Enumerable.Range(0,Slots.Length).Where(i=>At(i)==null && SpawnSafe(i) && (i<18 || id=="base:8" || id=="base:11" || id=="expo")).OrderBy(i=>Vector3.SqrMagnitude(Slots[i]-root.position)).First();
+            bool SpawnSafe(int i)=>new[]{layout.choices[SessionOptions.Kitchen].playerOneSpawn,layout.choices[SessionOptions.Kitchen].playerTwoSpawn}.All(p=>Mathf.Abs(p.x-Bays[i].x)>1.3f || Mathf.Abs(p.z-Bays[i].z)>1.3f);
+            if(preferred<0 || At(preferred)!=null || !SpawnSafe(preferred))preferred=Enumerable.Range(0,Bays.Length).Where(i=>At(i)==null && SpawnSafe(i) && (i<18 || i>=21 || id=="base:8" || id=="base:11" || id=="expo")).OrderBy(i=>Vector3.SqrMagnitude(Bays[i]-root.position)).First();
             pieces.Add(piece);Place(piece,preferred,0);piece.before=root.position;piece.rotation=root.rotation;
         }
         // Install after owned equipment and its saved layout have been restored. The new
@@ -67,8 +69,8 @@ namespace ThrownTogether
             }
             instance.Initialize(day);return instance;
         }
-        static int Nearest(Vector3 position)
-        {for(int i=0;i<Slots.Length;i++)if(Vector3.Distance(position,Slots[i])<.15f)return i;return -1;}
+        int Nearest(Vector3 position)
+        {for(int i=0;i<Bays.Length;i++)if(Vector3.Distance(position,Bays[i])<.15f)return i;return -1;}
         Piece At(int slot)=>pieces.FirstOrDefault(p=>p.slot==slot);
         public Transform Find(string id)=>pieces.FirstOrDefault(p=>p.id==id || id=="expo" && p.root!=null && p.root.GetComponent<ExpoStation>()!=null)?.root;
         public KeyValuePair<string,ProcessingStation>[] PrepStations=>pieces.Where(p=>p.root!=null).Select(p=>new KeyValuePair<string,ProcessingStation>(p.id,p.root.GetComponentInChildren<ProcessingStation>())).Where(p=>p.Value!=null && p.Value.requiresAttendance).ToArray();
@@ -79,7 +81,7 @@ namespace ThrownTogether
             var instance=Instantiate(offer.stationPrefab);instance.name=offer.displayName;
             var piece=new Piece{id="candidate",root=instance.transform};pieces.Add(piece);
             bool fits=false;
-            foreach(int slot in Enumerable.Range(0,Slots.Length).Where(s=>At(s)==null && (s<Slots.Length-1 || instance.GetComponent<ExpoStation>()!=null)).OrderBy(s=>instance.GetComponent<ExpoStation>()!=null && s==Slots.Length-1?0:1).ToArray())
+            foreach(int slot in Enumerable.Range(0,Bays.Length).Where(s=>At(s)==null && (s!=20 || instance.GetComponent<ExpoStation>()!=null)).OrderBy(s=>instance.GetComponent<ExpoStation>()!=null && s==20?0:1).ToArray())
             {Place(piece,slot,0);if(Validate(out var unused)){fits=true;break;}}
             if(!fits){pieces.Remove(piece);instance.SetActive(false);Destroy(instance);Message="No safe free bay. Sell equipment or rearrange first.";return false;}
             var account=RestaurantAccounts.Current;
@@ -97,14 +99,14 @@ namespace ThrownTogether
             if(applicable.Length==0)return;
             var old=pieces.Select(p=>(p.root.position,p.root.rotation,p.slot,p.turns)).ToArray();
             // Legacy partial saves must not collide with newly snapped default equipment.
-            foreach(var saved in applicable.Where(x=>x.slot>=0 && x.slot<Slots.Length)){var owner=pieces.FirstOrDefault(p=>p.id==saved.id);var occupant=At(saved.slot);if(owner!=null && occupant!=null && occupant!=owner && !applicable.Any(x=>x.id==occupant.id)){int free=Enumerable.Range(0,Slots.Length).First(i=>At(i)==null && !applicable.Any(x=>x.slot==i));Place(occupant,free,0);}}
+            foreach(var saved in applicable.Where(x=>x.slot>=0 && x.slot<Bays.Length)){var owner=pieces.FirstOrDefault(p=>p.id==saved.id);var occupant=At(saved.slot);if(owner!=null && occupant!=null && occupant!=owner && !applicable.Any(x=>x.id==occupant.id)){int free=Enumerable.Range(0,Bays.Length).First(i=>At(i)==null && !applicable.Any(x=>x.slot==i));Place(occupant,free,0);}}
 
             bool valid=applicable.Select(p=>p.id).Distinct().Count()==applicable.Length && applicable.Select(p=>p.slot).Distinct().Count()==applicable.Length;
             foreach(var saved in applicable)
             {
                 var piece=pieces.FirstOrDefault(p=>p.id==saved.id);
                 if(piece==null)continue; // Unknown/removed ownership never spawns free equipment.
-                if(saved.slot<0 || saved.slot>=Slots.Length || saved.turns<0 || saved.turns>3){valid=false;break;}
+                if(saved.slot<0 || saved.slot>=Bays.Length || saved.turns<0 || saved.turns>3){valid=false;break;}
                 Place(piece,saved.slot,saved.turns);
             }
             if(!valid || !Validate(out var unused))
@@ -127,11 +129,11 @@ namespace ThrownTogether
             foreach(var p in pieces){p.before=p.root.position;p.rotation=p.root.rotation;}
             Editing=true;Held=-1;Selected=0;Message="A: pick/place • X: rotate • RB: equipment • Y: save • B: cancel | $"+MoveFee+" per break, only for saved changes";return true;
         }
-        static void Place(Piece p,int slot,int turns)
-        {p.slot=slot;p.turns=turns;p.root.SetPositionAndRotation(Slots[slot],Quaternion.Euler(0,turns*90,0));Physics.SyncTransforms();}
+        void Place(Piece p,int slot,int turns)
+        {p.slot=slot;p.turns=turns;p.root.SetPositionAndRotation(Bays[slot],Quaternion.Euler(0,turns*90,0));Physics.SyncTransforms();}
         public bool TryMove(string id,int slot,int turns)
         {
-            if(!Editing || !CanEdit || slot<0 || slot>=Slots.Length || turns<0 || turns>3)return false;
+            if(!Editing || !CanEdit || slot<0 || slot>=Bays.Length || turns<0 || turns>3)return false;
             var p=pieces.FirstOrDefault(v=>v.root==Find(id));if(p==null)return false;
             var other=At(slot);if(other==p)other=null;
             var oldPosition=p.root.position;var oldRotation=p.root.rotation;int oldSlot=p.slot,oldTurns=p.turns;
@@ -178,11 +180,11 @@ namespace ThrownTogether
             foreach(var p in pieces){if(p.root==null)continue;p.root.SetPositionAndRotation(p.before,p.rotation);p.slot=Nearest(p.before);p.turns=(Mathf.RoundToInt(p.rotation.eulerAngles.y/90)%4+4)%4;}
             Physics.SyncTransforms();Editing=false;Held=-1;
         }
-        public void Select(int index){Selected=Mathf.Clamp(index,0,Slots.Length+1);}
+        public void Select(int index){Selected=Mathf.Clamp(index,0,Bays.Length+1);}
         public void Confirm()
         {
-            if(Selected==Slots.Length){Save();return;}
-            if(Selected==Slots.Length+1){Cancel();return;}
+            if(Selected==Bays.Length){Save();return;}
+            if(Selected==Bays.Length+1){Cancel();return;}
             if(Held<0){var p=At(Selected);if(p!=null){Held=pieces.IndexOf(p);pendingTurns=p.turns;}else Message="Empty slot. Select equipment first.";}
             else if(TryMove(pieces[Held].id,Selected,pendingTurns))Held=-1;
         }
@@ -191,9 +193,9 @@ namespace ThrownTogether
         public bool Back(){if(Held>=0){Held=-1;return false;}Cancel();return true;}
         public void Navigate(Vector2 direction)
         {
-            Vector2 Point(int i){if(i==Slots.Length)return new Vector2(1060,670);if(i==Slots.Length+1)return new Vector2(1210,670);var p=GetComponent<RestaurantHud>().gameplayCamera.WorldToViewportPoint(Slots[i]);return new Vector2(p.x*1280,p.y*720);}
+            Vector2 Point(int i){if(i==Bays.Length)return new Vector2(1060,670);if(i==Bays.Length+1)return new Vector2(1210,670);var p=GetComponent<RestaurantHud>().gameplayCamera.WorldToViewportPoint(Bays[i]);return new Vector2(p.x*1280,p.y*720);}
             var origin=Point(Selected);float best=float.MaxValue;int chosen=Selected;
-            for(int i=0;i<Slots.Length+2;i++)
+            for(int i=0;i<Bays.Length+2;i++)
             {var delta=Point(i)-origin;float along=Vector2.Dot(delta,direction.normalized);if(along<5)continue;float side=Mathf.Abs(delta.x*direction.y-delta.y*direction.x);float score=delta.magnitude+side*2;if(score<best){best=score;chosen=i;}}
             Selected=chosen;
         }
@@ -206,14 +208,14 @@ namespace ThrownTogether
             var style=new GUIStyle(GUI.skin.label){fontSize=22,alignment=TextAnchor.MiddleCenter};style.normal.textColor=Color.white;
             GUI.Box(new Rect(15,10,1280-30,76),"KITCHEN LAYOUT — Move / D-pad   A: select/place   X / R: rotate   RB / Tab: equipment   Y: save   B: back");
             GUI.Label(new Rect(30,40,1280-360,40),Message);
-            GUI.backgroundColor=Selected==Slots.Length?Color.yellow:Color.white;
+            GUI.backgroundColor=Selected==Bays.Length?Color.yellow:Color.white;
             if(GUI.Button(new Rect(1280-315,44,140,30),"Save ($"+MoveFee+")") && Save())saved();
-            GUI.backgroundColor=Selected==Slots.Length+1?Color.yellow:Color.white;
+            GUI.backgroundColor=Selected==Bays.Length+1?Color.yellow:Color.white;
             if(GUI.Button(new Rect(1280-165,44,140,30),"Cancel")){Cancel();cancelled();}
             GUI.backgroundColor=Color.white;
-            for(int i=0;i<Slots.Length;i++)
+            for(int i=0;i<Bays.Length;i++)
             {
-                var screen=camera.WorldToScreenPoint(Slots[i]+Vector3.up*1.15f);var occupant=At(i);
+                var screen=camera.WorldToScreenPoint(Bays[i]+Vector3.up*1.15f);var occupant=At(i);
                 var rect=new Rect(screen.x*1280f/Screen.width-29,720-screen.y*720f/Screen.height-25,58,50);
                 var tint=i==Selected?new Color(1,.85f,.2f):occupant==null?new Color(.15f,.95f,.3f):new Color(.25f,.7f,1);
                 GUI.color=tint;GUI.DrawTexture(rect,Texture2D.whiteTexture);
@@ -222,7 +224,7 @@ namespace ThrownTogether
             }
             GUI.color=Color.white;
             string name=Held>=0?pieces[Held].root.name:At(Selected)?.root.name??"Empty";
-            GUI.Box(new Rect(1280*.2f,720-74,1280*.6f,48),(Selected>=Slots.Length?(Selected==Slots.Length?"A: save layout":"A: cancel changes"):"Slot "+(Selected+1)+" — "+name)+(Held>=0?" | Rotation "+(pendingTurns*90)+"°":""));
+            GUI.Box(new Rect(1280*.2f,720-74,1280*.6f,48),(Selected>=Bays.Length?(Selected==Bays.Length?"A: save layout":"A: cancel changes"):"Slot "+(Selected+1)+" — "+name)+(Held>=0?" | Rotation "+(pendingTurns*90)+"°":""));
             // Out-of-plan equipment in alternate/older layouts remains selectable for its first move.
             int row=0;foreach(var p in pieces.Where(p=>p.slot<0))
                 if(GUI.Button(new Rect(1280-245,100+row++*38,225,34),"Move "+p.root.name)){Held=pieces.IndexOf(p);pendingTurns=p.turns;}

@@ -121,3 +121,6 @@ Reviewed/imported Claude PREP-001 f51f6a3; implemented physical worker, demand p
 2026-09-14 — Compound cook released as 0.21.0-dev: 248 full-pipeline checks passed; public build identity confirmed. No measured account-wide usage available; no credit estimate.
 
 2026-09-14 — COOK-001 reviewed: one reported source-trace stall independently reproduced; secondary stock-projection concern reproduced using actual tomato recipes. Two narrow runtime fixes and three regression cases; 20 live cook tests passed. Account-wide usage unknown. Claude did source-only audit; Codex performed all execution/integration.
+
+### 2026-09-14 — Room expansion and sidewalk queue
+Approved scope: optional kitchen/dining expansion plus visible outside queue. Reused purchase persistence, furniture slots, modular materials/props and service routes; no new economy or staff system. Added focused regressions and performed isolated live Unity service/save/night review. Actual account-wide token/credit use is unavailable; no estimate claimed. Full test/build/deploy follows the established gated pipeline.
