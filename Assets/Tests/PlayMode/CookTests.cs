@@ -162,7 +162,7 @@ namespace ThrownTogether.Tests
         }
         [Test] public void CompoundHoldFinishesCurrentComponentButDoesNotStartNext()
         {
-            StartCook();var ticket=Seat(ChickenFries);day.Expo.TryFire(ticket);
+            StartCook();StockParts(ChickenFries);var ticket=Seat(ChickenFries);day.Expo.TryFire(ticket);
             var grill=Object.FindObjectsByType<ProcessingStation>().First(s=>s.gameObject.scene==scene && s.ProcessFor(ItemPayload.Food(ChickenFries.ingredient))!=null);
             for(int i=0;i<1000 && !grill.Busy;i++)day.Cook.Advance(.1f);Assert.IsTrue(grill.Busy);day.Expo.TryHold(ticket);Tick(1500);
             Assert.IsNull(pass.pickupSlot.Item);Assert.AreEqual(5,plates.CleanPlatesRemaining);
@@ -172,7 +172,7 @@ namespace ThrownTogether.Tests
         }
         [Test] public void CookBreakFinishesActiveComponentWithoutPlatingOrStartingNext()
         {
-            StartCook();StockParts(ChickenFries);var ticket=Seat(ChickenFries);day.Expo.TryFire(ticket);
+            StartCook();var ticket=Seat(ChickenFries);day.Expo.TryFire(ticket);
             var member=day.Staff.Single(s=>s.Role=="cook");var appliances=Object.FindObjectsByType<ProcessingStation>().Where(p=>p.gameObject.scene==scene && !p.requiresAttendance).ToArray();
             for(int i=0;i<1200 && !appliances.Any(p=>p.Busy);i++)day.Cook.Advance(.1f);Assert.IsTrue(appliances.Any(p=>p.Busy));
             Assert.IsTrue(member.ToggleBreak());Tick(1800);Assert.IsTrue(member.OnBreak,member.DisplayStatus);Assert.IsNull(pass.pickupSlot.Item);Assert.AreEqual(5,plates.CleanPlatesRemaining);
