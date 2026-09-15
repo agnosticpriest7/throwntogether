@@ -44,13 +44,13 @@ namespace ThrownTogether.Tests
         [UnityTest] public IEnumerator ExtensionsPreserveOriginalBaysAndPersistNewPlacements()
         {
             var f=hud.GetComponent<KitchenFurniture>();var prior=Enumerable.Range(0,12).Select(i=>"base:"+i).Where(id=>f.Find(id)!=null).ToDictionary(id=>id,id=>f.Find(id).position);
-            Assert.That(f.Bays.Length,Is.EqualTo(21));Buy(RestaurantExpansion.KitchenId);
-            Assert.That(f.Bays.Length,Is.EqualTo(28));foreach(var pair in prior)Assert.That(f.Find(pair.Key).position,Is.EqualTo(pair.Value));
+            int baseCount=f.SelectableCount;Assert.That(f.Available(21),Is.False);Buy(RestaurantExpansion.KitchenId);
+            Assert.That(f.SelectableCount,Is.GreaterThan(baseCount));Assert.That(f.Available(21),Is.True);foreach(var pair in prior)Assert.That(f.Find(pair.Key).position,Is.EqualTo(pair.Value));
             Assert.That(f.Begin(),Is.True);
             for(int slot=21;slot<28;slot++)Assert.That(f.TryMove("base:3",slot,0),Is.True,"Bay "+(slot+1)+": "+f.Message);
             var seen=new HashSet<int>{0};var queue=new Queue<int>();queue.Enqueue(0);
             while(queue.Count>0){int source=queue.Dequeue();foreach(var direction in new[]{Vector2.up,Vector2.down,Vector2.left,Vector2.right}){f.Select(source);f.Navigate(direction);if(seen.Add(f.Selected))queue.Enqueue(f.Selected);}}
-            Assert.That(seen.Count,Is.EqualTo(30),"Every expansion bay, Save and Cancel is controller reachable");
+            Assert.That(seen.Count,Is.EqualTo(f.SelectableCount+2),"Every expansion bay, Save and Cancel is controller reachable");
             Assert.That(f.Save(),Is.True,f.Message);int cash=RestaurantAccounts.Current.Data.cash;
             RestaurantAccounts.UseStorage(memory);yield return Load();f=hud.GetComponent<KitchenFurniture>();
             Assert.That(f.AssignedSlot("base:3"),Is.EqualTo(27));Assert.That(f.Find("base:3").position,Is.EqualTo(KitchenFurniture.ExpandedSlots[27]));

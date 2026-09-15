@@ -127,7 +127,7 @@ namespace ThrownTogether.Tests
             foreach(int anchor in new[]{0,1,3,4,5,6,7,8,10,11})Assert.That(f.AssignedSlot("base:"+anchor),Is.GreaterThanOrEqualTo(0));
             var seen=new System.Collections.Generic.HashSet<int>{0};var pending=new System.Collections.Generic.Queue<int>();pending.Enqueue(0);
             while(pending.Count>0){int start=pending.Dequeue();foreach(var direction in new[]{Vector2.up,Vector2.down,Vector2.left,Vector2.right}){f.Select(start);f.Navigate(direction);if(seen.Add(f.Selected))pending.Enqueue(f.Selected);}}
-            Assert.That(seen.Count,Is.EqualTo(KitchenFurniture.Slots.Length+2),"Every bay, Save and Cancel must be reachable by D-pad");
+            Assert.That(seen.Count,Is.EqualTo(f.SelectableCount+2),"Every bay, Save and Cancel must be reachable by D-pad");
             Assert.That(f.TryMove("base:8",6,0),Is.True,f.Message);Assert.That(f.TryMove("base:11",9,0),Is.True,f.Message);f.Cancel();
             var menu=hud.GetComponent<RestaurantMenu>();menu.OpenFrontEnd();var pad=InputSystem.AddDevice<Gamepad>();
             try{hud.coop.UseControllerPlayerOne();hud.coop.BindPlayerOne(null);Assert.That(hud.coop.Join(pad),Is.False);hud.coop.RefreshPlayerOneAssignment();Assert.That(hud.coop.PlayerOnePad,Is.SameAs(pad));Assert.That(hud.coop.PlayerTwo,Is.Null);}
@@ -175,6 +175,21 @@ namespace ThrownTogether.Tests
             finally{InputSystem.RemoveDevice(pad);InputSystem.settings.backgroundBehavior=background;InputSystem.settings.editorInputBehaviorInPlayMode=editor;}
             RestaurantAccounts.UseStorage(memory);yield return Load();f=hud.GetComponent<KitchenFurniture>();Assert.That(f.Find("purchase:counter-bay").position,Is.EqualTo(KitchenFurniture.Slots[10]));
             Assert.That(f.Count,Is.EqualTo(expected));LogAssert.NoUnexpectedReceived();
+        }
+        [UnityTest] public IEnumerator InteriorGridPlacementPersistsAndLockedExtensionIsRejected()
+        {
+            var f=hud.GetComponent<KitchenFurniture>();Assert.That(f.Begin(),Is.True);
+            var before=f.Find("base:3").position;
+            Assert.That(f.TryMove("base:3",21,0),Is.False,"West extension must be purchased");
+            Assert.That(f.Find("base:3").position,Is.EqualTo(before));
+            int chosen=-1;
+            for(int i=28;i<f.Bays.Length;i++)
+                if(f.Available(i) && f.Bays[i].z>-4 && f.Bays[i].z<5 && f.TryMove("base:3",i,0)){chosen=i;break;}
+            Assert.That(chosen,Is.GreaterThanOrEqualTo(28),"A new interior grid cell must be usable");
+            Assert.That(f.Save(),Is.True,f.Message);RestaurantAccounts.UseStorage(memory);yield return Load();
+            f=hud.GetComponent<KitchenFurniture>();Assert.That(f.AssignedSlot("base:3"),Is.EqualTo(chosen));
+            Assert.That(f.Validate(out var reason),Is.True,reason);
+            LogAssert.NoUnexpectedReceived();
         }
         [UnityTest] public IEnumerator MovesSaveReloadCancelAndServiceLock()
         {

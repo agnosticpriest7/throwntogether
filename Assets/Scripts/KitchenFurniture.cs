@@ -19,7 +19,28 @@ namespace ThrownTogether
             new Vector3(2.45f,0,1),new Vector3(2.45f,0,-1),new Vector3(2.45f,0,3.4f)
         };
         public static readonly Vector3[] ExpandedSlots=Slots.Concat(new[]{new Vector3(-11,0,5.8f),new Vector3(-9.1f,0,5.8f),new Vector3(-11,0,3.2f),new Vector3(-11,0,.65f),new Vector3(-11,0,-1.9f),new Vector3(-11,0,-4.4f),new Vector3(-9.1f,0,-4.4f)}).ToArray();
-        public Vector3[] Bays=>GetComponent<RestaurantExpansion>()?.KitchenOpen==true?ExpandedSlots:Slots;
+        // Append only: the first 28 indices remain valid for every existing career.
+        public static readonly Vector3[] GridSlots=BuildGrid();
+        static Vector3[] BuildGrid()
+        {
+            var slots=ExpandedSlots.ToList();
+            for(int row=0;row<6;row++)for(int col=0;col<8;col++)
+            {
+                var p=new Vector3(-11+col*1.9f,0,5.8f-row*2.04f);
+                if(!slots.Any(s=>Vector3.Distance(s,p)<.02f))slots.Add(p);
+            }
+            return slots.ToArray();
+        }
+        public static bool SlotAvailable(int index,bool expanded)=>index>=0 && index<GridSlots.Length && (expanded || GridSlots[index].x>=-7.21f);
+        static bool Regular(int index)
+        {
+            var p=GridSlots[index];float x=(p.x+11)/1.9f,z=(5.8f-p.z)/2.04f;
+            return Mathf.Abs(x-Mathf.Round(x))<.01f && Mathf.Abs(z-Mathf.Round(z))<.01f;
+        }
+        public Vector3[] Bays=>GridSlots;
+        public bool Available(int index)=>SlotAvailable(index,GetComponent<RestaurantExpansion>()?.KitchenOpen==true);
+        public bool Selectable(int index)=>Available(index) && (At(index)!=null || Regular(index) && !pieces.Any(p=>p.slot>=0 && !Regular(p.slot) && Vector3.Distance(Bays[p.slot],Bays[index])<1.2f));
+        public int SelectableCount=>Enumerable.Range(0,Bays.Length).Count(Selectable);
         sealed class Piece { public string id; public Transform root; public Vector3 before; public Quaternion rotation; public int slot=-1,turns; }
         readonly List<Piece> pieces=new List<Piece>();
         KitchenLayout layout; RestaurantDay day;
@@ -46,7 +67,7 @@ namespace ThrownTogether
             int preferred=id=="expo" || root.GetComponent<ExpoStation>()!=null ? 20 : -1;
             for(int i=0;i<anchors.Length;i++)if(id=="base:"+anchors[i] && (SessionOptions.Kitchen==0 || anchors[i]==8 || anchors[i]==11))preferred=bays[i];
             bool SpawnSafe(int i)=>new[]{layout.choices[SessionOptions.Kitchen].playerOneSpawn,layout.choices[SessionOptions.Kitchen].playerTwoSpawn}.All(p=>Mathf.Abs(p.x-Bays[i].x)>1.3f || Mathf.Abs(p.z-Bays[i].z)>1.3f);
-            if(preferred<0 || At(preferred)!=null || !SpawnSafe(preferred))preferred=Enumerable.Range(0,Bays.Length).Where(i=>At(i)==null && SpawnSafe(i) && (i<18 || i>=21 || id=="base:8" || id=="base:11" || id=="expo")).OrderBy(i=>Vector3.SqrMagnitude(Bays[i]-root.position)).First();
+            if(preferred<0 || At(preferred)!=null || !SpawnSafe(preferred))preferred=Enumerable.Range(0,Bays.Length).Where(i=>Available(i) && At(i)==null && SpawnSafe(i) && (i<18 || i>=21 || id=="base:8" || id=="base:11" || id=="expo")).OrderBy(i=>i<ExpandedSlots.Length?0:1).ThenBy(i=>Vector3.SqrMagnitude(Bays[i]-root.position)).First();
             pieces.Add(piece);Place(piece,preferred,0);piece.before=root.position;piece.rotation=root.rotation;
         }
         // Install after owned equipment and its saved layout have been restored. The new
@@ -81,7 +102,7 @@ namespace ThrownTogether
             var instance=Instantiate(offer.stationPrefab);instance.name=offer.displayName;
             var piece=new Piece{id="candidate",root=instance.transform};pieces.Add(piece);
             bool fits=false;
-            foreach(int slot in Enumerable.Range(0,Bays.Length).Where(s=>At(s)==null && (s!=20 || instance.GetComponent<ExpoStation>()!=null)).OrderBy(s=>instance.GetComponent<ExpoStation>()!=null && s==20?0:1).ToArray())
+            foreach(int slot in Enumerable.Range(0,Bays.Length).Where(s=>Available(s) && At(s)==null && (s!=20 || instance.GetComponent<ExpoStation>()!=null)).OrderBy(s=>instance.GetComponent<ExpoStation>()!=null && s==20?0:1).ToArray())
             {Place(piece,slot,0);if(Validate(out var unused)){fits=true;break;}}
             if(!fits){pieces.Remove(piece);instance.SetActive(false);Destroy(instance);Message="No safe free bay. Sell equipment or rearrange first.";return false;}
             var account=RestaurantAccounts.Current;
@@ -99,14 +120,14 @@ namespace ThrownTogether
             if(applicable.Length==0)return;
             var old=pieces.Select(p=>(p.root.position,p.root.rotation,p.slot,p.turns)).ToArray();
             // Legacy partial saves must not collide with newly snapped default equipment.
-            foreach(var saved in applicable.Where(x=>x.slot>=0 && x.slot<Bays.Length)){var owner=pieces.FirstOrDefault(p=>p.id==saved.id);var occupant=At(saved.slot);if(owner!=null && occupant!=null && occupant!=owner && !applicable.Any(x=>x.id==occupant.id)){int free=Enumerable.Range(0,Bays.Length).First(i=>At(i)==null && !applicable.Any(x=>x.slot==i));Place(occupant,free,0);}}
+            foreach(var saved in applicable.Where(x=>x.slot>=0 && x.slot<Bays.Length)){var owner=pieces.FirstOrDefault(p=>p.id==saved.id);var occupant=At(saved.slot);if(owner!=null && occupant!=null && occupant!=owner && !applicable.Any(x=>x.id==occupant.id)){int free=Enumerable.Range(0,Bays.Length).First(i=>Available(i) && At(i)==null && !applicable.Any(x=>x.slot==i));Place(occupant,free,0);}}
 
             bool valid=applicable.Select(p=>p.id).Distinct().Count()==applicable.Length && applicable.Select(p=>p.slot).Distinct().Count()==applicable.Length;
             foreach(var saved in applicable)
             {
                 var piece=pieces.FirstOrDefault(p=>p.id==saved.id);
                 if(piece==null)continue; // Unknown/removed ownership never spawns free equipment.
-                if(saved.slot<0 || saved.slot>=Bays.Length || saved.turns<0 || saved.turns>3){valid=false;break;}
+                if(!Available(saved.slot) || saved.turns<0 || saved.turns>3){valid=false;break;}
                 Place(piece,saved.slot,saved.turns);
             }
             if(!valid || !Validate(out var unused))
@@ -133,7 +154,7 @@ namespace ThrownTogether
         {p.slot=slot;p.turns=turns;p.root.SetPositionAndRotation(Bays[slot],Quaternion.Euler(0,turns*90,0));Physics.SyncTransforms();}
         public bool TryMove(string id,int slot,int turns)
         {
-            if(!Editing || !CanEdit || slot<0 || slot>=Bays.Length || turns<0 || turns>3)return false;
+            if(!Editing || !CanEdit || !Available(slot) || turns<0 || turns>3)return false;
             var p=pieces.FirstOrDefault(v=>v.root==Find(id));if(p==null)return false;
             var other=At(slot);if(other==p)other=null;
             var oldPosition=p.root.position;var oldRotation=p.root.rotation;int oldSlot=p.slot,oldTurns=p.turns;
@@ -161,6 +182,9 @@ namespace ThrownTogether
             foreach(var spawn in new[]{layout.choices[SessionOptions.Kitchen].playerOneSpawn,layout.choices[SessionOptions.Kitchen].playerTwoSpawn})
                 if(!KitchenStaffRoute.Clear(spawn)){problem="Keep both player starting positions clear.";return false;}
             var start=layout.choices[SessionOptions.Kitchen].playerOneSpawn;
+            if(KitchenStaffRoute.ToPoint(start,layout.choices[SessionOptions.Kitchen].playerTwoSpawn)==null ||
+                KitchenStaffRoute.ToPoint(start,new Vector3(day.Settings.entrance.x,0,-4.8f))==null)
+            {problem="Keep both player spawns connected to the dining-room entrance.";return false;}
             foreach(var target in Interactable.Active.Where(s=>s.gameObject.scene==gameObject.scene && !(s is DiningTable)))
                 if(KitchenStaffRoute.ToStation(start,target.transform)==null){problem="Keep a clear walking route to every station and serving area.";return false;}
             problem="";return true;
@@ -196,7 +220,7 @@ namespace ThrownTogether
             Vector2 Point(int i){if(i==Bays.Length)return new Vector2(1060,670);if(i==Bays.Length+1)return new Vector2(1210,670);var p=GetComponent<RestaurantHud>().gameplayCamera.WorldToViewportPoint(Bays[i]);return new Vector2(p.x*1280,p.y*720);}
             var origin=Point(Selected);float best=float.MaxValue;int chosen=Selected;
             for(int i=0;i<Bays.Length+2;i++)
-            {var delta=Point(i)-origin;float along=Vector2.Dot(delta,direction.normalized);if(along<5)continue;float side=Mathf.Abs(delta.x*direction.y-delta.y*direction.x);float score=delta.magnitude+side*2;if(score<best){best=score;chosen=i;}}
+            {if(i<Bays.Length && !Selectable(i))continue;var delta=Point(i)-origin;float along=Vector2.Dot(delta,direction.normalized);if(along<5)continue;float side=Mathf.Abs(delta.x*direction.y-delta.y*direction.x);float score=delta.magnitude+side*2;if(score<best){best=score;chosen=i;}}
             Selected=chosen;
         }
 
@@ -205,7 +229,7 @@ namespace ThrownTogether
             var camera=GetComponent<RestaurantHud>().gameplayCamera;
             var prior=GUI.color;var matrix=GUI.matrix;GUI.depth=-150;
             GUI.matrix=Matrix4x4.Scale(new Vector3(Screen.width/1280f,Screen.height/720f,1));
-            var style=new GUIStyle(GUI.skin.label){fontSize=22,alignment=TextAnchor.MiddleCenter};style.normal.textColor=Color.white;
+            var style=new GUIStyle(GUI.skin.label){fontSize=16,alignment=TextAnchor.MiddleCenter};style.normal.textColor=Color.white;
             GUI.Box(new Rect(15,10,1280-30,76),"KITCHEN LAYOUT — Move / D-pad   A: select/place   X / R: rotate   RB / Tab: equipment   Y: save   B: back");
             GUI.Label(new Rect(30,40,1280-360,40),Message);
             GUI.backgroundColor=Selected==Bays.Length?Color.yellow:Color.white;
@@ -215,8 +239,9 @@ namespace ThrownTogether
             GUI.backgroundColor=Color.white;
             for(int i=0;i<Bays.Length;i++)
             {
+                if(!Selectable(i))continue;
                 var screen=camera.WorldToScreenPoint(Bays[i]+Vector3.up*1.15f);var occupant=At(i);
-                var rect=new Rect(screen.x*1280f/Screen.width-29,720-screen.y*720f/Screen.height-25,58,50);
+                var rect=new Rect(screen.x*1280f/Screen.width-21,720-screen.y*720f/Screen.height-18,42,36);
                 var tint=i==Selected?new Color(1,.85f,.2f):occupant==null?new Color(.15f,.95f,.3f):new Color(.25f,.7f,1);
                 GUI.color=tint;GUI.DrawTexture(rect,Texture2D.whiteTexture);
                 GUI.color=new Color(.02f,.07f,.09f,.9f);GUI.DrawTexture(new Rect(rect.x+3,rect.y+3,rect.width-6,rect.height-6),Texture2D.whiteTexture);GUI.color=Color.white;

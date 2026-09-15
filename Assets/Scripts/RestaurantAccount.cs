@@ -77,7 +77,7 @@ namespace ThrownTogether
         public bool SetFurniture(int kitchen,FurniturePlacement[] placements,bool charge=false)
         {
             if(Data.activeDay>Data.settledDay || kitchen<0 || kitchen>2 || placements==null)return false;
-            if(Array.Exists(placements,p=>p==null || p.kitchen!=kitchen || string.IsNullOrWhiteSpace(p.id) || p.slot<0 || p.slot>=(Owns(RestaurantExpansion.KitchenId)?KitchenFurniture.ExpandedSlots.Length:KitchenFurniture.Slots.Length) || p.turns<0 || p.turns>3))return false;
+            if(Array.Exists(placements,p=>p==null || p.kitchen!=kitchen || string.IsNullOrWhiteSpace(p.id) || !KitchenFurniture.SlotAvailable(p.slot,Owns(RestaurantExpansion.KitchenId)) || p.turns<0 || p.turns>3))return false;
             if(System.Linq.Enumerable.Distinct(System.Linq.Enumerable.Select(placements,p=>p.id)).Count()!=placements.Length || System.Linq.Enumerable.Distinct(System.Linq.Enumerable.Select(placements,p=>p.slot)).Count()!=placements.Length)return false;
             int fee=charge?ArrangementFee:0;
             if(Data.cash<fee){Problem="Rearranging costs $"+fee+" for this break. Your draft is retained.";return false;}

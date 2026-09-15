@@ -5,10 +5,12 @@ namespace ThrownTogether
     public sealed class DiningWalker : MonoBehaviour
     {
         Vector3[] route=new Vector3[0];int waypoint;ChefAppearance appearance;float clock;
+        StaffCongestion congestion;
         public bool Arrived=>waypoint>=route.Length;
         public bool Moving {get;private set;}
         public void Initialize(GameObject prefab,int look,bool customer=false)
         {
+            if(!customer)congestion=GetComponent<StaffCongestion>()??gameObject.AddComponent<StaffCongestion>();
             var visual=Instantiate(prefab,transform);appearance=visual.GetComponent<ChefAppearance>()??visual.GetComponentInChildren<ChefAppearance>();
             if(customer)visual.transform.localScale=Vector3.one*.85f;
             if(appearance!=null){appearance.enabled=false;appearance.usePlayerSelection=false;if(customer)CustomerPresentation.ApplyCustomerLook(appearance,look);else appearance.Apply(ChefAppearanceData.Example(look));}
@@ -17,7 +19,9 @@ namespace ThrownTogether
         public void Advance(float seconds,float speed,bool carrying=false)
         {
             Vector3 before=transform.position;
-            float distance=Mathf.Max(0,seconds)*speed;
+            Vector3 heading=Vector3.zero;
+            for(int i=waypoint;i<route.Length;i++)if((route[i]-transform.position).sqrMagnitude>.0001f){heading=route[i]-transform.position;break;}
+            float distance=Mathf.Max(0,seconds)*speed*(congestion!=null?congestion.Factor(heading):1);
             while(!Arrived && distance>0)
             {
                 Vector3 delta=route[waypoint]-transform.position;float length=delta.magnitude;

@@ -14,14 +14,15 @@ namespace ThrownTogether
         public void CancelWork() => WorkRevision++;
         private float feedbackUntil;
         private CharacterController motor;
+        private StaffCongestion congestion;
         public event System.Action<Interactable,bool,bool> InteractionSucceeded;
-        private void Awake() => motor=GetComponent<CharacterController>();
+        private void Awake(){motor=GetComponent<CharacterController>();congestion=GetComponent<StaffCongestion>()??gameObject.AddComponent<StaffCongestion>();}
         public void Move(Vector2 input, float seconds)
         {
             Vector3 direction=new Vector3(input.x,0,input.y);
             direction=Vector3.ClampMagnitude(direction,1);
             if (direction.sqrMagnitude>.002f) { CancelWork(); transform.rotation=Quaternion.LookRotation(direction); }
-            motor.Move((direction*speed+Vector3.down*3)*seconds);
+            motor.Move((direction*speed*congestion.Factor(direction)+Vector3.down*3)*seconds);
         }
         public void FindFocus()
         {
