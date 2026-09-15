@@ -124,3 +124,4 @@ Reviewed/imported Claude PREP-001 f51f6a3; implemented physical worker, demand p
 
 ### 2026-09-14 — Room expansion and sidewalk queue
 Approved scope: optional kitchen/dining expansion plus visible outside queue. Reused purchase persistence, furniture slots, modular materials/props and service routes; no new economy or staff system. Added focused regressions and performed isolated live Unity service/save/night review. Actual account-wide token/credit use is unavailable; no estimate claimed. Full test/build/deploy follows the established gated pipeline.
+Release gate complete: 256 checks passed and Web 0.22.0-dev deployed/verified live. Source b8c4480; Pages 198cd9a. No follow-on features begun.
