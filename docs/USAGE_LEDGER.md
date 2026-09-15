@@ -143,3 +143,5 @@ Staff/grid release complete: all 280 committed release checks passed; 0.25.0-dev
 HOST-001 release completed: all 285 checks passed and public Web 0.26.0-dev identity was verified. No measured account-wide credit usage is available.
 
 2026-09-15 — BREAKS-001 implemented from the approved Astra brief using the existing staff, role, menu, routing and customer systems. No broad scheduler or persistence rewrite was introduced. Canonical disposable live review completed; final committed release gate follows. Actual account-wide credit usage is unavailable, so no estimate is recorded.
+
+BREAKS-001 release completed: all 290 checks passed and public Web 0.27.0-dev identity was verified. Two failed candidates stopped before publication and produced narrow test/route corrections. No measured account-wide credit usage is available.
