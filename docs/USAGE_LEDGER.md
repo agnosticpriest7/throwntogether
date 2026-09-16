@@ -155,3 +155,5 @@ BREAKS-001 release completed: all 290 checks passed and public Web 0.27.0-dev id
 0.28.0 report release complete: 5 focused PlayMode checks and all 302 final release checks passed. Public Web version/source identity verified after deployment. No measured account-wide credit usage available.
 
 2026-09-15 — Owner authorized finishing the remaining employee edge-case pass. Reused role state machines and customer lifecycle; focused regressions and canonical disposable MCP checks passed. No delegation or unrelated feature work. Actual account-wide credit usage unavailable; no estimate claimed.
+
+0.28.1 employee follow-up complete: all 311 release checks passed; Web build deployed and public identity verified. No measured credit usage available.
