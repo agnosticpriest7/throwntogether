@@ -105,6 +105,18 @@ namespace ThrownTogether.Tests
             member.BeginDeparture();for(int i=0;i<500&&!member.Gone;i++)member.AdvanceDeparture(.1f);
             Assert.That(member.Gone,Is.True,member.Status);LogAssert.NoUnexpectedReceived();yield return null;
         }
+        [Test] public void HostBreakWaitsForGuestChairArrival()
+        {
+            HireHost();Assert.IsTrue(day.StartService());FinishArrival();var member=day.Staff.Single(s=>s.Role=="host");
+            for(int i=0;i<1500&&day.Host.Status!="Escorting customer to table";i++)day.Advance(.05f);
+            Assert.AreEqual("Escorting customer to table",day.Host.Status);Assert.IsTrue(member.ToggleBreak());
+            // Advance only the host: a delayed guest must retain the admitted escort.
+            for(int i=0;i<800;i++)day.Host.Advance(.05f);
+            Assert.IsTrue(day.Tables.Any(t=>t.Arriving));Assert.IsFalse(member.OnBreak);Assert.IsFalse(member.GoingToBreak);
+            Assert.AreEqual("Escorting customer to table",day.Host.Status);
+            for(int i=0;i<1600&&!member.OnBreak;i++)day.Advance(.05f);
+            Assert.IsTrue(member.OnBreak,member.DisplayStatus);Assert.IsTrue(day.Tables.Any(t=>t.WaitingForMeal));
+        }
         [TestCase(false)] [TestCase(true)]
         public void HostBreakDuringOutsideApproachReturnsOrResumesFromActualPosition(bool resumeOutside)
         {

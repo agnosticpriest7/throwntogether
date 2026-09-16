@@ -106,6 +106,7 @@ namespace ThrownTogether
         }
         void Park()
         {
+            if(member.BreakRequested){BreakPark();return;}
             // Hold may be lifted while every output surface remains occupied.
             // Resume only a still-needed finished portion, never raw or duplicate work.
             if(Fired && job!=null && hands.Item==job && component!=null &&

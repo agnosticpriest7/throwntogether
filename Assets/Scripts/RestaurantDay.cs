@@ -207,11 +207,6 @@ namespace ThrownTogether
             {ReleaseHostClaim(claim);return false;}
             guest.phase=1;route=AdmissionRoute(guest,false);guest.walker.Go(AdmissionRoute(guest,true));return true;
         }
-        internal void CompleteHostEscort(HostGuestClaim claim)
-        {
-            var guest=claim==null?null:guests.FirstOrDefault(g=>g.id==claim.GuestId);
-            if(guest!=null && guest.hostClaim==claim.Id)guest.hostClaim=System.Guid.Empty;
-        }
         internal void ReleaseHostClaim(HostGuestClaim claim)
         {
             var guest=claim==null?null:guests.FirstOrDefault(g=>g.id==claim.GuestId);

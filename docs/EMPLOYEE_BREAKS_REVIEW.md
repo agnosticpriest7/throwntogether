@@ -82,3 +82,11 @@ Stop at this review. No fixes, commits, pushes, builds or deployment were perfor
 ## Subsequent authorized repair
 
 The owner subsequently requested fixes for the four confirmed findings. The 0.27.1 repair addresses those findings and adds nine focused regression cases, including prep departure attendance/claim cleanup and host Resume from outside. The server route-origin and host escort-boundary observations remain follow-up items; this patch does not claim to resolve every additional observation above. Release evidence is recorded in DEVELOPMENT_NOTES.md.
+
+## Remaining edge-case pass — 0.28.1
+
+The owner authorized the follow-up after the day-report release. The server now computes break storage routes from its physical walker and verifies transfer proximity. Resume abandons stale break/home routes and replans with retained inventory. The host remains in Escort until RestaurantDay seats the guest and invalidates the claim; reaching the shorter host approach alone no longer ends the escort. Cook parking consistently honors pending break intent instead of attempting normal plating recovery.
+
+Focused isolation passed 10 cases: host chair boundary; server storage with an obstructed component origin, Resume carrying and Resume during home travel; cook full-counter recovery and each of three appliance-clearing substeps, including player removal of the buffered input; controller A/B through all six employee rows. The first run reproduced host/server failures. Initial cook fixtures lacked enough free storage for their expected recovery, so one counter was purchased in the fixture; no production capacity rule was relaxed. A proximity assertion was corrected to sample the transfer frame rather than later home travel. Earlier prep departure/claim and dishwasher identity regressions remain in the full suite.
+
+Canonical MCP Play Mode used disposable memory-only storage. It verified delayed guest chair arrival before host rest, server Resume retaining/delivering the same plate, and a cook break while carrying extra grilled chicken away from a player-occupied grill. Both chicken and cut mushroom remained physically stored; Resume completed the Chicken Mushroom Plate. No final Console errors, scene saves or real career writes. Full release results are recorded in DEVELOPMENT_NOTES.md. TV/controller traffic and feel remain owner checks.

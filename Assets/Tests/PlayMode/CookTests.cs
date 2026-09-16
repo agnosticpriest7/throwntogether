@@ -179,6 +179,35 @@ namespace ThrownTogether.Tests
             Assert.IsTrue(Object.FindObjectsByType<Carryable>().Any(i=>i.gameObject.scene==scene && i.Owner is CarrySlot && !i.Payload.isPlate && (i.Payload.state==FoodState.Cooked || i.Payload.state==FoodState.Grilled)));
             StockParts(ChickenFries);Assert.IsTrue(member.ToggleBreak());Tick(3000);Assert.IsTrue(ChickenFries.Matches(pass.pickupSlot.Item?.Payload),day.Cook.Status);
         }
+        [Test] public void CookBlockedBreakNeverPlatesAndRecoversWhenCounterClears()
+        {
+            StartCook();var ticket=Seat(ChickenFries);day.Expo.TryFire(ticket);
+            var member=day.Staff.Single(s=>s.Role=="cook");var appliances=Object.FindObjectsByType<ProcessingStation>().Where(p=>p.gameObject.scene==scene&&!p.requiresAttendance).ToArray();
+            for(int i=0;i<1200&&!appliances.Any(p=>p.Busy);i++)day.Cook.Advance(.1f);
+            Assert.IsTrue(appliances.Any(p=>p.Busy));var food=appliances.Single(p=>p.Busy).slot.Item;
+            var counters=Object.FindObjectsByType<CounterStation>().Where(c=>c.gameObject.scene==scene&&c.GetType()==typeof(CounterStation)).ToArray();
+            foreach(var counter in counters){var filler=Object.Instantiate(plates.itemPrefab);filler.Configure(ItemPayload.Plate());Assert.IsTrue(counter.slot.TryTake(filler));}
+            Assert.IsTrue(member.ToggleBreak());Tick(800);Assert.AreSame(food,day.Cook.Hands.Item);Assert.AreEqual(5,plates.CleanPlatesRemaining);Assert.IsNull(pass.pickupSlot.Item);
+            Object.DestroyImmediate(counters[0].slot.Release().gameObject);Tick(1200);
+            Assert.IsTrue(member.OnBreak,member.DisplayStatus);Assert.AreSame(food,counters[0].slot.Item);Assert.AreEqual(5,plates.CleanPlatesRemaining);
+        }
+        [TestCase(1,false)] [TestCase(2,false)] [TestCase(3,false)] [TestCase(3,true)]
+        public void CookClearingBreakPreservesInputAndOutputThenResumes(int boundary,bool playerTakesInput)
+        {
+            var furniture=day.GetComponent<KitchenFurniture>();Assert.IsTrue(furniture.TryPurchase(day.Settings.purchases.Single(p=>p.id=="counter-bay")),furniture.Message);
+            StartCook();var recipe=DailyMenu.Catalog.Single(r=>r.displayName=="Chicken Mushroom Plate");StockParts(recipe);var ticket=Seat(recipe);day.Expo.TryFire(ticket);
+            var mushroom=recipe.additionalIngredients.Single().ingredient;
+            for(int i=0;i<1800&&!(day.Cook.Hands.Item!=null&&day.Cook.Hands.Item.Payload.ingredient==mushroom);i++)Tick(1);
+            var input=day.Cook.Hands.Item;Assert.IsNotNull(input);var extra=Portion(recipe.ingredient,FoodState.Raw);chef.Hands.TryTake(extra);
+            var grill=Object.FindObjectsByType<ProcessingStation>().Single(p=>p.gameObject.scene==scene&&p.ProcessFor(extra.Payload)?.output==FoodState.Grilled);KitchenTestAccess.Approach(chef,grill);Assert.IsTrue(chef.Use());
+            var field=typeof(KitchenCook).GetField("clearing",System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.NonPublic);
+            for(int i=0;i<1200&&(int)field.GetValue(day.Cook)!=boundary;i++)Tick(1);Assert.AreEqual(boundary,field.GetValue(day.Cook));
+            if(playerTakesInput)Assert.IsTrue(chef.Hands.TryTake(input));
+            var member=day.Staff.Single(s=>s.Role=="cook");Assert.IsTrue(member.ToggleBreak());Tick(1500);
+            Assert.IsTrue(member.OnBreak,member.DisplayStatus);Assert.IsNotNull(input.Owner);Assert.IsNotNull(extra.Owner);Assert.AreEqual(FoodState.Cut,input.Payload.state);Assert.AreEqual(FoodState.Grilled,extra.Payload.state);Assert.IsNull(pass.pickupSlot.Item);
+            if(playerTakesInput){var free=Object.FindObjectsByType<CounterStation>().First(c=>c.gameObject.scene==scene&&c.GetType()==typeof(CounterStation)&&c.slot.Item==null);Assert.IsTrue(free.slot.TryTake(input));}
+            Assert.IsTrue(member.ToggleBreak());Tick(3000);Assert.IsTrue(recipe.Matches(pass.pickupSlot.Item?.Payload),day.Cook.Status);Assert.IsNotNull(extra.Owner);Assert.AreEqual(4,plates.CleanPlatesRemaining);
+        }
         [Test] public void PlayerMovingPartialPlatePausesAssemblyAndResumesWithoutAnotherPlate()
         {
             StartCook();var ticket=Seat(ChickenFries);day.Expo.TryFire(ticket);

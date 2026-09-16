@@ -99,7 +99,15 @@ namespace ThrownTogether.Tests
             Assert.IsTrue(day.StartService());for(int i=0;i<1000&&day.StaffEntering;i++)day.Advance(.1f);Assert.IsFalse(day.StaffEntering);
             var menu=day.GetComponent<RestaurantMenu>();menu.Close();menu.Open();int controls=System.Array.FindIndex(menu.VisibleOptions,s=>s=="Employee Controls");Assert.That(controls,Is.GreaterThanOrEqualTo(0));
             menu.SelectRow(controls);menu.ActivateSelection();Assert.AreEqual("Employee Controls",menu.Page);Assert.AreEqual(7,menu.VisibleOptions.Length);
-            foreach(var member in day.Staff)Assert.IsTrue(member.ToggleBreak(),member.Role);
+            var pad=InputSystem.AddDevice<Gamepad>();var background=InputSystem.settings.backgroundBehavior;var editor=InputSystem.settings.editorInputBehaviorInPlayMode;
+            try
+            {
+                InputSystem.settings.backgroundBehavior=InputSettings.BackgroundBehavior.IgnoreFocus;InputSystem.settings.editorInputBehaviorInPlayMode=InputSettings.EditorInputBehaviorInPlayMode.AllDeviceInputAlwaysGoesToGameView;
+                void Press(GamepadButton b){InputSystem.QueueStateEvent(pad,new GamepadState().WithButton(b));InputSystem.Update();menu.Tick(true);InputSystem.QueueStateEvent(pad,new GamepadState());InputSystem.Update();menu.Tick(true);}
+                for(int i=0;i<6;i++){Press(GamepadButton.South);Assert.AreEqual(i+1,day.Staff.Count(s=>s.BreakRequested));Press(GamepadButton.DpadDown);}
+                Press(GamepadButton.East);Assert.AreEqual("Main",menu.Page);
+            }
+            finally{InputSystem.RemoveDevice(pad);InputSystem.settings.backgroundBehavior=background;InputSystem.settings.editorInputBehaviorInPlayMode=editor;}
             menu.Close();for(int i=0;i<400&&!day.Staff.All(s=>s.OnBreak);i++)day.Advance(.1f);
             Assert.IsTrue(day.Staff.All(s=>s.OnBreak),string.Join(" / ",day.Staff.Select(s=>s.Role+": "+s.DisplayStatus)));
             var prep=day.Staff.Single(s=>s.Role=="prep-cook");Assert.IsTrue(prep.ToggleBreak());Assert.IsTrue(prep.AvailableForWork);Assert.AreEqual("Working",prep.DisplayStatus=="On break"?"On break":"Working");
@@ -131,6 +139,56 @@ namespace ThrownTogether.Tests
                 Assert.IsTrue(menu.OpenKitchenLayout());Press(GamepadButton.LeftShoulder);Press(GamepadButton.East);Assert.IsFalse(furniture.HomeMode);Assert.IsTrue(furniture.Editing);Press(GamepadButton.East);Assert.IsFalse(furniture.Editing);
             }
             finally{InputSystem.RemoveDevice(pad);InputSystem.settings.backgroundBehavior=background;InputSystem.settings.editorInputBehaviorInPlayMode=editor;}
+        }
+        [TestCase(0)] [TestCase(1)] [TestCase(2)]
+        public void ServerBreakUsesPhysicalWalkerAndResumeRetainsDelivery(int resumeAt)
+        {
+            bool resumeCarrying=resumeAt==1;
+            Assert.IsTrue(RestaurantAccounts.Current.Buy("server",0));Assert.IsTrue(day.StartService());
+            for(int i=0;i<1000&&day.StaffEntering;i++)day.Advance(.1f);
+            var member=day.Staff.Single();var server=day.GetComponent<DiningServer>();var hands=member.GetComponentInChildren<CarrySlot>();
+            var pass=Object.FindObjectsByType<ServiceStation>().Single(s=>s.gameObject.scene==scene);
+            var stock=Object.FindObjectsByType<SourceStation>().Single(s=>s.gameObject.scene==scene&&s.plates);
+            var recipe=DailyMenu.Catalog.First(r=>r.requiredPurchases.Length==0&&r.additionalIngredients.Length==0);
+            var meal=stock.TakeCleanPlate();meal.Payload.AddFood(new ItemPayload{ingredient=recipe.ingredient,state=recipe.requiredState});meal.RefreshVisual();
+            Assert.IsTrue(hands.TryTake(meal));var blocker=stock.TakeCleanPlate();Assert.IsTrue(pass.pickupSlot.TryTake(blocker));
+            // Only the component origin is obstructed. The employee has a valid physical route.
+            var obstruction=new GameObject("Test blocked component origin");obstruction.transform.position=server.transform.position+Vector3.up*.5f;obstruction.AddComponent<BoxCollider>().size=new Vector3(.5f,1,.5f);Physics.SyncTransforms();
+            try
+            {
+                Assert.IsTrue(member.ToggleBreak());
+                for(int i=0;i<1200&&!member.OnBreak;i++)
+                {
+                    var previousOwner=meal.Owner;
+                    server.Advance(.05f);
+                    if(resumeCarrying&&i==1)
+                    {
+                        Assert.AreSame(meal,hands.Item);Assert.IsTrue(member.ToggleBreak());
+                        day.Tables[0].ReserveSeat();day.Tables[0].Seat(recipe);Assert.IsTrue(stock.ReturnCleanPlate(blocker));
+                    }
+                    if(meal.Owner!=hands&&previousOwner==hands)
+                    {
+                        var station=meal.Owner.GetComponentInParent<Interactable>();
+                        if(station!=null)Assert.LessOrEqual(Vector3.Distance(member.transform.position,station.transform.position),1.85f,"No remote storage transfer");
+                        if(resumeCarrying)break;
+                    }
+                    if(resumeAt==2&&member.GoingToBreak)
+                    {
+                        server.Advance(.05f);var position=member.transform.position;
+                        Assert.IsTrue(member.ToggleBreak());Assert.AreEqual(position,member.transform.position);
+                        Assert.IsTrue(stock.ReturnCleanPlate(blocker));Assert.IsTrue(pass.pickupSlot.TryTake(meal));day.Tables[0].ReserveSeat();day.Tables[0].Seat(recipe);
+                        for(int j=0;j<1200&&day.Tables[0].order.tableSlot.Item!=meal;j++)server.Advance(.05f);
+                        Assert.AreSame(meal,day.Tables[0].order.tableSlot.Item);Assert.IsFalse(member.BreakRequested);return;
+                    }
+                }
+                if(resumeCarrying){Assert.AreSame(meal,day.Tables[0].order.tableSlot.Item);Assert.IsNull(hands.Item);}
+                else
+                {
+                    Assert.AreEqual(0,resumeAt,"Must exercise Resume during home travel");Assert.IsTrue(member.OnBreak,member.DisplayStatus);Assert.IsNotNull(meal.Owner);Assert.IsNull(hands.Item);
+                    Assert.IsInstanceOf<CounterStation>(meal.Owner.GetComponentInParent<Interactable>());
+                }
+            }
+            finally{Object.DestroyImmediate(obstruction);}
         }
         KitchenDishwasher StartWasher(out StaffMember member,out WashingStation sink,out SourceStation stock)
         {

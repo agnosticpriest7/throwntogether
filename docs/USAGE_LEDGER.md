@@ -153,3 +153,5 @@ BREAKS-001 release completed: all 290 checks passed and public Web 0.27.0-dev id
 2026-09-15 — Owner selected end-of-day feedback before further AI/balance work. Reused day lifecycle, settlement and controller management flow; added bounded observational counters and summary presentation. Focused checks and disposable Unity visual review completed. No measured account-wide credit usage available.
 
 0.28.0 report release complete: 5 focused PlayMode checks and all 302 final release checks passed. Public Web version/source identity verified after deployment. No measured account-wide credit usage available.
+
+2026-09-15 — Owner authorized finishing the remaining employee edge-case pass. Reused role state machines and customer lifecycle; focused regressions and canonical disposable MCP checks passed. No delegation or unrelated feature work. Actual account-wide credit usage unavailable; no estimate claimed.

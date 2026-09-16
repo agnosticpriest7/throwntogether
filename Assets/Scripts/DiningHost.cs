@@ -59,7 +59,8 @@ namespace ThrownTogether
                 if(!day.BeginHostEscort(claim,out var route)){Reset();return;}
                 walker.Go(route);phase=Phase.Escort;Status="Escorting customer to table";return;
             }
-            if(phase==Phase.Escort){day.CompleteHostEscort(claim);Reset();if(member.BreakRequested)member.BeginBreak();}
+            // RestaurantDay releases the escort when the guest reaches the chair.
+            // Reaching our shorter table-approach route alone is not completion.
         }
 
         void Reset(){claim=null;phase=Phase.Idle;Status="Waiting to greet customers";}
