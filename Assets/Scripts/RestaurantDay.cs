@@ -71,6 +71,11 @@ namespace ThrownTogether
         public float LastWasteAt {get;private set;}=-100;
         public bool RecordWaste(){if(Closed)return false;WasteFees+=Mathf.Max(0,Settings.wasteCost);LastWasteAt=Elapsed;return true;}
         public int LostCustomers {get;private set;}
+        public int LostOutside {get;private set;}
+        public int LostUnserved {get;private set;}
+        public int TurnedAwayAtClosing {get;private set;}
+        public int DistinctDishesServed=>servedRecipes.Count;
+        public float QueueWithDirtyTablesSeconds {get;private set;}
         public float LastLostAt {get;private set;}=-100;
         public int DayNumber {get;private set;}
         public int ServiceDayNumber {get;private set;}
@@ -258,6 +263,7 @@ namespace ThrownTogether
                 // Guests already admitted may finish; unseated arrivals go home at closing.
                 if(AdmissionsClosed && (guest.phase==0 || guest.phase==4))
                 {
+                    TurnedAwayAtClosing++;
                     TurnAway(guest,"Customer leaving — restaurant closed");
                 }
                 if(guest.phase==0)
@@ -269,7 +275,7 @@ namespace ThrownTogether
                         guest.walker.Go(AdmissionRoute(guest,true));
                     }
                     else if(guest.waited>=Settings.outsidePatience)
-                    {LostCustomers++;LastLostAt=Elapsed;TurnAway(guest,"Customer left — waited too long");}
+                    {LostCustomers++;LostOutside++;LastLostAt=Elapsed;TurnAway(guest,"Customer left — waited too long");}
                 }
                 if(guest.phase==1 || guest.phase==3 || guest.phase==4 || guest.phase==5 || guest.phase==6)
                 {
@@ -291,11 +297,12 @@ namespace ThrownTogether
                 }
                 else if(guest.phase==2 && (guest.table.order.Phase==OrderPhase.Dirty || guest.table.WaitingForMeal && guest.table.PatienceRemaining<=0))
                 {
-                    if(guest.table.WaitingForMeal){LostCustomers++;LastLostAt=Elapsed;guest.walker.name="Customer left â€” not served";}
+                    if(guest.table.WaitingForMeal){LostCustomers++;LostUnserved++;LastLostAt=Elapsed;guest.walker.name="Customer left — not served";}
                     guest.phase=6;guest.table.BeginDeparture();guest.walker.gameObject.SetActive(true);
                     guest.walker.Go(new Vector3(TableApproach(guest.table).x,0,guest.walker.transform.position.z));
                 }
             }
+            if(!AdmissionsClosed && WaitingOutside>0 && Tables.Any(t=>t.order.tableSlot.Item?.Payload.dirty==true))QueueWithDirtyTablesSeconds+=dt;
             Expo?.Refresh();StageExpoPass();host?.Advance(dt);server?.Advance(dt);dishwasher?.Advance(dt);busser?.Advance(dt);PrepCook?.Advance(dt);Cook?.Advance(dt);
             if(AdmissionsClosed && guests.Count==0)
             {

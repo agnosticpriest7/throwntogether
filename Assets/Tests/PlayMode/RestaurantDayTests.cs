@@ -4,6 +4,8 @@ using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
+using UnityEngine.InputSystem;
+using UnityEngine.InputSystem.LowLevel;
 #if UNITY_EDITOR
 using UnityEditor.SceneManagement;
 #endif
@@ -105,9 +107,50 @@ namespace ThrownTogether.Tests
                 Assert.That(day.Closed,Is.False);FinishDay();
                 Assert.That(day.CustomersArrived,Is.EqualTo(1));Assert.That(day.Served,Is.Zero);
                 Assert.That(day.LostCustomers,Is.Zero,"Closing the door is not a patience penalty");
+                Assert.That(day.TurnedAwayAtClosing,Is.EqualTo(1));Assert.Zero(day.LostOutside);Assert.Zero(day.LostUnserved);
+                day.Advance(30);Assert.That(day.TurnedAwayAtClosing,Is.EqualTo(1),"Closing is counted once");
             }
             finally{day.Settings.durationSeconds=duration;}
             yield return null;
+        }
+
+        [Test] public void DayReportSeparatesOutsideAndSeatedLossesWithoutChangingSettlement()
+        {
+            FinishDay();
+            Assert.Greater(day.LostOutside,0);Assert.Greater(day.LostUnserved,0);
+            Assert.AreEqual(day.LostCustomers,day.LostOutside+day.LostUnserved);
+            Assert.AreEqual(day.CustomersArrived,day.Served+day.LostOutside+day.LostUnserved+day.TurnedAwayAtClosing);
+            int outside=day.LostOutside,seated=day.LostUnserved,cash=RestaurantAccounts.Current.Data.cash;
+            day.Advance(100);Assert.IsTrue(day.RetryPayment());Assert.AreEqual(cash,RestaurantAccounts.Current.Data.cash);
+            Assert.AreEqual(outside,day.LostOutside);Assert.AreEqual(seated,day.LostUnserved);
+            StringAssert.Contains("Outside losses",DayServiceReport.Advice(day));StringAssert.Contains("Unserved guests",DayServiceReport.Advice(day));
+        }
+        [Test] public void DayReportClearingAdviceRequiresObservedDirtyTablesWithQueue()
+        {
+            var stock=stations.OfType<SourceStation>().Single(s=>s.plates);
+            foreach(var table in day.Tables)
+            {var plate=stock.TakeCleanPlate();plate.Payload.MakeDirty();plate.RefreshVisual();Assert.IsTrue(table.order.tableSlot.TryTake(plate));}
+            FinishDay();Assert.Greater(day.QueueWithDirtyTablesSeconds,1);Assert.Greater(day.LostOutside,0);
+            Assert.Zero(day.LostUnserved);StringAssert.Contains("busser",DayServiceReport.Advice(day));
+        }
+        [Test] public void DayReportManagementRemainsControllerAccessible()
+        {
+            FinishDay();var menu=day.GetComponent<RestaurantMenu>();menu.Open();
+            var pad=InputSystem.AddDevice<Gamepad>();
+            var background=InputSystem.settings.backgroundBehavior;var editor=InputSystem.settings.editorInputBehaviorInPlayMode;
+            try
+            {
+                InputSystem.settings.backgroundBehavior=InputSettings.BackgroundBehavior.IgnoreFocus;
+                InputSystem.settings.editorInputBehaviorInPlayMode=InputSettings.EditorInputBehaviorInPlayMode.AllDeviceInputAlwaysGoesToGameView;
+                void Press(GamepadButton button){InputSystem.QueueStateEvent(pad,new GamepadState().WithButton(button));InputSystem.Update();menu.Tick(true);InputSystem.QueueStateEvent(pad,new GamepadState());InputSystem.Update();menu.Tick(true);}
+                Assert.AreEqual("Restaurant",menu.Page);int count=menu.VisibleOptions.Length;
+                for(int i=1;i<=count;i++){Press(GamepadButton.DpadDown);Assert.AreEqual(i%count,menu.Selection);}
+                Press(GamepadButton.South);Assert.AreEqual("Employees",menu.Page);Press(GamepadButton.East);Assert.AreEqual("Restaurant",menu.Page);
+                Press(GamepadButton.DpadDown);Press(GamepadButton.DpadDown);Press(GamepadButton.South);Assert.AreEqual("Shop",menu.Page);
+                Press(GamepadButton.East);Assert.AreEqual("Restaurant",menu.Page);Press(GamepadButton.East);Assert.AreEqual("Restaurant",menu.Page);
+                Assert.Zero(Time.timeScale);
+            }
+            finally{InputSystem.RemoveDevice(pad);InputSystem.settings.backgroundBehavior=background;InputSystem.settings.editorInputBehaviorInPlayMode=editor;menu.Close();}
         }
 
 

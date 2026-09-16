@@ -57,6 +57,7 @@ namespace ThrownTogether.Tests
             Assert.That(day.AwaitingMenu,Is.False);Assert.That(day.Menu.Length,Is.EqualTo(3));
             day.Advance(18);Assert.That(day.Tables.Where(t=>t.order.Active).All(t=>day.Menu.Contains(t.order.recipe)),Is.True);
             foreach(var r in day.Menu)day.RecordMeal(r,0);day.Advance(600);Assert.That(day.VarietyBonus,Is.Zero);Assert.That(day.Paid,Is.True);
+            Assert.AreEqual(3,day.DistinctDishesServed);StringAssert.Contains("choose 4+",DayServiceReport.Variety(day));
             var a=RestaurantAccounts.Current;int funding=a.StartDay();Assert.That(a.Settle(funding,300,0),Is.True);
             var offer=day.Settings.purchases.Single(p=>p.id=="grill");Assert.That(a.Buy(offer.id,offer.cost),Is.True);
             var chosen=DailyMenu.Catalog.Where(r=>r.Unlocked(a)).Take(4).ToArray();Assert.That(a.SetMenu(chosen.Select(r=>r.id).ToArray()),Is.True);
@@ -66,8 +67,15 @@ namespace ThrownTogether.Tests
             // Changing a draft does not change customers' service-day menu snapshot.
             Assert.That(RestaurantAccounts.Current.SetMenu(new string[0]),Is.True);
             for(int i=0;i<8;i++){day.Advance(8);Assert.That(day.Tables.Where(t=>t.order.Active).All(t=>chosen.Contains(t.order.recipe)),Is.True);}
-            foreach(var r in chosen)day.RecordMeal(r,0);int income=day.BaseIncome,bonus=day.Bonuses,cash=RestaurantAccounts.Current.Data.cash;
+            foreach(var r in chosen)
+            {
+                day.RecordMeal(r,0);
+                if(day.DistinctDishesServed==3)StringAssert.Contains("3/4",DayServiceReport.Variety(day));
+            }
+            int income=day.BaseIncome,bonus=day.Bonuses,cash=RestaurantAccounts.Current.Data.cash;
             day.Advance(600);Assert.That(day.VarietyBonus,Is.EqualTo(income/20));Assert.That(RestaurantAccounts.Current.Data.cash,Is.EqualTo(cash+income+bonus+income/20));
+            Assert.AreEqual(4,day.DistinctDishesServed);StringAssert.Contains("Variety earned",DayServiceReport.Variety(day));
+            Assert.AreEqual(income+bonus+day.VarietyBonus-day.WasteFees,day.NetIncome);
             day.RetryPayment();Assert.That(RestaurantAccounts.Current.Data.cash,Is.EqualTo(cash+income+bonus+income/20));LogAssert.NoUnexpectedReceived();
         }
         [UnityTest] public IEnumerator AllThirteenRecipesCookPlateAndServeWithRealStationsAndFinitePlates()

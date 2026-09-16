@@ -484,6 +484,34 @@ namespace ThrownTogether
             SceneManager.LoadScene(name);
 #endif
         }
+        void DrawDayReport(RestaurantDay day,float opacity)
+        {
+            var body=new GUIStyle(GUI.skin.label){fontSize=Mathf.RoundToInt(20*Display.TextScale),wordWrap=true,alignment=TextAnchor.UpperLeft};
+            body.normal.textColor=Color.white;
+            var heading=new GUIStyle(body){fontStyle=FontStyle.Bold,fontSize=Mathf.RoundToInt(22*Display.TextScale)};
+            GUI.color=new Color(.035f,.065f,.085f,.96f*opacity);GUI.DrawTexture(new Rect(40,135,675,505),Texture2D.whiteTexture);GUI.color=new Color(1,1,1,opacity);
+            void Row(float x,float y,float width,string label,string value)
+            {
+                GUI.Label(new Rect(x,y,width-74,34),label,body);
+                GUI.Label(new Rect(x+width-74,y,74,34),value,new GUIStyle(body){alignment=TextAnchor.UpperRight,wordWrap=false});
+            }
+            GUI.Label(new Rect(60,151,280,35),"CUSTOMERS",heading);
+            GUI.Label(new Rect(390,151,290,35),"EARNINGS",heading);
+            Row(60,194,290,"Arrived",day.CustomersArrived.ToString());
+            Row(60,234,290,"Served",day.Served.ToString());
+            Row(60,274,290,"Left outside",day.LostOutside.ToString());
+            Row(60,314,290,"Left unserved",day.LostUnserved.ToString());
+            Row(60,354,290,"Closing turnaways",day.TurnedAwayAtClosing.ToString());
+            Row(390,194,300,"Dish sales","$"+day.BaseIncome);
+            Row(390,234,300,"Speed bonuses","+$"+day.Bonuses);
+            Row(390,274,300,"Menu variety","+$"+day.VarietyBonus);
+            Row(390,314,300,"Food waste fees","-$"+day.WasteFees);
+            Row(390,354,300,day.Paid?"Banked (min $0)":"To bank (min $0)","$"+day.NetIncome);
+            var advice=new GUIStyle(body){fontSize=Mathf.RoundToInt(18*Display.TextScale)};
+            GUI.Label(new Rect(60,398,635,87),"Speed: up to $"+day.Settings.maximumBonus+"/dish, decreasing over "+day.Settings.bonusWindow.ToString("0")+"s.\n"+DayServiceReport.Variety(day),advice);
+            GUI.Label(new Rect(60,490,630,34),"WHAT TO IMPROVE",heading);
+            GUI.Label(new Rect(60,529,635,105),DayServiceReport.Advice(day),advice);
+        }
         private void OnGUI()
         {
             if(!IsOpen) return;
@@ -503,8 +531,10 @@ namespace ThrownTogether
             var style=buttonStyle; style.fontSize=Mathf.RoundToInt(21*Display.TextScale); var text=textStyle;
             text.normal.textColor=Color.white; style.normal.textColor=Color.white; style.hover.textColor=Color.white; style.active.textColor=Color.white;
             GUI.Label(new Rect(260,25,760,48),Page=="Title" ? "THROWN TOGETHER" : Page=="Main" ? "PAUSED" : Page=="Levels" ? (practiceLevel ? "CHOOSE A PRACTICE KITCHEN":"CHOOSE YOUR LEVEL") : Page=="Recipes" ? "RECIPE BOOK" : Page=="Restaurant" ? (hud.shift?.Day?.Closed==true?"DAY "+hud.shift.Day.DayNumber+" COMPLETE":"RESTAURANT SETUP") : Page=="Shop" ? "APPLIANCES, COUNTERS & DISHES" : Page=="Today's Menu" ? "DAY "+RestaurantAccounts.Current.Data.nextDay+" — CHOOSE MENU" : Page.ToUpperInvariant(),text);
-            GUI.Label(Page=="Restaurant"?new Rect(180,73,920,60):new Rect(260,73,760,60),Page=="Reset career" ? "Erase all career days, money, purchases, hires, menu choices and saved kitchen layouts? Settings and chef appearance stay." : Page=="Confirm" ? confirmation : Page=="Today's Menu" ? DailyMenu.Resolve(RestaurantAccounts.Current).Length+" selected • Minimum 3 • A: toggle dish\nServe 4 different menu dishes: +5% meal revenue (max $15)" : Page=="Restaurant" && hud.shift?.Day?.Closed==true ? hud.shift.Day.Clock+" • "+hud.shift.Day.Served+" served / "+hud.shift.Day.LostCustomers+" lost • Earned $"+hud.shift.Day.NetIncome+" (speed $"+hud.shift.Day.Bonuses+", variety $"+hud.shift.Day.VarietyBonus+", waste $"+hud.shift.Day.WasteFees+")\nAvailable $"+RestaurantAccounts.Current.Data.cash+" • B returns here" : Page=="Career" ? "Resume to arrange, hire and choose the menu before service.\nA: select • B: back" : IsFrontEnd ? "D-pad / stick: navigate • A: select • B: back\nChoose a kitchen and start cooking." : BetweenDays?"Available $"+RestaurantAccounts.Current.Data.cash+" • D-pad: navigate • A: select • B: Management":"Paused • D-pad / stick: navigate • A: select • B: back\nY / Escape: close • Xbox Menu belongs to Edge",text);
-            int visible=Page=="Recipes"?6:Page=="Shop"?7:(Page=="Restaurant" || Page=="Today's Menu")?8:9;
+            GUI.Label(Page=="Restaurant"?new Rect(180,73,920,60):new Rect(260,73,760,60),Page=="Reset career" ? "Erase all career days, money, purchases, hires, menu choices and saved kitchen layouts? Settings and chef appearance stay." : Page=="Confirm" ? confirmation : Page=="Today's Menu" ? DailyMenu.Resolve(RestaurantAccounts.Current).Length+" selected • Minimum 3 • A: toggle dish\nServe 4 different menu dishes: +5% meal revenue (max $15)" : Page=="Restaurant" && hud.shift?.Day?.Closed==true ? "Available $"+RestaurantAccounts.Current.Data.cash+" • "+(hud.shift.Day.Paid?"Earnings saved":"Earnings not saved — use Retry")+"\nD-pad: choose improvement • A: select • B: stay here" : Page=="Career" ? "Resume to arrange, hire and choose the menu before service.\nA: select • B: back" : IsFrontEnd ? "D-pad / stick: navigate • A: select • B: back\nChoose a kitchen and start cooking." : BetweenDays?"Available $"+RestaurantAccounts.Current.Data.cash+" • D-pad: navigate • A: select • B: Management":"Paused • D-pad / stick: navigate • A: select • B: back\nY / Escape: close • Xbox Menu belongs to Edge",text);
+            bool report=Page=="Restaurant" && hud.shift?.Day?.Closed==true;
+            if(report)DrawDayReport(hud.shift.Day,opacity);
+            int visible=report?9:Page=="Recipes"?6:Page=="Shop"?7:(Page=="Restaurant" || Page=="Today's Menu")?8:9;
             bool menu=Page=="Today's Menu";
             int begin=menu?1:0, end=menu?rows.Count-1:rows.Count;
             int first=Mathf.Clamp(Selection-visible+1,begin,Mathf.Max(begin,end-visible));
@@ -516,8 +546,10 @@ namespace ThrownTogether
                 var rowRect=Page=="Recipes" ? new Rect(35,160+(i-first)*55,345,48):WardrobePage ? new Rect(65,145+(i-first)*47,670,42):(Page=="Restaurant" || Page=="Today's Menu") ? new Rect(260,140+(i-first)*42,760,37):new Rect(260,145+(i-first)*47,760,42);
                 if(menu && (i==0 || i==rows.Count-1))rowRect=new Rect(i==0?260:650,500,370,40);
                 if(Page=="Shop")rowRect.y+=40;
+                if(report)rowRect=new Rect(745,140+(i-first)*49,495,44);
                 GUI.color=new Color(.025f,.035f,.05f,.94f*opacity);GUI.DrawTexture(rowRect,Texture2D.whiteTexture);GUI.color=new Color(1,1,1,opacity);
-                if(GUI.Button(rowRect,(i==Selection ? ">  ":"    ")+rows[i].label,style)) { Selection=i; ActivateSelection(); break; }
+                var rowStyle=report?new GUIStyle(style){fontSize=Mathf.RoundToInt(18*Display.TextScale),wordWrap=true}:style;
+                if(GUI.Button(rowRect,(i==Selection ? ">  ":"    ")+rows[i].label,rowStyle)) { Selection=i; ActivateSelection(); break; }
             }
             GUI.enabled=true; GUI.backgroundColor=Color.white;
             if(Page=="Shop")for(int tab=0;tab<shopTabs.Length;tab++){GUI.backgroundColor=tab==shopTab?new Color(.2f,.8f,.6f):Color.gray;if(GUI.Button(new Rect(260+tab*152,140,148,34),shopTabs[tab])){shopTab=tab;Selection=0;BuildRows();}}GUI.backgroundColor=Color.white;
@@ -547,7 +579,7 @@ namespace ThrownTogether
             }
             if(Page=="Kitchen") GUI.Label(new Rect(260,370,760,135),hud.GetComponent<KitchenLayout>().choices[Mathf.Min(Selection,2)].description,text);
             if(Page=="Co-op") GUI.Label(new Rect(200,390,880,145),"1. Xbox Edge: hold Menu, then Use game controls.\n2. Resume. First pad controls P1; A on another joins P2.\nChoose both looks in Choose your chef. A: use. Y: menu.\nDisconnected? Food stays safe. Reconnect that pad or press A on an unused one.",text);
-            GUI.Label(new Rect(240,610,800,65),message,text);
+            GUI.Label(report?new Rect(240,645,800,42):new Rect(240,610,800,65),message,text);
             if(Page=="Results")
             {
                 var summary=hud.GetComponent<SessionSummary>();

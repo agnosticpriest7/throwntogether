@@ -149,3 +149,5 @@ BREAKS-001 release completed: all 290 checks passed and public Web 0.27.0-dev id
 2026-09-15 — Astra review reproduced four employee-break edge cases in disposable Unity play. Owner authorized a bounded repair. Added focused regressions and verified seven failures against the previous source before checking the fixes. No delegation or unrelated feature work; actual credit usage unavailable.
 
 0.27.1 repair deployed: 9/9 focused cases, live Unity checks, and all 299 final release checks passed. Public version/source identity verified. No measured credit usage available.
+
+2026-09-15 — Owner selected end-of-day feedback before further AI/balance work. Reused day lifecycle, settlement and controller management flow; added bounded observational counters and summary presentation. Focused checks and disposable Unity visual review completed. No measured account-wide credit usage available.
